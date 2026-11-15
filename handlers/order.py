@@ -8,7 +8,13 @@ from aiogram import Router, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardRemove
+)
 
 from keyboards.reply_markup import (
     get_main_menu_keyboard,
@@ -32,6 +38,8 @@ class OrderFSM(StatesGroup):
     waiting_for_photos = State()
     waiting_for_deadline = State()
     waiting_for_delivery_type = State()
+    waiting_for_recipient_name = State()
+    waiting_for_phone = State()
     waiting_for_location = State()
     waiting_for_payment_receipt = State()
 
@@ -176,12 +184,72 @@ def get_date_picker_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
     ])
 
+def get_recipient_name_keyboard(tg_name: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"✅ Use My Name: {tg_name}", callback_data="recip_name:tg")],
+        [InlineKeyboardButton(text="✏️ Different Recipient Name", callback_data="recip_name:custom")],
+        [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
+    ])
+
+def get_phone_request_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📱 Share Phone Number (1-Tap)", request_contact=True)],
+            [KeyboardButton(text="❌ Cancel Order")]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+
+def get_location_dispatch_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📍 Send Exact GPS Pin (Best for Ride/Yango)", request_location=True)],
+            [KeyboardButton(text="🏙️ Choose Addis Ababa Sub-City / Area")],
+            [KeyboardButton(text="✏️ Type Landmark / Street Name")],
+            [KeyboardButton(text="❌ Cancel Order")]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+
+def get_subcities_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="📍 Bole / Medhanialem", callback_data="subcity:Bole / Medhanialem"),
+            InlineKeyboardButton(text="📍 Kazanchis / Bambis", callback_data="subcity:Kazanchis / Bambis")
+        ],
+        [
+            InlineKeyboardButton(text="📍 CMC / Ayat / Summit", callback_data="subcity:CMC / Ayat / Summit"),
+            InlineKeyboardButton(text="📍 Piassa / Arat Kilo", callback_data="subcity:Piassa / Arat Kilo")
+        ],
+        [
+            InlineKeyboardButton(text="📍 Sarbet / Bisrate Gabriel", callback_data="subcity:Sarbet / Bisrate Gabriel"),
+            InlineKeyboardButton(text="📍 Megenagna / 22", callback_data="subcity:Megenagna / 22")
+        ],
+        [
+            InlineKeyboardButton(text="📍 Gerji / Imperial", callback_data="subcity:Gerji / Imperial"),
+            InlineKeyboardButton(text="📍 Lebu / Jemo", callback_data="subcity:Lebu / Jemo")
+        ],
+        [
+            InlineKeyboardButton(text="📍 Mexico / Ledeta", callback_data="subcity:Mexico / Ledeta"),
+            InlineKeyboardButton(text="📍 4 Kilo / 6 Kilo", callback_data="subcity:4 Kilo / 6 Kilo")
+        ],
+        [
+            InlineKeyboardButton(text="📍 Gotera / Saris", callback_data="subcity:Gotera / Saris"),
+            InlineKeyboardButton(text="📍 Kera / Bulgaria", callback_data="subcity:Kera / Bulgaria")
+        ],
+        [
+            InlineKeyboardButton(text="◀ Back to Location Options", callback_data="subcity:back")
+        ]
+    ])
+
 # -------------------------------------------------------------
 # START ORDER & PRODUCT PICKER
 # -------------------------------------------------------------
 
 @router.message(Command("cancel"))
-@router.message(F.text == "❌ Cancel")
+@router.message(F.text.in_(["❌ Cancel", "❌ Cancel Order"]))
 async def cancel_order(message: types.Message, state: FSMContext):
     await state.clear()
     await message.answer(
@@ -582,36 +650,172 @@ async def callback_date_picked(callback: types.CallbackQuery, state: FSMContext)
     await callback.answer()
 
 # -------------------------------------------------------------
-# DELIVERY SELECTION
+# DELIVERY SELECTION & DETERMINISTIC DISPATCH INTAKE
 # -------------------------------------------------------------
 
 @router.callback_query(OrderFSM.waiting_for_delivery_type, F.data.startswith("delivery_choice:"))
 async def process_delivery_choice(callback: types.CallbackQuery, state: FSMContext):
     choice = callback.data.split(":")[1]
+    user = callback.from_user
     if choice == "pickup":
         await state.update_data(
             delivery_type="Store Pickup (Ledeta - Free)",
-            delivery_location="Ledeta Store"
+            delivery_location="Ledeta Store (In-Person Pickup)",
+            recipient_name=user.full_name,
+            phone="Store Pickup / In Person"
         )
         await callback.message.edit_text("✅ Selected: *Store Pickup (Ledeta - Free)*", parse_mode="Markdown")
         await show_payment_summary(callback.message, state)
     else:
-        await state.update_data(delivery_type="Yango Delivery")
-        await state.set_state(OrderFSM.waiting_for_location)
-        await callback.message.edit_text("✅ Selected: *Yango Delivery*", parse_mode="Markdown")
+        await state.update_data(delivery_type="Yango / Feres / RIDE Delivery")
+        await state.set_state(OrderFSM.waiting_for_recipient_name)
+        await callback.message.edit_text("✅ Selected: *Yango / Feres / RIDE Delivery*", parse_mode="Markdown")
         await callback.message.answer(
-            "📍 *Please provide your delivery address & contact phone number:*\n\n"
-            "_(e.g., Bole Medhanialem next to Edna Mall, Phone: 0911XXXXXX)_",
+            "👤 *STEP 1 OF 3: RECIPIENT NAME FOR DRIVER DISPATCH*\n"
+            "`[ 🟢 🟢 🟢 🟡 ] Driver Dispatch Information`\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "Who will be meeting the driver to receive the package?\n\n"
+            "👉 *Tap below to confirm recipient:*",
             parse_mode="Markdown",
-            reply_markup=get_cancel_keyboard()
+            reply_markup=get_recipient_name_keyboard(user.full_name)
         )
     await callback.answer()
 
-@router.message(OrderFSM.waiting_for_location)
-async def process_location(message: types.Message, state: FSMContext):
-    if not message.text or message.text == "❌ Cancel":
+@router.callback_query(OrderFSM.waiting_for_recipient_name, F.data.startswith("recip_name:"))
+async def callback_recipient_name(callback: types.CallbackQuery, state: FSMContext):
+    mode = callback.data.split(":")[1]
+    user = callback.from_user
+    if mode == "tg":
+        await state.update_data(recipient_name=user.full_name)
+        await callback.message.edit_text(f"✅ Recipient: *{user.full_name}*", parse_mode="Markdown")
+        await state.set_state(OrderFSM.waiting_for_phone)
+        await callback.message.answer(
+            "📱 *STEP 2 OF 3: CONTACT PHONE NUMBER*\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "The driver (Feres / Yango / RIDE) will call this number when arriving.\n\n"
+            "👉 *Tap '📱 Share Phone Number (1-Tap)'* below, or type your 10-digit number (e.g. `0911223344`):",
+            parse_mode="Markdown",
+            reply_markup=get_phone_request_keyboard()
+        )
+    else:
+        await callback.message.edit_text(
+            "✏️ *Please type the full name of the recipient:*\n\n_(e.g., Kebron Girma)_",
+            parse_mode="Markdown"
+        )
+    await callback.answer()
+
+@router.message(OrderFSM.waiting_for_recipient_name, F.text)
+async def process_custom_recipient_name(message: types.Message, state: FSMContext):
+    if message.text in ["❌ Cancel", "❌ Cancel Order"]:
+        await cancel_order(message, state)
         return
-    await state.update_data(delivery_location=message.text.strip())
+    name = message.text.strip()
+    await state.update_data(recipient_name=name)
+    await message.answer(f"✅ Recipient: *{name}*", parse_mode="Markdown")
+    await state.set_state(OrderFSM.waiting_for_phone)
+    await message.answer(
+        "📱 *STEP 2 OF 3: CONTACT PHONE NUMBER*\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "The driver (Feres / Yango / RIDE) will call this number when arriving.\n\n"
+        "👉 *Tap '📱 Share Phone Number (1-Tap)'* below, or type your 10-digit number (e.g. `0911223344`):",
+        parse_mode="Markdown",
+        reply_markup=get_phone_request_keyboard()
+    )
+
+@router.message(OrderFSM.waiting_for_phone, F.contact)
+async def process_phone_contact(message: types.Message, state: FSMContext):
+    phone = message.contact.phone_number
+    if not phone.startswith("+") and len(phone) == 10 and phone.startswith("0"):
+        phone = f"+251{phone[1:]}"
+    await state.update_data(phone=phone)
+    await message.answer(f"✅ Contact Phone: *{phone}*", parse_mode="Markdown")
+    await state.set_state(OrderFSM.waiting_for_location)
+    await message.answer(
+        "📍 *STEP 3 OF 3: EXACT LOCATION FOR DRIVER DISPATCH*\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "To ensure the driver (Feres / Yango / RIDE) navigates directly to your door without getting lost:\n\n"
+        "1️⃣ 🎯 *Recommended:* Tap **'📍 Send Exact GPS Pin'** below.\n"
+        "2️⃣ 🏙️ Or tap **'Choose Addis Ababa Sub-City / Area'** for 1-tap area selection.\n"
+        "3️⃣ ✏️ Or type your specific building / street name.",
+        parse_mode="Markdown",
+        reply_markup=get_location_dispatch_keyboard()
+    )
+
+@router.message(OrderFSM.waiting_for_phone, F.text)
+async def process_phone_text(message: types.Message, state: FSMContext):
+    if message.text in ["❌ Cancel", "❌ Cancel Order"]:
+        await cancel_order(message, state)
+        return
+    phone = message.text.strip()
+    await state.update_data(phone=phone)
+    await message.answer(f"✅ Contact Phone: *{phone}*", parse_mode="Markdown")
+    await state.set_state(OrderFSM.waiting_for_location)
+    await message.answer(
+        "📍 *STEP 3 OF 3: EXACT LOCATION FOR DRIVER DISPATCH*\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "To ensure the driver (Feres / Yango / RIDE) navigates directly to your door without getting lost:\n\n"
+        "1️⃣ 🎯 *Recommended:* Tap **'📍 Send Exact GPS Pin'** below.\n"
+        "2️⃣ 🏙️ Or tap **'Choose Addis Ababa Sub-City / Area'** for 1-tap area selection.\n"
+        "3️⃣ ✏️ Or type your specific building / street name.",
+        parse_mode="Markdown",
+        reply_markup=get_location_dispatch_keyboard()
+    )
+
+@router.message(OrderFSM.waiting_for_location, F.location)
+async def process_location_gps(message: types.Message, state: FSMContext):
+    lat = message.location.latitude
+    lon = message.location.longitude
+    maps_url = f"https://www.google.com/maps?q={lat},{lon}"
+    loc_text = f"GPS Pin ({lat:.4f}, {lon:.4f})"
+    await state.update_data(delivery_location=loc_text, delivery_maps_url=maps_url)
+    await message.answer(
+        f"🎯 *GPS Pin Received!*\n[🗺️ Open in Google Maps]({maps_url})",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await show_payment_summary(message, state)
+
+@router.message(OrderFSM.waiting_for_location, F.text == "🏙️ Choose Addis Ababa Sub-City / Area")
+async def process_location_subcity_prompt(message: types.Message, state: FSMContext):
+    await message.answer(
+        "🏙️ *Select your Addis Ababa sub-city / area:*",
+        parse_mode="Markdown",
+        reply_markup=get_subcities_keyboard()
+    )
+
+@router.callback_query(OrderFSM.waiting_for_location, F.data.startswith("subcity:"))
+async def process_subcity_choice(callback: types.CallbackQuery, state: FSMContext):
+    subcity = callback.data.split(":", 1)[1]
+    if subcity == "back":
+        await callback.message.edit_text("📍 Please tap an option below to set your delivery location:")
+        await callback.answer()
+        return
+
+    loc_text = f"{subcity}, Addis Ababa"
+    await state.update_data(delivery_location=loc_text)
+    await callback.message.edit_text(f"✅ Location: *{loc_text}*", parse_mode="Markdown")
+    await callback.message.answer("Proceeding to payment summary...", reply_markup=ReplyKeyboardRemove())
+    await show_payment_summary(callback.message, state)
+    await callback.answer()
+
+@router.message(OrderFSM.waiting_for_location, F.text == "✏️ Type Landmark / Street Name")
+async def process_location_type_prompt(message: types.Message, state: FSMContext):
+    await message.answer(
+        "✏️ *Please type your street, building, or landmark:*\n\n_(e.g., Bole Medhanialem next to Edna Mall, Morning Star Bldg 3rd Fl)_",
+        parse_mode="Markdown"
+    )
+
+@router.message(OrderFSM.waiting_for_location, F.text)
+async def process_location_text(message: types.Message, state: FSMContext):
+    if message.text in ["❌ Cancel", "❌ Cancel Order"]:
+        await cancel_order(message, state)
+        return
+    if message.text in ["🏙️ Choose Addis Ababa Sub-City / Area", "✏️ Type Landmark / Street Name"]:
+        return
+
+    loc_text = message.text.strip()
+    await state.update_data(delivery_location=loc_text)
+    await message.answer(f"✅ Location: *{loc_text}*", parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
     await show_payment_summary(message, state)
 
 # -------------------------------------------------------------
@@ -637,6 +841,12 @@ async def show_payment_summary(message: types.Message, state: FSMContext):
     if rush_fee > 0:
         fee_lines += f"• ⚡ Urgent Rush Fee (2-day): `+{rush_fee} ETB`\n"
 
+    recip_str = data.get('recipient_name', 'Customer')
+    phone_str = data.get('phone', 'N/A')
+    loc_display = data.get('delivery_location', 'Ledeta Store')
+    if data.get('delivery_maps_url'):
+        loc_display += f" — [🗺️ GPS Link]({data.get('delivery_maps_url')})"
+
     payment_prompt = (
         "📱 *SELORA ORDER SUMMARY & 50% DEPOSIT*\n"
         "`[ 🟢 🟢 🟢 🟡 ] Final Step: Advance Pre-Payment`\n"
@@ -644,7 +854,9 @@ async def show_payment_summary(message: types.Message, state: FSMContext):
         f"🏷 *Order:* {data.get('items')}\n"
         f"🎨 *Design:* {data.get('design_note', 'Custom artwork attached')}\n"
         f"🗓 *Needed By:* {data.get('deadline')}\n"
-        f"🚚 *Delivery:* {data.get('delivery_type')} ({data.get('delivery_location')})\n"
+        f"👤 *Recipient:* {recip_str}\n"
+        f"📞 *Contact Phone:* `{phone_str}`\n"
+        f"🚚 *Delivery:* {data.get('delivery_type')} ({loc_display})\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "💰 *Cost Breakdown:*\n"
         f"• Items Subtotal: `{subtotal} ETB`\n"
@@ -671,7 +883,7 @@ async def show_payment_summary(message: types.Message, state: FSMContext):
 
 @router.message(OrderFSM.waiting_for_payment_receipt)
 async def process_payment_receipt(message: types.Message, state: FSMContext):
-    if message.text == "❌ Cancel":
+    if message.text in ["❌ Cancel", "❌ Cancel Order"]:
         await cancel_order(message, state)
         return
 
@@ -703,6 +915,9 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
 
     # Save to cloud PostgreSQL or SQLite database
     notes_combined = f"{data.get('design_note', '')} | Deposit: {data.get('deposit_amount', 0)} ETB (Total: {data.get('total_price', 0)} ETB)"
+    if data.get('delivery_maps_url'):
+        notes_combined += f" | GPS: {data.get('delivery_maps_url')}"
+
     order_code = database.save_order(
         user_id=user.id,
         full_name=user.full_name,
@@ -716,10 +931,19 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         payment_screenshot_file_id=screenshot_file_id,
         payment_screenshot_filename=temp_filename,
         payment_status="pending_review",
-        status="pending"
+        status="pending",
+        phone=data.get('phone', ''),
+        recipient_name=data.get('recipient_name', user.full_name)
     )
 
     # 1. Customer confirmation
+    loc_disp = data.get('delivery_location', '')
+    if data.get('delivery_maps_url'):
+        loc_disp += f" — [🗺️ GPS Pin]({data.get('delivery_maps_url')})"
+
+    phone_disp = data.get('phone', 'N/A')
+    recip_disp = data.get('recipient_name', user.full_name)
+
     customer_msg = (
         "🎉 *Thank you! Your order & deposit receipt have been received!* 💛\n\n"
         f"🔖 *Order Code:* `{order_code}`\n\n"
@@ -728,7 +952,9 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         f"• *Total Price:* `{data.get('total_price', 0)} ETB`\n"
         f"• *50% Deposit Submitted:* `{data.get('deposit_amount', 0)} ETB`\n"
         f"• *Deadline:* {data.get('deadline')}\n"
-        f"• *Delivery:* {data.get('delivery_type')} ({data.get('delivery_location')})\n\n"
+        f"• *Recipient:* {recip_disp}\n"
+        f"• *Contact Phone:* `{phone_disp}`\n"
+        f"• *Delivery:* {data.get('delivery_type')} ({loc_disp})\n\n"
         "🔍 *Status:* `Pending Review` (Verifying deposit receipt).\n"
         "Once approved by the owner, we will notify you immediately and begin production! ✨"
     )
@@ -743,17 +969,25 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
             rush_badge = "\n⚡ *PRIORITY:* URGENT 2-DAY RUSH (+200 ETB)" if data.get("rush_fee", 0) > 0 else ""
             design_badge = "\n🎨 *INCLUDES SELORA DESIGN SERVICE (+100 ETB)*" if data.get("design_fee", 0) > 0 else ""
 
+            phone_val = data.get('phone', 'N/A')
+            recip_val = data.get('recipient_name', user.full_name)
+            maps_val = data.get('delivery_maps_url')
+            nav_line = f"\n🗺️ *Driver Navigation Link (RIDE / Yango / Feres):*\n[📍 Open GPS Coordinates in Google Maps]({maps_val})" if maps_val else ""
+
             admin_text = (
                 f"🚨 *NEW ORDER & PAYMENT SUBMITTED! — {order_code}*{rush_badge}{design_badge}\n"
                 f"⏰ *Time:* {timestamp}\n"
                 f"👤 *Customer:* [{user.full_name}](tg://user?id={user.id}) ({username_str})\n"
                 f"🆔 *Telegram ID:* `{user.id}`\n"
                 "━━━━━━━━━━━━━━━━━━━━\n"
+                f"📦 *Recipient:* *{recip_val}*\n"
+                f"📞 *Driver Call Phone:* [{phone_val}](tel:{phone_val})\n"
+                f"🚚 *Method:* {data.get('delivery_type')}\n"
+                f"📍 *Location:* {data.get('delivery_location')}{nav_line}\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
                 f"🏷 *Items:* {data.get('items')}\n"
                 f"💰 *Total:* `{data.get('total_price', 0)} ETB` | *50% Deposit:* `{data.get('deposit_amount', 0)} ETB`\n"
                 f"🗓 *Needed By:* {data.get('deadline')}\n"
-                f"🚚 *Method:* {data.get('delivery_type')}\n"
-                f"📍 *Location:* {data.get('delivery_location')}\n"
                 f"📝 *Details:* {notes_combined}\n"
                 "━━━━━━━━━━━━━━━━━━━━\n"
                 "💰 *Payment Receipt Attached Below.* Please verify and tap an action:"

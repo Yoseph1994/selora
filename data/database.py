@@ -75,6 +75,8 @@ def init_db():
                 delivery_type TEXT,
                 delivery_location TEXT,
                 notes TEXT,
+                phone TEXT,
+                recipient_name TEXT,
                 has_attachment INTEGER DEFAULT 0,
                 payment_screenshot_file_id TEXT,
                 payment_screenshot_filename TEXT,
@@ -91,6 +93,8 @@ def init_db():
                 last_seen TEXT,
                 total_orders INTEGER DEFAULT 0
             );
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone TEXT;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS recipient_name TEXT;
         """)
         conn.commit()
     else:
@@ -135,7 +139,9 @@ def init_db():
             "payment_screenshot_file_id": "TEXT",
             "payment_screenshot_filename": "TEXT",
             "payment_status": "TEXT DEFAULT 'pending_review'",
-            "updated_at": "TEXT"
+            "updated_at": "TEXT",
+            "phone": "TEXT",
+            "recipient_name": "TEXT"
         }
 
         for col, col_type in new_cols.items():
@@ -162,7 +168,9 @@ def save_order(
     payment_screenshot_file_id: Optional[str] = None,
     payment_screenshot_filename: Optional[str] = None,
     payment_status: str = "pending_review",
-    status: str = "pending"
+    status: str = "pending",
+    phone: Optional[str] = None,
+    recipient_name: Optional[str] = None
 ) -> str:
     """Save order to database and return generated order code (e.g. SP-1001)."""
     conn, is_pg = get_connection()
@@ -174,14 +182,16 @@ def save_order(
             user_id, full_name, username, items, deadline,
             delivery_type, delivery_location, notes, has_attachment,
             payment_screenshot_file_id, payment_screenshot_filename,
-            payment_status, status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            payment_status, status, created_at, updated_at,
+            phone, recipient_name
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     params = (
         user_id, full_name, username or "", items, deadline,
         delivery_type, delivery_location, notes, 1 if has_attachment else 0,
         payment_screenshot_file_id, payment_screenshot_filename,
-        payment_status, status, created_at, created_at
+        payment_status, status, created_at, created_at,
+        phone or "", recipient_name or full_name
     )
 
     if is_pg:
