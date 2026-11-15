@@ -861,263 +861,51 @@
       }
     };
 
-    // ─── PRODUCTS DATABASE ─────────────────────────────────────────
-    const PRODUCTS = [
-      {
-        id: "stickers",
-        name: "Stickers",
-        nameAm: "ተለጣፊዎች (ስቲከር)",
-        category: "stickers",
-        price: 20,
-        unit: "piece",
-        unitAm: "ፍሬ",
-        minOrder: 15,
-        description: "High quality custom printed stickers with vibrant colors and durable finish.",
-        descriptionAm: "ከፍተኛ ጥራት ያላቸው ተለጣፊዎች፣ ደማቅ ቀለማት እና የውሃ መቋቋም የሚችሉ።",
-        imageUrl: "/product-images/stickers.png"
-      },
-      {
-        id: "bookmarks",
-        name: "Bookmarks",
-        nameAm: "የመጽሐፍ ማርከሮች",
-        category: "stationery",
-        price: 50,
-        unit: "piece",
-        unitAm: "ፍሬ",
-        minOrder: 2,
-        description: "Beautiful custom printed bookmarks for students and book lovers.",
-        descriptionAm: "ለተማሪዎች እና ለመጽሐፍ ወዳጆች የሚያማምሩ ብጁ ማርከሮች።",
-        imageUrl: "/product-images/bookmarks.png"
-      },
-      {
-        id: "business_cards",
-        name: "Business Cards",
-        nameAm: "የቢዝነስ ካርድ",
-        category: "stationery",
-        price: 10,
-        unit: "card",
-        unitAm: "ካርድ",
-        minOrder: 50,
-        description: "Professional high-resolution business cards for your brand and networking.",
-        descriptionAm: "ፕሮፌሽናል ከፍተኛ ጥራት ያላቸው የቢዝነስ ካርዶች ለድርጅትዎ።",
-        imageUrl: "/product-images/business_cards.png"
-      },
-      {
-        id: "polaroid",
-        name: "Polaroid Prints",
-        nameAm: "ፖላሮይድ ፎቶ ፕሪንት",
-        category: "photos",
-        price: 35,
-        unit: "piece",
-        unitAm: "ፍሬ",
-        minOrder: 10,
-        description: "Classic vintage-style polaroid photo prints of your favorite memories.",
-        descriptionAm: "የግል ፎቶዎችዎን በሚያምር የፖላሮይድ ቅርጽ በማተም ትዝታዎችዎን ያስቀምጡ።",
-        imageUrl: "/product-images/polaroid.png"
-      },
-      {
-        id: "mini_notebook",
-        name: "Mini Pocket Notebook",
-        nameAm: "ሚኒ ኪስ ደብተር",
-        category: "books",
-        price: 200,
-        unit: "each",
-        unitAm: "ደብተር",
-        minOrder: 1,
-        description: "Compact portable pocket-sized notebook for daily notes and sketches.",
-        descriptionAm: "የኪስ ማስታወሻ ደብተር ለፈጣን ማስታወሻዎች እና ስዕሎች።",
-        imageUrl: "/product-images/mini_notebook.png"
-      },
-      {
-        id: "notebook",
-        name: "Custom Notebook",
-        nameAm: "መደበኛ ብጁ ደብተር",
-        category: "books",
-        price: 500,
-        unit: "each",
-        unitAm: "ደብተር",
-        minOrder: 1,
-        description: "Standard aesthetic custom notebook with high quality binding.",
-        descriptionAm: "በሚፈልጉት የሽፋን ዲዛይን የተዘጋጀ ደረጃውን የጠበቀ ደብተር።",
-        imageUrl: "/product-images/notebook.png"
-      },
-      {
-        id: "minibook_white",
-        name: "Mini Photo Book (White)",
-        nameAm: "ሚኒ ፎቶ አልበም (ነጭ ሽፋን)",
-        category: "books",
-        price: 600,
-        unit: "each",
-        unitAm: "አልበም",
-        minOrder: 1,
-        description: "Custom bound pocket minibook with clean white cover.",
-        descriptionAm: "የግል ፎቶ አልበም በሚያምር ነጭ ሽፋን እና ጠንካራ ማሰሪያ።",
-        imageUrl: "/product-images/minibook.png"
-      },
-      {
-        id: "minibook_black",
-        name: "Mini Photo Book (Black)",
-        nameAm: "ሚኒ ፎቶ አልበም (ጥቁር ሽፋን)",
-        category: "books",
-        price: 700,
-        unit: "each",
-        unitAm: "አልበም",
-        minOrder: 1,
-        description: "Sleek custom bound pocket minibook with premium black cover.",
-        descriptionAm: "የግል ፎቶ አልበም በሚያምር ፕሪሚየም ጥቁር ሽፋን እና ጠንካራ ማሰሪያ።",
-        imageUrl: "/product-images/minibook.png"
-      },
-      {
-        id: "book_medium",
-        name: "Medium Photo Book",
-        nameAm: "መካከለኛ ፎቶ አልበም",
-        category: "books",
-        price: 800,
-        unit: "each",
-        unitAm: "አልበም",
-        minOrder: 1,
-        description: "Medium custom photo book with high resolution photo binding.",
-        descriptionAm: "መካከለኛ መጠን ያለው የፎቶ አልበም ለግል ትዝታዎችዎ።",
-        imageUrl: "/product-images/minibook.png"
-      },
-      {
-        id: "book_a5",
-        name: "A5 Photo Book",
-        nameAm: "A5 ፕሪሚየም ፎቶ አልበም",
-        category: "books",
-        price: 1000,
-        unit: "each",
-        unitAm: "አልበም",
-        minOrder: 1,
-        description: "A5 custom bound luxury photo book for milestones and collections.",
-        descriptionAm: "A5 ፕሪሚየም የፎቶ አልበም ለልዩ ዝግጅቶች እና ስጦታዎች።",
-        imageUrl: "/product-images/notebook.png"
-      },
-      {
-        id: "book_a4",
-        name: "Luxury A4 Photo Book",
-        nameAm: "የቅንጦት A4 ፎቶ አልበም",
-        category: "books",
-        price: 1500,
-        unit: "each",
-        unitAm: "አልበም",
-        minOrder: 1,
-        description: "Large A4 luxury custom photo book for weddings and corporate portfolios.",
-        descriptionAm: "ትልቅ A4 የቅንጦት ፎቶ አልበም ለሰርግ እና ለትዝታዎች።",
-        imageUrl: "/product-images/notebook.png"
-      },
-      {
-        id: "mug",
-        name: "Custom Ceramic Mug",
-        nameAm: "ብጁ የሴራሚክ ኩባያ",
-        category: "merch",
-        price: 1500,
-        unit: "each",
-        unitAm: "ኩባያ",
-        minOrder: 1,
-        description: "Custom printed ceramic mug, dishwasher and microwave safe.",
-        descriptionAm: "በፎቶዎ ወይም በፈለጉት ጽሑፍ የታተመ የሚያምር የሴራሚክ ኩባያ።",
-        imageUrl: "/product-images/mug.png"
-      },
-      {
-        id: "puzzle",
-        name: "Custom Photo Puzzle",
-        nameAm: "የፎቶ እንቆቅልሽ (ፓዝል)",
-        category: "merch",
-        price: 1500,
-        unit: "each",
-        unitAm: "ፓዝል",
-        minOrder: 1,
-        description: "Personalized custom photo jigsaw puzzle made from your photograph.",
-        descriptionAm: "ከሚወዱት ፎቶ የተዘጋጀ አዝናኝ እና ውብ የፎቶ እንቆቅልሽ።",
-        imageUrl: "/product-images/puzzle.png"
-      },
-      {
-        id: "sticker_poster_a5",
-        name: "Sticker Poster A5",
-        nameAm: "ተለጣፊ ፖስተር A5",
-        category: "stickers",
-        price: 40,
-        unit: "piece",
-        unitAm: "ፍሬ",
-        minOrder: 10,
-        description: "Peel and stick smooth surface wall poster in A5 size.",
-        descriptionAm: "ለግድግዳ እና ለተለያዩ ቦታዎች የሚሆን ተለጣፊ ፖስተር በ A5 መጠን።",
-        imageUrl: "/product-images/sticker_poster_a5.png"
-      },
-      {
-        id: "sticker_poster_a4",
-        name: "Sticker Poster A4",
-        nameAm: "ተለጣፊ ፖስተር A4",
-        category: "stickers",
-        price: 70,
-        unit: "piece",
-        unitAm: "ፍሬ",
-        minOrder: 10,
-        description: "Peel and stick smooth surface wall poster in A4 size.",
-        descriptionAm: "ለግድግዳ እና ለተለያዩ ቦታዎች የሚሆን ተለጣፊ ፖስተር በ A4 መጠን።",
-        imageUrl: "/product-images/sticker_poster_a4.png"
-      }
-    ];
+    // ─── LIVE DASHBOARD SYNC (JINJA2 + REALTIME API) ───────────────
+    const RAW_SERVER_PRODUCTS = {{ products | default([]) | tojson }};
+    const RAW_SERVER_DESIGNS = {{ designs | default([]) | tojson }};
 
-    const DESIGNS = [
-      {
-        id: "des_stickers_1",
-        productId: "stickers",
-        title: "Studio Ghibli Aesthetic Pack",
-        category: "Anime & Manga",
-        imageUrl: "/designs-images/des_stickers_1.png"
-      },
-      {
-        id: "des_stickers_2",
-        productId: "stickers",
-        title: "Vintage Coffee & Cozy Books",
-        category: "Aesthetic",
-        imageUrl: "/designs-images/des_stickers_2.png"
-      },
-      {
-        id: "des_stickers_3",
-        productId: "stickers",
-        title: "Daily Wisdom & Quotes",
-        category: "Typography",
-        imageUrl: "/designs-images/des_stickers_3.png"
-      },
-      {
-        id: "des_bookmarks_1",
-        productId: "bookmarks",
-        title: "Dark Academia Library & Stars",
-        category: "Dark Academia",
-        imageUrl: "/designs-images/des_bookmarks_1.png"
-      },
-      {
-        id: "des_bookmarks_2",
-        productId: "bookmarks",
-        title: "Pressed Wildflowers Botanical",
-        category: "Floral",
-        imageUrl: "/designs-images/des_bookmarks_2.png"
-      },
-      {
-        id: "des_cards_1",
-        productId: "business_cards",
-        title: "Executive Luxury Matte",
-        category: "Corporate",
-        imageUrl: "/designs-images/des_cards_1.png"
-      },
-      {
-        id: "des_cards_2",
-        productId: "business_cards",
-        title: "Modern Minimalist Gold Foil",
-        category: "Creative",
-        imageUrl: "/designs-images/des_cards_2.png"
-      },
-      {
-        id: "des_mug_1",
-        productId: "mug",
-        title: "Morning Roast Graphic Print",
-        category: "Lifestyle",
-        imageUrl: "/designs-images/des_mug_1.png"
-      }
-    ];
+    function normalizeProducts(rawList) {
+      if (!rawList || !rawList.length) return [];
+      return rawList.map(p => {
+        let cat = "stickers";
+        const idLower = (p.id || '').toLowerCase();
+        if (idLower.includes("card") || idLower.includes("bookmark")) cat = "stationery";
+        else if (idLower.includes("book") || idLower.includes("notebook")) cat = "books";
+        else if (idLower.includes("mug") || idLower.includes("puzzle")) cat = "merch";
+        else if (idLower.includes("poster")) cat = "stickers";
+
+        let img = p.image_url || p.imageUrl || `/product-images/${p.id}.png`;
+
+        return {
+          id: p.id,
+          name: (p.name || '').replace(/^[^\w\s]+/, '').trim(),
+          nameAm: p.nameAm || p.name,
+          category: cat,
+          price: p.price || 0,
+          unit: p.unit ? p.unit.replace(/^per\s+/, '') : "piece",
+          unitAm: p.unitAm || (p.unit ? p.unit.replace(/^per\s+/, '') : "ፍሬ"),
+          minOrder: p.min_order || p.minOrder || 1,
+          description: p.description || "High quality custom print from Selora Prints.",
+          descriptionAm: p.descriptionAm || p.description,
+          imageUrl: img
+        };
+      });
+    }
+
+    function normalizeDesigns(rawList) {
+      if (!rawList || !rawList.length) return [];
+      return rawList.map(d => ({
+        id: d.id,
+        productId: d.product_id || d.productId,
+        title: d.title || d.name,
+        category: d.category || d.subproduct || "Curated",
+        imageUrl: d.image_url || d.imageUrl || `/designs-images/${d.id}.png`
+      }));
+    }
+
+    let PRODUCTS = normalizeProducts(RAW_SERVER_PRODUCTS);
+    let DESIGNS = normalizeDesigns(RAW_SERVER_DESIGNS);
 
     // ─── INITIALIZATION ────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', () => {
@@ -1146,8 +934,30 @@
       dateInput.min = minDateStr;
       dateInput.value = minDateStr;
 
-      renderProducts(PRODUCTS);
-      renderDesigns(DESIGNS);
+      // Render with server products immediately
+      if (PRODUCTS && PRODUCTS.length) {
+        renderProducts(PRODUCTS);
+      }
+      if (DESIGNS && DESIGNS.length) {
+        renderDesigns(DESIGNS);
+      }
+
+      // Re-fetch in background to ensure any dashboard uploads made seconds ago are active
+      fetch('/api/webapp/config')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.ok) {
+            if (data.products && data.products.length) {
+              PRODUCTS = normalizeProducts(data.products);
+              renderProducts(PRODUCTS);
+            }
+            if (data.designs && data.designs.length) {
+              DESIGNS = normalizeDesigns(data.designs);
+              renderDesigns(DESIGNS);
+            }
+          }
+        })
+        .catch(err => console.log('Serving server-rendered catalog.'));
     });
 
     // ─── HAPTIC FEEDBACK ───────────────────────────────────────────
