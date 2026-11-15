@@ -171,7 +171,7 @@
                   {% endif %}
                 </td>
                 <td class="py-4 px-4 max-w-xs">
-                  <p class="font-medium text-slate-800 line-clamp-2">{{ o.items }}</p>
+                  <p class="font-medium text-slate-800 line-clamp-2">{{ o['items'] }}</p>
                   {% if o.notes and o.notes != 'None' %}
                   <p class="text-xs text-slate-400 truncate mt-0.5"><i class="fa-regular fa-note-sticky mr-1"></i>{{ o.notes }}</p>
                   {% endif %}
@@ -226,7 +226,7 @@
                   <a href="/orders/{{ o.order_code }}/receipt" target="_blank" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs transition shadow-sm inline-block" title="Customer Invoice / Receipt">
                     <i class="fa-solid fa-receipt"></i>
                   </a>
-                  <button onclick="printSlip('{{ o.order_code }}', '{{ o.full_name }}', '{{ o.items }}', '{{ o.deadline }}', '{{ o.delivery_type }}', '{{ o.delivery_location }}', '{{ o.notes }}')" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs transition shadow-sm" title="Print Production Slip">
+                  <button onclick="printSlip('{{ o.order_code }}', '{{ o.full_name }}', '{{ o['items'] }}', '{{ o.deadline }}', '{{ o.delivery_type }}', '{{ o.delivery_location }}', '{{ o.notes }}')" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs transition shadow-sm" title="Print Production Slip">
                     <i class="fa-solid fa-print"></i>
                   </button>
                   {% if o.payment_status == 'pending_review' %}

@@ -35,6 +35,7 @@ PAYMENT_DEPOSIT_PERCENT = int(os.getenv("PAYMENT_DEPOSIT_PERCENT", "50"))
 # Dynamic Web Dashboard & Authentication
 DASHBOARD_HOST = os.getenv("DASHBOARD_HOST", "0.0.0.0").strip()
 DASHBOARD_PORT = int(os.getenv("PORT", os.getenv("DASHBOARD_PORT", "8000")))
+DASHBOARD_PUBLIC_URL = os.getenv("DASHBOARD_PUBLIC_URL", "https://selora-ck7t.onrender.com").strip()
 DASHBOARD_USERNAME = os.getenv("DASHBOARD_USERNAME", "admin").strip()
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "selora2026").strip()
 SECRET_KEY = os.getenv("SECRET_KEY", "selora_prints_secret_key_2026_xyz").strip()
