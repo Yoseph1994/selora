@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Depends
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Depends, Response
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -109,7 +109,8 @@ AUTH_COOKIE_NAME = "selora_auth_session"
 
 def get_auth_token() -> str:
     """Generate signed HMAC token for the dashboard session."""
-    data = f"{config.DASHBOARD_USERNAME}:{config.DASHBOARD_PASSWORD}".encode("utf-8")
+    user, pwd = database.get_admin_credentials()
+    data = f"{user}:{pwd}".encode("utf-8")
     return hmac.new(config.SECRET_KEY.encode("utf-8"), data, hashlib.sha256).hexdigest()
 
 def is_authenticated(request: Request) -> bool:
@@ -123,6 +124,11 @@ def require_api_auth(request: Request):
     """Dependency to protect all API endpoints."""
     if not is_authenticated(request):
         raise HTTPException(status_code=401, detail="Authentication required. Please log in.")
+
+class CredentialsUpdateRequest(BaseModel):
+    current_password: str
+    new_username: str
+    new_password: str
 
 class PriceUpdateRequest(BaseModel):
     price: float
@@ -273,7 +279,8 @@ async def login_action(
     username: str = Form(""),
     password: str = Form("")
 ):
-    if username == config.DASHBOARD_USERNAME and password == config.DASHBOARD_PASSWORD:
+    admin_user, admin_pwd = database.get_admin_credentials()
+    if username == admin_user and password == admin_pwd:
         response = RedirectResponse(url="/", status_code=303)
         # Set 30-day secure cookie
         response.set_cookie(
@@ -328,6 +335,7 @@ async def dashboard_index(request: Request):
 
     portfolio = database.get_portfolio_items()
     analytics = database.get_sales_analytics()
+    admin_username, _ = database.get_admin_credentials()
 
     return templates.TemplateResponse(
         request=request,
@@ -340,7 +348,8 @@ async def dashboard_index(request: Request):
             "design_categories": design_categories,
             "portfolio": portfolio,
             "analytics": analytics,
-            "store_name": config.STORE_NAME
+            "store_name": config.STORE_NAME,
+            "admin_username": admin_username
         }
     )
 
@@ -357,6 +366,37 @@ async def get_orders_api():
 async def get_analytics_api():
     """Returns sales analytics data for charts."""
     return database.get_sales_analytics()
+
+@app.post("/api/settings/credentials", dependencies=[Depends(require_api_auth)])
+async def update_credentials_api(payload: CredentialsUpdateRequest, response: Response):
+    """Allows admin to update username and password from the dashboard."""
+    admin_user, admin_pwd = database.get_admin_credentials()
+    if payload.current_password != admin_pwd:
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    new_user = payload.new_username.strip()
+    new_pass = payload.new_password.strip()
+
+    if not new_user:
+        raise HTTPException(status_code=400, detail="Username cannot be empty.")
+    if len(new_pass) < 4:
+        raise HTTPException(status_code=400, detail="New password must be at least 4 characters long.")
+
+    database.update_admin_credentials(new_user, new_pass)
+
+    # Set new secure auth session cookie
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=get_auth_token(),
+        max_age=86400 * 30,
+        httponly=True,
+        samesite="lax"
+    )
+    return {
+        "success": True,
+        "message": "Username and password updated successfully!",
+        "username": new_user
+    }
 
 @app.post("/api/orders/{order_code}/approve", dependencies=[Depends(require_api_auth)])
 async def approve_order(order_code: str):

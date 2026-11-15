@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Selora Prints &bull; Enterprise Operations Command Center</title>
+  <title>Selora Prints - Operations Dashboard</title>
 
-  <!-- Typography: Plus Jakarta Sans & JetBrains Mono -->
+  <!-- Typography: Inter font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS & Font Awesome -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -22,7 +22,7 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+            sans: ['"Inter"', 'system-ui', '-apple-system', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
@@ -30,31 +30,11 @@
               50: '#fffbeb',
               100: '#fef3c7',
               200: '#fde68a',
-              300: '#fcd34d',
               400: '#fbbf24',
               500: '#f59e0b',
               600: '#d97706',
               700: '#b45309',
-              800: '#92400e',
-              900: '#78350f',
-              950: '#451a03',
-            },
-            surface: {
-              50: '#F8FAFC',
-              100: '#F1F5F9',
-              200: '#E2E8F0',
-              300: '#CBD5E1',
-              800: '#1E293B',
-              900: '#0F172A',
-              950: '#0B0F19',
             }
-          },
-          boxShadow: {
-            'glow-amber': '0 0 25px -5px rgba(245, 158, 11, 0.35)',
-            'glow-emerald': '0 0 25px -5px rgba(16, 185, 129, 0.35)',
-            'subtle': '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',
-            'card': '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
-            'modal': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           }
         }
       }
@@ -62,1308 +42,1088 @@
   </script>
 
   <style>
-    /* Custom scrollbars */
+    /* Clean custom scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-    /* Smooth transitions */
-    * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-
-    /* Print styles */
     @media print {
       body * { visibility: hidden; }
       #printable-slip, #printable-slip * { visibility: visible; }
-      #printable-slip { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; }
+      #printable-slip { position: absolute; left: 0; top: 0; width: 100%; border: none; }
     }
   </style>
 </head>
-<body class="bg-surface-50 text-slate-800 font-sans antialiased h-full flex flex-col overflow-hidden">
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col antialiased">
 
   <!-- ============================================================== -->
-  <!-- TOP GLOBAL COMMAND BAR                                        -->
+  <!-- CLEAN TOP NAVIGATION BAR                                       -->
   <!-- ============================================================== -->
-  <header class="bg-white border-b border-slate-200/80 h-16 flex-shrink-0 z-30 px-4 sm:px-6 flex items-center justify-between shadow-xs">
-    <!-- Brand & Workspace -->
-    <div class="flex items-center space-x-3 sm:space-x-4">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-500 to-amber-300 text-white flex items-center justify-center font-extrabold text-xl shadow-glow-amber border border-amber-300/40">
-        S
-      </div>
-      <div>
-        <div class="flex items-center space-x-2">
-          <h1 class="font-bold text-base text-slate-900 tracking-tight leading-none">{{ store_name }}</h1>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60 uppercase tracking-wider">
-            Enterprise
-          </span>
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+
+      <!-- Left: Logo & Store Brand -->
+      <div class="flex items-center space-x-3 flex-shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-brand-500 text-white flex items-center justify-center font-bold text-lg shadow-xs">
+          S
         </div>
-        <p class="text-[11px] text-slate-400 font-medium mt-0.5">Management & Order Fulfillment Console</p>
+        <div>
+          <h1 class="font-bold text-base text-slate-900 leading-tight">{{ store_name }}</h1>
+          <p class="text-xs text-slate-500">Order Management</p>
+        </div>
+      </div>
+
+      <!-- Center: Desktop Navigation Tabs -->
+      <nav class="hidden md:flex items-center space-x-1 border-slate-200">
+        <button onclick="switchTab('orders')" id="tab-orders-btn" class="nav-tab px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 text-white transition">
+          Orders ({{ orders|length }})
+        </button>
+        <button onclick="switchTab('sales')" id="tab-sales-btn" class="nav-tab px-3.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          Sales & Analytics
+        </button>
+        <button onclick="switchTab('products')" id="tab-products-btn" class="nav-tab px-3.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          Products & Prices
+        </button>
+        <button onclick="switchTab('designs')" id="tab-designs-btn" class="nav-tab px-3.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          Designs
+        </button>
+        <button onclick="switchTab('portfolio')" id="tab-portfolio-btn" class="nav-tab px-3.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          Showcase
+        </button>
+      </nav>
+
+      <!-- Right: Action Controls -->
+      <div class="flex items-center space-x-2 flex-shrink-0">
+        <!-- Quick Refresh -->
+        <button onclick="refreshData()" class="p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition flex items-center space-x-1.5" title="Refresh Live Data">
+          <i id="refresh-spinner" class="fa-solid fa-arrows-rotate text-xs"></i>
+          <span class="hidden sm:inline">Refresh</span>
+        </button>
+
+        <!-- Export CSV -->
+        <a href="/api/export-csv" class="hidden sm:flex px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium items-center space-x-1.5 transition" title="Export Orders to CSV">
+          <i class="fa-solid fa-file-csv text-slate-500"></i>
+          <span>Export CSV</span>
+        </a>
+
+        <!-- Settings: Change Username & Password -->
+        <button onclick="openSettingsModal()" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium transition flex items-center space-x-1.5" title="Account Settings">
+          <i class="fa-solid fa-gear text-slate-500"></i>
+          <span class="hidden sm:inline">Settings</span>
+        </button>
+
+        <!-- Logout -->
+        <a href="/logout" class="p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 hover:border-rose-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs font-medium transition flex items-center space-x-1" title="Sign Out">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span class="hidden sm:inline">Logout</span>
+        </a>
       </div>
     </div>
 
-    <!-- Center Quick Search Bar (Global ⌘K) -->
-    <div class="hidden md:flex items-center flex-1 max-w-md mx-6">
-      <div class="relative w-full">
-        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-        <input type="text" id="global-search-input" oninput="handleGlobalSearch(this.value)" placeholder="Quick search order code, customer, phone, item..." class="w-full pl-9 pr-12 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
-        <kbd class="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-slate-400 bg-slate-200/60 border border-slate-300/50">⌘K</kbd>
-      </div>
-    </div>
-
-    <!-- Top Right Status & Actions -->
-    <div class="flex items-center space-x-2.5">
-      <!-- Live Sync Indicator -->
-      <div class="hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
-        <span class="relative flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-        </span>
-        <span class="text-[11px]">Live Sync Active</span>
-      </div>
-
-      <!-- Refresh Button -->
-      <button onclick="refreshData()" class="p-2 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-semibold transition flex items-center space-x-1.5" title="Refresh Live Data">
-        <i id="refresh-spinner" class="fa-solid fa-arrows-rotate text-slate-500 text-xs"></i>
-        <span class="hidden sm:inline">Refresh</span>
+    <!-- Mobile Navigation Bar (Scrollable on small devices) -->
+    <div class="md:hidden flex items-center space-x-1 px-4 pb-2.5 overflow-x-auto border-t border-slate-100 pt-2">
+      <button onclick="switchTab('orders')" id="tab-orders-mobile" class="nav-tab-mobile px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white whitespace-nowrap">
+        Orders ({{ orders|length }})
       </button>
-
-      <!-- Export CSV -->
-      <a href="/api/export-csv" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition shadow-xs flex items-center space-x-1.5" title="Export All Orders to Excel CSV">
-        <i class="fa-solid fa-file-excel text-emerald-400"></i>
-        <span class="hidden sm:inline">Export CSV</span>
-      </a>
-
-      <!-- Logout -->
-      <a href="/logout" class="p-2 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200 hover:border-rose-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs font-medium transition flex items-center space-x-1" title="Sign Out">
-        <i class="fa-solid fa-arrow-right-from-bracket"></i>
-        <span class="hidden sm:inline">Logout</span>
-      </a>
+      <button onclick="switchTab('sales')" id="tab-sales-mobile" class="nav-tab-mobile px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap">
+        Sales
+      </button>
+      <button onclick="switchTab('products')" id="tab-products-mobile" class="nav-tab-mobile px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap">
+        Products
+      </button>
+      <button onclick="switchTab('designs')" id="tab-designs-mobile" class="nav-tab-mobile px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap">
+        Designs
+      </button>
+      <button onclick="switchTab('portfolio')" id="tab-portfolio-mobile" class="nav-tab-mobile px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap">
+        Showcase
+      </button>
     </div>
   </header>
 
   <!-- ============================================================== -->
-  <!-- MAIN LAYOUT: SIDEBAR NAVIGATION + CONTENT PANE                  -->
+  <!-- MAIN WORKSPACE CONTAINER                                       -->
   <!-- ============================================================== -->
-  <div class="flex-1 flex overflow-hidden">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1 space-y-6">
 
-    <!-- Primary Vertical Navigation Sidebar -->
-    <aside class="w-64 bg-surface-950 text-slate-300 flex-shrink-0 hidden lg:flex flex-col justify-between border-r border-slate-800 select-none">
-      <div class="p-4 space-y-6 overflow-y-auto">
+    <!-- ============================================================== -->
+    <!-- TAB 1: ORDERS OVERVIEW                                         -->
+    <!-- ============================================================== -->
+    <div id="tab-orders" class="tab-pane space-y-5">
 
-        <!-- Operational Section -->
-        <div>
-          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Operations Center</p>
-          <nav class="space-y-1">
-            <button onclick="switchTab('orders')" id="nav-orders-btn" class="sidebar-nav-btn w-full px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between text-white bg-white/10 shadow-xs border border-white/5 transition">
-              <div class="flex items-center space-x-2.5">
-                <i class="fa-solid fa-boxes-stacked text-brand-400 text-sm w-4 text-center"></i>
-                <span>Orders Pipeline</span>
-              </div>
-              <span id="sidebar-order-count" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500 text-white font-mono">
-                {{ orders|length }}
-              </span>
-            </button>
-
-            <button onclick="switchTab('sales')" id="nav-sales-btn" class="sidebar-nav-btn w-full px-3 py-2.5 rounded-xl text-xs font-medium flex items-center justify-between text-slate-400 hover:text-white hover:bg-white/5 transition">
-              <div class="flex items-center space-x-2.5">
-                <i class="fa-solid fa-chart-line text-emerald-400 text-sm w-4 text-center"></i>
-                <span>Sales & Financials</span>
-              </div>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 font-mono">
-                ETB
-              </span>
-            </button>
-          </nav>
+      <!-- Clean KPI Metric Cards (Standard, Non-Flashy White Cards) -->
+      <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- Total Orders -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-medium uppercase tracking-wider text-slate-400">Total Orders</span>
+            <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-box-archive"></i>
+            </span>
+          </div>
+          <h3 class="text-2xl font-bold text-slate-900 font-mono mt-2">{{ stats.total_orders }}</h3>
+          <p class="text-xs text-slate-400 mt-0.5">All time orders</p>
         </div>
 
-        <!-- Inventory & Creative Catalog Section -->
-        <div>
-          <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Store Catalog</p>
-          <nav class="space-y-1">
-            <button onclick="switchTab('products')" id="nav-products-btn" class="sidebar-nav-btn w-full px-3 py-2.5 rounded-xl text-xs font-medium flex items-center justify-between text-slate-400 hover:text-white hover:bg-white/5 transition">
-              <div class="flex items-center space-x-2.5">
-                <i class="fa-solid fa-tags text-blue-400 text-sm w-4 text-center"></i>
-                <span>Products & Pricing</span>
-              </div>
-              <span class="text-[11px] text-slate-500 font-mono">{{ products|length }}</span>
-            </button>
-
-            <button onclick="switchTab('designs')" id="nav-designs-btn" class="sidebar-nav-btn w-full px-3 py-2.5 rounded-xl text-xs font-medium flex items-center justify-between text-slate-400 hover:text-white hover:bg-white/5 transition">
-              <div class="flex items-center space-x-2.5">
-                <i class="fa-solid fa-palette text-purple-400 text-sm w-4 text-center"></i>
-                <span>Designs & Templates</span>
-              </div>
-              <span class="text-[11px] text-slate-500 font-mono">{{ designs|length }}</span>
-            </button>
-
-            <button onclick="switchTab('portfolio')" id="nav-portfolio-btn" class="sidebar-nav-btn w-full px-3 py-2.5 rounded-xl text-xs font-medium flex items-center justify-between text-slate-400 hover:text-white hover:bg-white/5 transition">
-              <div class="flex items-center space-x-2.5">
-                <i class="fa-solid fa-star text-amber-400 text-sm w-4 text-center"></i>
-                <span>Our Works Showcase</span>
-              </div>
-              <span class="text-[11px] text-slate-500 font-mono">{{ portfolio|length }}</span>
-            </button>
-          </nav>
+        <!-- Awaiting Review -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-medium uppercase tracking-wider text-amber-600">Pending Review</span>
+            <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-receipt"></i>
+            </span>
+          </div>
+          <h3 class="text-2xl font-bold text-slate-900 font-mono mt-2">{{ stats.pending_approvals }}</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Awaiting deposit approval</p>
         </div>
 
-        <!-- Financial Summary Mini Card -->
-        <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs space-y-2">
-          <div class="flex items-center justify-between text-[11px]">
-            <span class="text-slate-400 font-medium">Gross Revenue</span>
-            <span class="text-emerald-400 font-bold font-mono">{{ "{:,.0f}".format(analytics.total_revenue) }} ETB</span>
+        <!-- In Production -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-medium uppercase tracking-wider text-blue-600">In Production</span>
+            <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </span>
           </div>
-          <div class="flex items-center justify-between text-[11px]">
-            <span class="text-slate-400 font-medium">Secured Deposits</span>
-            <span class="text-blue-400 font-bold font-mono">{{ "{:,.0f}".format(analytics.total_deposits_collected) }} ETB</span>
-          </div>
-          <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
-            {% if analytics.total_revenue > 0 %}
-            <div class="bg-blue-500 h-full" style="width: {{ (analytics.total_deposits_collected / analytics.total_revenue * 100)|int }}%"></div>
-            {% else %}
-            <div class="bg-slate-700 h-full w-0"></div>
-            {% endif %}
-          </div>
+          <h3 class="text-2xl font-bold text-slate-900 font-mono mt-2">{{ stats.approved_orders }}</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Printing in progress</p>
         </div>
 
-      </div>
-
-      <!-- Sidebar Footer: System Status -->
-      <div class="p-4 border-t border-slate-800/80 bg-black/20 text-xs">
-        <div class="flex items-center justify-between text-slate-400">
-          <span class="text-[11px] flex items-center space-x-1.5">
-            <i class="fa-solid fa-shield-halved text-emerald-400"></i>
-            <span>TLS Secured</span>
-          </span>
-          <span class="text-[10px] text-slate-500 font-mono">v3.2 PRO</span>
+        <!-- Completed Orders -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-medium uppercase tracking-wider text-emerald-600">Completed</span>
+            <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-circle-check"></i>
+            </span>
+          </div>
+          <h3 class="text-2xl font-bold text-slate-900 font-mono mt-2">{{ stats.completed_orders }}</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Fulfilled & delivered</p>
         </div>
       </div>
-    </aside>
 
-    <!-- Content Workspace Pane -->
-    <main class="flex-1 overflow-y-auto flex flex-col p-4 sm:p-6 lg:p-8 space-y-6">
+      <!-- Toolbar: Status Filter Pills + Search Input -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <!-- Status Filter Pills -->
+        <div class="flex items-center space-x-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+          <button onclick="filterByStatus('all')" data-status="all" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white transition whitespace-nowrap">
+            All ({{ orders|length }})
+          </button>
+          <button onclick="filterByStatus('pending_review')" data-status="pending_review" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap">
+            Pending Review
+          </button>
+          <button onclick="filterByStatus('reuploaded')" data-status="reuploaded" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap">
+            Re-uploaded
+          </button>
+          <button onclick="filterByStatus('in_production')" data-status="in_production" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap">
+            In Production
+          </button>
+          <button onclick="filterByStatus('ready_for_delivery')" data-status="ready_for_delivery" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap">
+            Ready to Ship
+          </button>
+          <button onclick="filterByStatus('completed')" data-status="completed" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap">
+            Completed
+          </button>
+          <button onclick="filterByStatus('rejected')" data-status="rejected" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap">
+            Rejected
+          </button>
+        </div>
 
-      <!-- Mobile Horizontal Tab Bar (Visible on small screens) -->
-      <div class="lg:hidden flex items-center space-x-1 overflow-x-auto pb-2 border-b border-slate-200">
-        <button onclick="switchTab('orders')" id="tab-orders-mobile" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white whitespace-nowrap">
-          Orders ({{ orders|length }})
-        </button>
-        <button onclick="switchTab('sales')" id="tab-sales-mobile" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 whitespace-nowrap">
-          Sales & Analytics
-        </button>
-        <button onclick="switchTab('products')" id="tab-products-mobile" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 whitespace-nowrap">
-          Products
-        </button>
-        <button onclick="switchTab('designs')" id="tab-designs-mobile" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 whitespace-nowrap">
-          Designs
-        </button>
-        <button onclick="switchTab('portfolio')" id="tab-portfolio-mobile" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 whitespace-nowrap">
-          Showcase
-        </button>
+        <!-- Search input -->
+        <div class="w-full md:w-72 relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text" id="order-search" oninput="filterOrders()" placeholder="Search code, name, phone, item..." class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 transition">
+        </div>
       </div>
 
-      <!-- ============================================================== -->
-      <!-- TAB 1: ORDERS COMMAND CENTER                                  -->
-      <!-- ============================================================== -->
-      <div id="tab-orders" class="tab-pane space-y-6">
+      <!-- Orders Data Table -->
+      <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+        {% if orders %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 select-none">
+              <tr>
+                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(0, 'str')">
+                  <span>Order Code</span>
+                  <i id="sort-icon-0" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
+                </th>
+                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(1, 'str')">
+                  <span>Customer</span>
+                  <i id="sort-icon-1" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
+                </th>
+                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition" onclick="sortTable(2, 'str')">
+                  <span>Items</span>
+                  <i id="sort-icon-2" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
+                </th>
+                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(3, 'str')">
+                  <span>Delivery Method</span>
+                  <i id="sort-icon-3" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
+                </th>
+                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(4, 'date')">
+                  <span>Deadline</span>
+                  <i id="sort-icon-4" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
+                </th>
+                <th class="py-3 px-3.5 whitespace-nowrap">Payment Receipt</th>
+                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(6, 'str')">
+                  <span>Status</span>
+                  <i id="sort-icon-6" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
+                </th>
+                <th class="py-3 px-3.5 text-right whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="orders-tbody">
+              {% for o in orders %}
+              {% if o.status == 'reuploaded' or o.payment_status == 'reuploaded' %}
+                {% set row_status = 'reuploaded' %}
+              {% elif o.status == 'rejected' or o.payment_status == 'rejected' %}
+                {% set row_status = 'rejected' %}
+              {% elif o.payment_status == 'pending_review' %}
+                {% set row_status = 'pending_review' %}
+              {% elif o.status == 'ready_for_delivery' %}
+                {% set row_status = 'ready_for_delivery' %}
+              {% elif o.status == 'completed' %}
+                {% set row_status = 'completed' %}
+              {% elif o.status == 'cancelled' %}
+                {% set row_status = 'cancelled' %}
+              {% elif o.payment_status == 'approved' or o.status == 'in_production' %}
+                {% set row_status = 'in_production' %}
+              {% else %}
+                {% set row_status = 'pending' %}
+              {% endif %}
+              <tr class="hover:bg-slate-50/60 transition" id="row-{{ o.order_code }}" data-status="{{ row_status }}">
 
-        <!-- Executive KPI Cards Grid -->
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-          <!-- Total Orders -->
-          <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-subtle hover:shadow-card transition flex flex-col justify-between">
-            <div class="flex items-center justify-between text-slate-500">
-              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Volume</span>
-              <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-xs">
-                <i class="fa-solid fa-box-archive"></i>
-              </span>
-            </div>
-            <div class="mt-2">
-              <h3 class="text-2xl font-extrabold text-slate-900 font-mono tracking-tight">{{ stats.total_orders }}</h3>
-              <p class="text-[11px] text-slate-400 mt-0.5">All-time received</p>
-            </div>
+                <!-- Code -->
+                <td class="py-3.5 px-3.5 whitespace-nowrap">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-mono font-semibold text-xs select-all">
+                      {{ o.order_code }}
+                    </span>
+                    <button onclick="copyToClipboard('{{ o.order_code }}')" class="p-1 text-slate-400 hover:text-slate-700 transition" title="Copy code">
+                      <i class="fa-regular fa-copy text-xs"></i>
+                    </button>
+                  </div>
+                  <span class="text-[11px] text-slate-400 font-mono block mt-0.5">{{ o.created_at[:16] if o.created_at else '' }}</span>
+                </td>
+
+                <!-- Customer -->
+                <td class="py-3.5 px-3.5">
+                  <div class="font-semibold text-slate-900 leading-tight">{{ o.full_name }}</div>
+                  {% if o.username %}
+                  <a href="https://t.me/{{ o.username }}" target="_blank" class="text-[11px] text-brand-600 hover:underline inline-flex items-center space-x-1 mt-0.5">
+                    <i class="fa-brands fa-telegram text-[11px]"></i>
+                    <span>@{{ o.username }}</span>
+                  </a>
+                  {% else %}
+                  <span class="text-[11px] text-slate-400 font-mono">UID: {{ o.user_id }}</span>
+                  {% endif %}
+                </td>
+
+                <!-- Items -->
+                <td class="py-3.5 px-3.5 max-w-xs">
+                  <p class="font-medium text-slate-900 leading-snug">{{ o['items'] }}</p>
+                  {% if o.notes and o.notes != 'None' %}
+                  <p class="text-[11px] text-slate-500 mt-0.5 truncate" title="{{ o.notes }}">
+                    <i class="fa-regular fa-note-sticky mr-1 text-slate-400"></i>{{ o.notes }}
+                  </p>
+                  {% endif %}
+
+                  {% if o.customer_files and o.customer_files != '[]' %}
+                  <div class="mt-1.5">
+                    <button onclick='viewCustomerArtwork({{ o.customer_files|tojson }}, "{{ o.order_code }}")' class="px-2 py-0.5 rounded border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-medium transition flex items-center space-x-1">
+                      <i class="fa-solid fa-images text-[10px]"></i>
+                      <span>View Artwork</span>
+                    </button>
+                  </div>
+                  {% endif %}
+                </td>
+
+                <!-- Delivery -->
+                <td class="py-3.5 px-3.5 whitespace-nowrap">
+                  {% if 'Store Pickup' in (o.delivery_type or '') %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                      <i class="fa-solid fa-store mr-1 text-[10px]"></i> Pickup (Ledeta)
+                    </span>
+                  {% elif 'Taxi' in (o.delivery_type or '') or 'Yango' in (o.delivery_type or '') or 'Feres' in (o.delivery_type or '') %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-sky-50 text-sky-700 border border-sky-200">
+                      <i class="fa-solid fa-taxi mr-1 text-[10px]"></i> Taxi Delivery
+                    </span>
+                    <div class="text-[11px] text-slate-600 truncate max-w-xs mt-0.5">{{ o.delivery_location }}</div>
+                  {% else %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700">
+                      <i class="fa-solid fa-clock mr-1 text-[10px]"></i> Awaiting Choice
+                    </span>
+                  {% endif %}
+
+                  {% if o.phone and o.phone != 'N/A' and o.phone != 'Store Pickup / In Person' %}
+                    <div class="text-[11px] text-slate-500 font-mono mt-0.5">
+                      <a href="tel:{{ o.phone }}" class="hover:text-brand-600 transition inline-flex items-center">
+                        <i class="fa-solid fa-phone mr-1 text-[9px]"></i>{{ o.phone }}
+                      </a>
+                    </div>
+                  {% endif %}
+                </td>
+
+                <!-- Deadline -->
+                <td class="py-3.5 px-3.5 whitespace-nowrap text-slate-700 font-medium">
+                  {{ o.deadline }}
+                </td>
+
+                <!-- Payment Receipt -->
+                <td class="py-3.5 px-3.5 whitespace-nowrap">
+                  {% if o.payment_screenshot_filename %}
+                  <button onclick="viewReceipt('/receipts/{{ o.payment_screenshot_filename }}', '{{ o.order_code }}')" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium transition">
+                    <i class="fa-solid fa-image text-slate-500 text-xs"></i>
+                    <span>Receipt</span>
+                  </button>
+                  {% else %}
+                  <span class="text-[11px] text-slate-400 italic">No receipt</span>
+                  {% endif %}
+                </td>
+
+                <!-- Status -->
+                <td class="py-3.5 px-3.5 whitespace-nowrap">
+                  {% if o.status == 'reuploaded' or o.payment_status == 'reuploaded' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-800 border border-orange-200">
+                      Re-uploaded
+                    </span>
+                  {% elif o.payment_status == 'pending_review' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                      Pending Review
+                    </span>
+                  {% elif o.status == 'ready_for_delivery' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-800 border border-indigo-200">
+                      Ready to Ship
+                    </span>
+                  {% elif o.payment_status == 'approved' and o.status != 'completed' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200">
+                      In Production
+                    </span>
+                  {% elif o.status == 'completed' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      Completed
+                    </span>
+                  {% elif o.status == 'rejected' or o.payment_status == 'rejected' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-800 border border-rose-200">
+                      Rejected
+                    </span>
+                  {% elif o.status == 'cancelled' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+                      Cancelled
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                      {{ o.status }}
+                    </span>
+                  {% endif %}
+                </td>
+
+                <!-- Actions -->
+                <td class="py-3.5 px-3.5 text-right whitespace-nowrap">
+                  <div class="flex items-center justify-end space-x-1">
+                    <!-- Invoice / Receipt view -->
+                    <a href="/orders/{{ o.order_code }}/receipt" target="_blank" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 transition" title="Print Invoice">
+                      <i class="fa-solid fa-receipt text-xs"></i>
+                    </a>
+
+                    <!-- Print Packing Slip -->
+                    <button onclick="printSlip('{{ o.order_code }}', '{{ o.full_name }}', '{{ o['items'] }}', '{{ o.deadline }}', '{{ o.delivery_type }}', '{{ o.delivery_location }}', '{{ o.notes }}')" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 transition" title="Print Slip">
+                      <i class="fa-solid fa-print text-xs"></i>
+                    </button>
+
+                    <!-- Approve Deposit -->
+                    {% if o.status == 'reuploaded' or o.payment_status == 'reuploaded' or o.payment_status == 'pending_review' %}
+                    <button onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition" title="Approve Deposit">
+                      Approve
+                    </button>
+                    {% elif o.status != 'completed' and o.status != 'ready_for_delivery' %}
+                    <button onclick="updateOrderStatus('{{ o.order_code }}', 'ready')" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition" title="Mark Ready & Notify Customer">
+                      Ready & DM
+                    </button>
+                    {% endif %}
+
+                    <!-- Complete -->
+                    {% if o.status == 'ready_for_delivery' %}
+                    <button onclick="updateOrderStatus('{{ o.order_code }}', 'complete')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition" title="Mark Fulfilled">
+                      Fulfill
+                    </button>
+                    {% endif %}
+
+                    <!-- Reject -->
+                    {% if o.status != 'completed' and o.status != 'cancelled' %}
+                    <button onclick="openRejectModal('{{ o.order_code }}')" class="px-2 py-1 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-xs transition" title="Reject Order">
+                      Reject
+                    </button>
+                    {% endif %}
+
+                    <!-- Cancel -->
+                    <button onclick="updateOrderStatus('{{ o.order_code }}', 'cancel')" class="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-400 transition" title="Cancel">
+                      <i class="fa-solid fa-xmark text-xs"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div id="orders-empty-filter" class="hidden text-center py-10 text-slate-400 text-xs">
+            No orders match the current filter.
           </div>
+        </div>
+        {% else %}
+        <div class="text-center py-12 text-slate-400">
+          <i class="fa-solid fa-box-open text-3xl text-slate-300 mb-2"></i>
+          <p class="text-xs">No orders received yet.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
 
-          <!-- Awaiting Review -->
-          <div class="bg-white p-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-white via-amber-50/20 to-amber-50/50 shadow-subtle hover:shadow-card transition flex flex-col justify-between">
-            <div class="flex items-center justify-between text-amber-700">
-              <span class="text-[11px] font-bold uppercase tracking-wider text-amber-800">Review Pending</span>
-              <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center text-xs animate-pulse">
-                <i class="fa-solid fa-receipt"></i>
-              </span>
-            </div>
-            <div class="mt-2">
-              <h3 class="text-2xl font-extrabold text-amber-900 font-mono tracking-tight">{{ stats.pending_approvals }}</h3>
-              <p class="text-[11px] text-amber-700/80 mt-0.5">Needs 50% deposit verify</p>
-            </div>
+    <!-- ============================================================== -->
+    <!-- TAB 2: SALES & FINANCIAL METRICS                               -->
+    <!-- ============================================================== -->
+    <div id="tab-sales" class="tab-pane hidden space-y-6">
+
+      <!-- Financial Metric Cards (Standard Clean Cards) -->
+      <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- Gross Sales -->
+        <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-medium uppercase tracking-wider text-slate-500">Gross Sales</span>
+            <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold font-mono">
+              ETB
+            </span>
           </div>
+          <h3 class="text-2xl sm:text-3xl font-bold text-slate-900 font-mono mt-2">{{ "{:,.0f}".format(analytics.total_revenue) }}</h3>
+          <p class="text-xs text-slate-500 mt-1">Across {{ analytics.order_count }} orders</p>
+        </div>
 
-          <!-- In Production -->
-          <div class="bg-white p-4 rounded-2xl border border-purple-200 bg-gradient-to-br from-white via-purple-50/20 to-purple-50/50 shadow-subtle hover:shadow-card transition flex flex-col justify-between">
-            <div class="flex items-center justify-between text-purple-700">
-              <span class="text-[11px] font-bold uppercase tracking-wider text-purple-800">In Production</span>
-              <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-              </span>
-            </div>
-            <div class="mt-2">
-              <h3 class="text-2xl font-extrabold text-purple-900 font-mono tracking-tight">{{ stats.approved_orders }}</h3>
-              <p class="text-[11px] text-purple-700/80 mt-0.5">Printing & binding</p>
-            </div>
+        <!-- 50% Deposits Collected -->
+        <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-medium uppercase tracking-wider text-slate-500">Deposits Received</span>
+            <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-shield-halved"></i>
+            </span>
           </div>
+          <h3 class="text-2xl sm:text-3xl font-bold text-slate-900 font-mono mt-2">{{ "{:,.0f}".format(analytics.total_deposits_collected) }}</h3>
+          <p class="text-xs text-slate-500 mt-1">50% pre-payments verified</p>
+        </div>
 
-          <!-- Completed -->
-          <div class="bg-white p-4 rounded-2xl border border-emerald-200 bg-gradient-to-br from-white via-emerald-50/20 to-emerald-50/50 shadow-subtle hover:shadow-card transition flex flex-col justify-between">
-            <div class="flex items-center justify-between text-emerald-700">
-              <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Fulfilled</span>
-              <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">
-                <i class="fa-solid fa-circle-check"></i>
-              </span>
-            </div>
-            <div class="mt-2">
-              <h3 class="text-2xl font-extrabold text-emerald-900 font-mono tracking-tight">{{ stats.completed_orders }}</h3>
-              <p class="text-[11px] text-emerald-700/80 mt-0.5">Delivered / Picked up</p>
-            </div>
+        <!-- Outstanding Balance -->
+        <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-medium uppercase tracking-wider text-slate-500">Pending on Delivery</span>
+            <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-clock"></i>
+            </span>
           </div>
+          <h3 class="text-2xl sm:text-3xl font-bold text-slate-900 font-mono mt-2">{{ "{:,.0f}".format(analytics.pending_balance) }}</h3>
+          <p class="text-xs text-slate-500 mt-1">Balance to be collected</p>
+        </div>
 
-          <!-- Financial Snapshot -->
-          <div class="col-span-2 sm:col-span-1 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-subtle hover:shadow-card transition flex flex-col justify-between">
-            <div class="flex items-center justify-between text-slate-500">
-              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Sales</span>
-              <span class="w-7 h-7 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center text-xs">
-                <i class="fa-solid fa-coins"></i>
-              </span>
+        <!-- Average Order Value -->
+        <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-medium uppercase tracking-wider text-slate-500">Avg. Order Value</span>
+            <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-chart-pie"></i>
+            </span>
+          </div>
+          <h3 class="text-2xl sm:text-3xl font-bold text-slate-900 font-mono mt-2">{{ "{:,.0f}".format(analytics.aov) }}</h3>
+          <p class="text-xs text-slate-500 mt-1">Average ETB per order</p>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- Revenue Over Time Line Chart -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-slate-900 text-sm">Revenue Over Time</h3>
+              <p class="text-xs text-slate-500">Daily gross sales in ETB</p>
             </div>
-            <div class="mt-2">
-              <h3 class="text-2xl font-extrabold text-slate-900 font-mono tracking-tight">{{ "{:,.0f}".format(analytics.total_revenue) }} <span class="text-xs font-semibold text-slate-400">ETB</span></h3>
-              <p class="text-[11px] text-slate-400 mt-0.5">{{ "{:,.0f}".format(analytics.total_deposits_collected) }} ETB secured</p>
-            </div>
+            <span class="text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">
+              Total: {{ "{:,.0f}".format(analytics.total_revenue) }} ETB
+            </span>
+          </div>
+          <div class="relative" style="height: 260px;">
+            <canvas id="chart-revenue-trend"></canvas>
           </div>
         </div>
 
-        <!-- Filter & Search Toolbar -->
-        <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-card flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
-
-          <!-- Status Segmented Pills -->
-          <div class="flex items-center space-x-1.5 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0">
-            <button onclick="filterByStatus('all')" data-status="all" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-xs transition whitespace-nowrap">
-              All Orders ({{ orders|length }})
-            </button>
-            <button onclick="filterByStatus('pending_review')" data-status="pending_review" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs transition whitespace-nowrap flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-              <span>Pending Review</span>
-            </button>
-            <button onclick="filterByStatus('reuploaded')" data-status="reuploaded" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 shadow-xs transition whitespace-nowrap flex items-center space-x-1">
-              <i class="fa-solid fa-arrows-rotate text-amber-600 text-[10px]"></i>
-              <span>Re-uploaded</span>
-            </button>
-            <button onclick="filterByStatus('in_production')" data-status="in_production" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs transition whitespace-nowrap flex items-center space-x-1">
-              <i class="fa-solid fa-wand-magic-sparkles text-purple-500 text-[10px]"></i>
-              <span>In Production</span>
-            </button>
-            <button onclick="filterByStatus('ready_for_delivery')" data-status="ready_for_delivery" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs transition whitespace-nowrap flex items-center space-x-1">
-              <i class="fa-solid fa-truck-fast text-indigo-500 text-[10px]"></i>
-              <span>Ready to Ship</span>
-            </button>
-            <button onclick="filterByStatus('completed')" data-status="completed" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs transition whitespace-nowrap flex items-center space-x-1">
-              <i class="fa-solid fa-circle-check text-emerald-500 text-[10px]"></i>
-              <span>Completed</span>
-            </button>
-            <button onclick="filterByStatus('rejected')" data-status="rejected" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-rose-200 text-rose-700 hover:text-rose-900 hover:bg-rose-50 shadow-xs transition whitespace-nowrap flex items-center space-x-1">
-              <i class="fa-solid fa-ban text-rose-500 text-[10px]"></i>
-              <span>Rejected</span>
-            </button>
+        <!-- Revenue by Product Category Bar Chart -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-slate-900 text-sm">Revenue by Product</h3>
+              <p class="text-xs text-slate-500">Breakdown per product item</p>
+            </div>
+            <span class="text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">
+              {{ analytics.product_labels|length }} Items
+            </span>
           </div>
+          <div class="relative" style="height: 260px;">
+            <canvas id="chart-product-revenue"></canvas>
+          </div>
+        </div>
+      </div>
 
-          <!-- Quick Search Filter Input -->
-          <div class="w-full lg:w-72 relative">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input type="text" id="order-search" oninput="filterOrders()" placeholder="Filter current view..." class="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
+      <!-- Order Status Breakdown + Top Products -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <!-- Pipeline Doughnut -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+          <h3 class="font-semibold text-slate-900 text-sm mb-1">Order Pipeline Status</h3>
+          <p class="text-xs text-slate-500 mb-4">Distribution across stages</p>
+          <div class="relative mx-auto" style="max-width: 220px; height: 220px;">
+            <canvas id="chart-status-doughnut"></canvas>
           </div>
         </div>
 
-        <!-- Orders Data Grid -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl shadow-card overflow-hidden">
-          {% if orders %}
+        <!-- Top Selling Products Table -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs lg:col-span-2">
+          <h3 class="font-semibold text-slate-900 text-sm mb-3">Top Products by Revenue</h3>
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm border-collapse" id="orders-table">
-              <thead class="bg-slate-50/90 text-slate-500 text-[11px] uppercase tracking-wider font-bold border-b border-slate-200 select-none">
+            <table class="w-full text-xs">
+              <thead class="text-slate-500 border-b border-slate-200">
                 <tr>
-                  <th class="py-3.5 px-4 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(0, 'str')">
-                    <span>Order Code</span>
-                    <i id="sort-icon-0" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
-                  </th>
-                  <th class="py-3.5 px-4 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(1, 'str')">
-                    <span>Customer Details</span>
-                    <i id="sort-icon-1" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
-                  </th>
-                  <th class="py-3.5 px-4 cursor-pointer hover:text-slate-900 transition" onclick="sortTable(2, 'str')">
-                    <span>Items & Specifications</span>
-                    <i id="sort-icon-2" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
-                  </th>
-                  <th class="py-3.5 px-4 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(3, 'str')">
-                    <span>Fulfillment Method</span>
-                    <i id="sort-icon-3" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
-                  </th>
-                  <th class="py-3.5 px-4 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(4, 'date')">
-                    <span>Deadline</span>
-                    <i id="sort-icon-4" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
-                  </th>
-                  <th class="py-3.5 px-4 whitespace-nowrap">Payment Proof</th>
-                  <th class="py-3.5 px-4 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(6, 'str')">
-                    <span>Pipeline Status</span>
-                    <i id="sort-icon-6" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
-                  </th>
-                  <th class="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
+                  <th class="text-left py-2.5 px-3 font-semibold">#</th>
+                  <th class="text-left py-2.5 px-3 font-semibold">Product</th>
+                  <th class="text-right py-2.5 px-3 font-semibold">Units Sold</th>
+                  <th class="text-right py-2.5 px-3 font-semibold">Revenue (ETB)</th>
+                  <th class="text-right py-2.5 px-3 font-semibold">Share</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100" id="orders-tbody">
-                {% for o in orders %}
-                {% if o.status == 'reuploaded' or o.payment_status == 'reuploaded' %}
-                  {% set row_status = 'reuploaded' %}
-                {% elif o.status == 'rejected' or o.payment_status == 'rejected' %}
-                  {% set row_status = 'rejected' %}
-                {% elif o.payment_status == 'pending_review' %}
-                  {% set row_status = 'pending_review' %}
-                {% elif o.status == 'ready_for_delivery' %}
-                  {% set row_status = 'ready_for_delivery' %}
-                {% elif o.status == 'completed' %}
-                  {% set row_status = 'completed' %}
-                {% elif o.status == 'cancelled' %}
-                  {% set row_status = 'cancelled' %}
-                {% elif o.payment_status == 'approved' or o.status == 'in_production' %}
-                  {% set row_status = 'in_production' %}
-                {% else %}
-                  {% set row_status = 'pending' %}
-                {% endif %}
-                <tr class="hover:bg-slate-50/80 transition group" id="row-{{ o.order_code }}" data-status="{{ row_status }}">
-
-                  <!-- Code Column -->
-                  <td class="py-4 px-4 whitespace-nowrap">
-                    <div class="flex items-center space-x-1.5">
-                      <span class="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200/80 text-slate-900 text-xs font-mono font-bold select-all">
-                        {{ o.order_code }}
-                      </span>
-                      <button onclick="copyToClipboard('{{ o.order_code }}')" class="p-1 text-slate-300 hover:text-brand-600 transition" title="Copy code">
-                        <i class="fa-regular fa-copy text-xs"></i>
-                      </button>
-                    </div>
-                    <span class="text-[10px] text-slate-400 font-mono block mt-1">{{ o.created_at[:16] if o.created_at else '' }}</span>
-                  </td>
-
-                  <!-- Customer Column -->
-                  <td class="py-4 px-4 min-w-[180px]">
-                    <div class="flex items-center space-x-2.5">
-                      <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-200 to-slate-100 border border-slate-300 flex items-center justify-center font-bold text-slate-700 text-xs flex-shrink-0">
-                        {{ o.full_name[:1] if o.full_name else 'C' }}
-                      </div>
-                      <div class="overflow-hidden">
-                        <div class="font-bold text-slate-900 text-xs leading-tight truncate">{{ o.full_name }}</div>
-                        {% if o.username %}
-                        <a href="https://t.me/{{ o.username }}" target="_blank" class="text-[11px] text-brand-600 hover:underline inline-flex items-center space-x-1 mt-0.5">
-                          <i class="fa-brands fa-telegram text-[11px]"></i>
-                          <span>@{{ o.username }}</span>
-                        </a>
-                        {% else %}
-                        <span class="text-[10px] text-slate-400 font-mono">UID: {{ o.user_id }}</span>
-                        {% endif %}
-                      </div>
-                    </div>
-                  </td>
-
-                  <!-- Items Column -->
-                  <td class="py-4 px-4 max-w-sm">
-                    <p class="font-semibold text-slate-900 text-xs leading-snug">{{ o['items'] }}</p>
-                    {% if o.notes and o.notes != 'None' %}
-                    <p class="text-[11px] text-slate-500 mt-1 line-clamp-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200/60" title="{{ o.notes }}">
-                      <i class="fa-regular fa-note-sticky mr-1 text-slate-400"></i>{{ o.notes }}
-                    </p>
-                    {% endif %}
-
-                    {% if o.customer_files and o.customer_files != '[]' %}
-                    <div class="mt-2">
-                      <button onclick='viewCustomerArtwork({{ o.customer_files|tojson }}, "{{ o.order_code }}")' class="px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-800 text-[11px] font-bold transition flex items-center space-x-1.5 shadow-xs">
-                        <i class="fa-solid fa-images text-purple-600"></i>
-                        <span>Customer Artwork Attached</span>
-                      </button>
-                    </div>
-                    {% endif %}
-                  </td>
-
-                  <!-- Delivery Column -->
-                  <td class="py-4 px-4 whitespace-nowrap">
-                    {% if 'Store Pickup' in (o.delivery_type or '') %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                        <i class="fa-solid fa-store mr-1.5 text-[10px]"></i> Free Store Pickup (Ledeta)
-                      </span>
-                    {% elif 'Taxi' in (o.delivery_type or '') or 'Yango' in (o.delivery_type or '') or 'Feres' in (o.delivery_type or '') %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
-                        <i class="fa-solid fa-taxi mr-1.5 text-[10px]"></i> Doorstep Taxi Dispatch
-                      </span>
-                      <div class="text-[11px] text-slate-700 font-medium truncate max-w-xs mt-1">{{ o.delivery_location }}</div>
+              <tbody class="divide-y divide-slate-100">
+                {% for i in range(analytics.product_labels|length) %}
+                <tr class="hover:bg-slate-50/60 transition">
+                  <td class="py-2.5 px-3 text-slate-400 font-mono">{{ i + 1 }}</td>
+                  <td class="py-2.5 px-3 font-semibold text-slate-800">{{ analytics.product_labels[i] }}</td>
+                  <td class="py-2.5 px-3 text-right text-slate-600 font-mono">{{ analytics.product_quantities[i] }} pcs</td>
+                  <td class="py-2.5 px-3 text-right font-bold text-slate-900 font-mono">{{ "{:,.0f}".format(analytics.product_revenues[i]) }} ETB</td>
+                  <td class="py-2.5 px-3 text-right text-slate-600 font-mono">
+                    {% if analytics.total_revenue > 0 %}
+                    {{ "{:.1f}".format(analytics.product_revenues[i] / analytics.total_revenue * 100) }}%
                     {% else %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        <i class="fa-solid fa-clock mr-1.5 text-[10px]"></i> Awaiting Choice
-                      </span>
-                      <div class="text-[10px] text-slate-400 mt-0.5">Will coordinate upon ready</div>
+                    0%
                     {% endif %}
-
-                    {% if o.phone and o.phone != 'N/A' and o.phone != 'Store Pickup / In Person' %}
-                      <div class="text-[11px] text-slate-600 font-mono mt-1">
-                        <a href="tel:{{ o.phone }}" class="hover:text-brand-600 transition inline-flex items-center">
-                          <i class="fa-solid fa-phone mr-1 text-[10px] text-slate-400"></i>{{ o.phone }}
-                        </a>
-                      </div>
-                    {% endif %}
-
-                    {% if o.recipient_name and o.recipient_name != o.full_name %}
-                      <div class="text-[10px] text-slate-500 mt-0.5"><i class="fa-solid fa-user-tag mr-1 text-[10px]"></i>For: {{ o.recipient_name }}</div>
-                    {% endif %}
-                  </td>
-
-                  <!-- Deadline Column -->
-                  <td class="py-4 px-4 whitespace-nowrap text-slate-900 text-xs font-semibold">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-mono">
-                      <i class="fa-regular fa-calendar mr-1.5 text-slate-400"></i>
-                      {{ o.deadline }}
-                    </span>
-                  </td>
-
-                  <!-- Payment Receipt Column -->
-                  <td class="py-4 px-4 whitespace-nowrap">
-                    {% if o.payment_screenshot_filename %}
-                    <button onclick="viewReceipt('/receipts/{{ o.payment_screenshot_filename }}', '{{ o.order_code }}')" class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl border border-amber-300 bg-amber-50/80 hover:bg-amber-100 text-amber-900 text-xs font-bold transition shadow-xs">
-                      <i class="fa-solid fa-receipt text-amber-600"></i>
-                      <span>Inspect Receipt</span>
-                    </button>
-                    {% else %}
-                    <span class="text-[11px] text-slate-400 italic">No receipt attached</span>
-                    {% endif %}
-                  </td>
-
-                  <!-- Status Column -->
-                  <td class="py-4 px-4 whitespace-nowrap">
-                    {% if o.status == 'reuploaded' or o.payment_status == 'reuploaded' %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-xs animate-pulse">
-                        <i class="fa-solid fa-arrows-rotate mr-1.5 text-amber-600"></i>
-                        Re-uploaded (Review)
-                      </span>
-                    {% elif o.payment_status == 'pending_review' %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>
-                        Review Pending
-                      </span>
-                    {% elif o.status == 'ready_for_delivery' %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
-                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 mr-1.5"></span>
-                        Ready to Ship
-                      </span>
-                    {% elif o.payment_status == 'approved' and o.status != 'completed' %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span>
-                        In Production
-                      </span>
-                    {% elif o.status == 'completed' %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-                        Completed
-                      </span>
-                    {% elif o.status == 'rejected' or o.payment_status == 'rejected' %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                        <i class="fa-solid fa-circle-xmark mr-1.5 text-rose-600"></i>
-                        Rejected
-                      </span>
-                    {% elif o.status == 'cancelled' %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
-                        Cancelled
-                      </span>
-                    {% else %}
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                        {{ o.status }}
-                      </span>
-                    {% endif %}
-                  </td>
-
-                  <!-- Action Buttons Column -->
-                  <td class="py-4 px-4 text-right whitespace-nowrap">
-                    <div class="flex items-center justify-end space-x-1.5">
-                      <!-- Printable Invoice / Receipt -->
-                      <a href="/orders/{{ o.order_code }}/receipt" target="_blank" class="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs transition" title="Print Customer Invoice / Receipt">
-                        <i class="fa-solid fa-receipt"></i>
-                      </a>
-
-                      <!-- Production Slip -->
-                      <button onclick="printSlip('{{ o.order_code }}', '{{ o.full_name }}', '{{ o['items'] }}', '{{ o.deadline }}', '{{ o.delivery_type }}', '{{ o.delivery_location }}', '{{ o.notes }}')" class="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs transition" title="Print Production Packing Slip">
-                        <i class="fa-solid fa-print"></i>
-                      </button>
-
-                      <!-- Action Button: Approve Deposit -->
-                      {% if o.status == 'reuploaded' or o.payment_status == 'reuploaded' or o.payment_status == 'pending_review' %}
-                      <button onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white text-xs font-bold transition shadow-xs flex items-center space-x-1" title="Approve 50% Deposit & Put in Production">
-                        <i class="fa-solid fa-check"></i>
-                        <span>Approve</span>
-                      </button>
-                      {% elif o.status != 'completed' and o.status != 'ready_for_delivery' %}
-                      <button onclick="updateOrderStatus('{{ o.order_code }}', 'ready')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white text-xs font-bold transition shadow-xs flex items-center space-x-1" title="Mark Prints Ready & DM Customer on Telegram">
-                        <i class="fa-solid fa-truck-ramp-box"></i>
-                        <span>Ready & DM</span>
-                      </button>
-                      {% endif %}
-
-                      <!-- Action Button: Complete Order -->
-                      {% if o.status == 'ready_for_delivery' %}
-                      <button onclick="updateOrderStatus('{{ o.order_code }}', 'complete')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white text-xs font-bold transition shadow-xs flex items-center space-x-1" title="Mark Delivered & Collect Remaining Balance">
-                        <i class="fa-solid fa-circle-check"></i>
-                        <span>Fulfilled</span>
-                      </button>
-                      {% endif %}
-
-                      <!-- Reject Button -->
-                      {% if o.status != 'completed' and o.status != 'cancelled' %}
-                      <button onclick="openRejectModal('{{ o.order_code }}')" class="px-2.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center space-x-1" title="Reject artwork/receipt and trigger automatic DM to customer">
-                        <i class="fa-solid fa-ban"></i>
-                        <span>Reject</span>
-                      </button>
-                      {% endif %}
-
-                      <!-- Cancel Button -->
-                      <button onclick="updateOrderStatus('{{ o.order_code }}', 'cancel')" class="p-2 rounded-xl border border-slate-200 hover:border-rose-300 hover:bg-rose-50 text-slate-400 hover:text-rose-600 text-xs transition" title="Cancel Order">
-                        <i class="fa-solid fa-xmark"></i>
-                      </button>
-                    </div>
                   </td>
                 </tr>
                 {% endfor %}
+                {% if analytics.product_labels|length == 0 %}
+                <tr>
+                  <td colspan="5" class="py-8 text-center text-slate-400">No sales recorded yet.</td>
+                </tr>
+                {% endif %}
               </tbody>
             </table>
-
-            <div id="orders-empty-filter" class="hidden text-center py-12 text-slate-400 text-xs">
-              <i class="fa-solid fa-inbox text-3xl text-slate-300 mb-2"></i>
-              <p>No orders match the current filter or search criteria.</p>
-            </div>
-          </div>
-          {% else %}
-          <div class="text-center py-16">
-            <div class="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center text-2xl mx-auto mb-3">
-              <i class="fa-solid fa-box-open"></i>
-            </div>
-            <h3 class="font-bold text-slate-800 text-sm">No Orders Received Yet</h3>
-            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Orders submitted by clients through the Telegram Bot and Telegram Mini App will stream here in real time.</p>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- ============================================================== -->
-      <!-- TAB 2: SALES & FINANCIAL INTELLIGENCE                          -->
-      <!-- ============================================================== -->
-      <div id="tab-sales" class="tab-pane hidden space-y-6">
-
-        <!-- Executive Financial KPI Row -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <!-- Gross Revenue -->
-          <div class="bg-white p-5 rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/20 to-emerald-50/60 shadow-card">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Gross Sales</span>
-              <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold shadow-xs">
-                ETB
-              </span>
-            </div>
-            <div class="mt-3">
-              <h3 class="text-3xl font-extrabold text-emerald-950 font-mono tracking-tight">{{ "{:,.0f}".format(analytics.total_revenue) }}</h3>
-              <p class="text-xs text-emerald-700/80 mt-1 flex items-center space-x-1">
-                <i class="fa-solid fa-arrow-trend-up text-emerald-600"></i>
-                <span>Calculated across {{ analytics.order_count }} orders</span>
-              </p>
-            </div>
-          </div>
-
-          <!-- Deposits Collected -->
-          <div class="bg-white p-5 rounded-3xl border border-blue-200/80 bg-gradient-to-br from-white via-blue-50/20 to-blue-50/60 shadow-card">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-blue-800">50% Deposits Secured</span>
-              <span class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-sm shadow-xs">
-                <i class="fa-solid fa-vault"></i>
-              </span>
-            </div>
-            <div class="mt-3">
-              <h3 class="text-3xl font-extrabold text-blue-950 font-mono tracking-tight">{{ "{:,.0f}".format(analytics.total_deposits_collected) }}</h3>
-              <p class="text-xs text-blue-700/80 mt-1">Verified in CBE / Telebirr accounts</p>
-            </div>
-          </div>
-
-          <!-- Outstanding Receivables -->
-          <div class="bg-white p-5 rounded-3xl border border-amber-200/80 bg-gradient-to-br from-white via-amber-50/20 to-amber-50/60 shadow-card">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-amber-800">Delivery Receivables</span>
-              <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-sm shadow-xs">
-                <i class="fa-solid fa-hand-holding-dollar"></i>
-              </span>
-            </div>
-            <div class="mt-3">
-              <h3 class="text-3xl font-extrabold text-amber-950 font-mono tracking-tight">{{ "{:,.0f}".format(analytics.pending_balance) }}</h3>
-              <p class="text-xs text-amber-700/80 mt-1">Collected on customer pickup / taxi dispatch</p>
-            </div>
-          </div>
-
-          <!-- Average Order Value (AOV) -->
-          <div class="bg-white p-5 rounded-3xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/20 to-purple-50/60 shadow-card">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-purple-800">Avg. Order Value</span>
-              <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-sm shadow-xs">
-                <i class="fa-solid fa-chart-pie"></i>
-              </span>
-            </div>
-            <div class="mt-3">
-              <h3 class="text-3xl font-extrabold text-purple-950 font-mono tracking-tight">{{ "{:,.0f}".format(analytics.aov) }}</h3>
-              <p class="text-xs text-purple-700/80 mt-1">Average ETB revenue per customer</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Interactive Charts Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          <!-- Revenue Trend Chart -->
-          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-card">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="font-bold text-slate-900 text-sm">Revenue Trajectory</h3>
-                <p class="text-xs text-slate-400">Daily financial earnings in ETB</p>
-              </div>
-              <span class="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center space-x-1">
-                <i class="fa-solid fa-chart-line"></i>
-                <span>{{ "{:,.0f}".format(analytics.total_revenue) }} ETB Gross</span>
-              </span>
-            </div>
-            <div class="relative" style="height: 300px;">
-              <canvas id="chart-revenue-trend"></canvas>
-            </div>
-          </div>
-
-          <!-- Product Sales Mix Bar Chart -->
-          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-card">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="font-bold text-slate-900 text-sm">Revenue by Product Type</h3>
-                <p class="text-xs text-slate-400">Sales distribution across catalog</p>
-              </div>
-              <span class="px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
-                {{ analytics.product_labels|length }} Product Categories
-              </span>
-            </div>
-            <div class="relative" style="height: 300px;">
-              <canvas id="chart-product-revenue"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pipeline Doughnut + Top Performing Products -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          <!-- Order Status Doughnut -->
-          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-card">
-            <h3 class="font-bold text-slate-900 text-sm mb-1">Fulfillment Funnel</h3>
-            <p class="text-xs text-slate-400 mb-4">Current order distribution across stages</p>
-            <div class="relative mx-auto" style="max-width: 250px; height: 250px;">
-              <canvas id="chart-status-doughnut"></canvas>
-            </div>
-          </div>
-
-          <!-- Top Performing Products Table -->
-          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-card lg:col-span-2">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="font-bold text-slate-900 text-sm">Top Performing Products</h3>
-                <p class="text-xs text-slate-400">Ranked by total ETB revenue generated</p>
-              </div>
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead class="text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-200">
-                  <tr>
-                    <th class="text-left py-3 px-3 font-bold">#</th>
-                    <th class="text-left py-3 px-3 font-bold">Product Item</th>
-                    <th class="text-right py-3 px-3 font-bold">Quantity Sold</th>
-                    <th class="text-right py-3 px-3 font-bold">Total Revenue</th>
-                    <th class="text-right py-3 px-3 font-bold">Sales Share</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                  {% for i in range(analytics.product_labels|length) %}
-                  <tr class="hover:bg-slate-50/70 transition">
-                    <td class="py-3 px-3 text-slate-400 text-xs font-mono font-bold">{{ i + 1 }}</td>
-                    <td class="py-3 px-3 font-bold text-slate-800 text-xs">{{ analytics.product_labels[i] }}</td>
-                    <td class="py-3 px-3 text-right text-slate-700 text-xs font-mono">{{ analytics.product_quantities[i] }} pcs</td>
-                    <td class="py-3 px-3 text-right font-bold text-slate-900 text-xs font-mono">{{ "{:,.0f}".format(analytics.product_revenues[i]) }} ETB</td>
-                    <td class="py-3 px-3 text-right text-xs">
-                      {% if analytics.total_revenue > 0 %}
-                      {% set share = (analytics.product_revenues[i] / analytics.total_revenue * 100) %}
-                      <div class="inline-flex items-center space-x-2">
-                        <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[11px]">
-                          {{ "{:.1f}".format(share) }}%
-                        </span>
-                      </div>
-                      {% else %}
-                      <span class="text-slate-400">&mdash;</span>
-                      {% endif %}
-                    </td>
-                  </tr>
-                  {% endfor %}
-                  {% if analytics.product_labels|length == 0 %}
-                  <tr>
-                    <td colspan="5" class="py-10 text-center text-slate-400 text-xs">No product sales recorded yet.</td>
-                  </tr>
-                  {% endif %}
-                </tbody>
-              </table>
-            </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- ============================================================== -->
-      <!-- TAB 3: DYNAMIC PRODUCTS & PRICING                              -->
-      <!-- ============================================================== -->
-      <div id="tab-products" class="tab-pane hidden space-y-6">
-        <div class="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-card">
-          <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 flex-wrap gap-3">
+    <!-- ============================================================== -->
+    <!-- TAB 3: PRODUCTS & LIVE PRICING                                 -->
+    <!-- ============================================================== -->
+    <div id="tab-products" class="tab-pane hidden space-y-5">
+      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100 flex-wrap gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Product Catalog & Prices</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Price edits immediately sync to the Telegram Bot and WebApp.</p>
+          </div>
+          <button onclick="openAddProductModal()" class="px-3.5 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-xs">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Add Product</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {% for p in products %}
+          <div class="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition shadow-xs flex flex-col justify-between group">
             <div>
-              <h2 class="text-lg font-bold text-slate-900 tracking-tight">Product Catalog & Dynamic Pricing</h2>
-              <p class="text-xs text-slate-500 mt-0.5">Live store prices immediately sync to the Telegram Bot, Telegram Mini App, and AI assistant.</p>
-            </div>
-            <div class="flex items-center space-x-2.5">
-              <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold font-mono">
-                {{ products|length }} Products Listed
-              </span>
-              <button onclick="openAddProductModal()" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
-                <i class="fa-solid fa-plus"></i>
-                <span>Add Product</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {% for p in products %}
-            <div class="p-4 rounded-2xl border border-slate-200 bg-white hover:border-brand-400 transition shadow-subtle hover:shadow-card flex flex-col justify-between group">
-              <div>
-                <!-- Product Preview Image -->
-                <div class="relative mb-3 rounded-xl overflow-hidden bg-slate-100 aspect-video flex items-center justify-center border border-slate-200/80 shadow-inner">
-                  <img id="img-{{ p.id }}" src="{{ p.image_url or '/product-images/' ~ p.id ~ '.png' }}" alt="{{ p.name }}" class="w-full h-full object-cover">
-                  <!-- Hover Upload Overlay -->
-                  <label for="upload-{{ p.id }}" class="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white backdrop-blur-xs">
-                    <i class="fa-solid fa-cloud-arrow-up text-2xl mb-1 text-brand-400"></i>
-                    <span class="text-xs font-bold">Replace Product Photo</span>
-                    <span class="text-[10px] text-slate-300">Click to upload JPG / PNG</span>
-                    <input type="file" id="upload-{{ p.id }}" accept="image/*" class="hidden" onchange="uploadProductImage('{{ p.id }}', this)">
-                  </label>
-                </div>
-
-                <div class="flex items-start justify-between mb-1">
-                  <div class="flex-1 pr-2">
-                    <h3 class="font-bold text-slate-900 text-sm">{{ p.name }}</h3>
-                    {% if p.min_order %}
-                    <span class="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-bold inline-block mt-0.5">Min: {{ p.min_order }} pcs</span>
-                    {% endif %}
-                  </div>
-                  <div class="flex items-center space-x-1">
-                    <span class="text-xs text-slate-500 font-medium px-2 py-0.5 rounded bg-slate-100">{{ p.unit }}</span>
-                    <button onclick="deleteProduct('{{ p.id }}', '{{ p.name }}')" class="p-1 rounded text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition" title="Delete product">
-                      <i class="fa-regular fa-trash-can text-xs"></i>
-                    </button>
-                  </div>
-                </div>
-                <p class="text-xs text-slate-500 mb-4 line-clamp-2">{{ p.description }}</p>
+              <div class="relative mb-2.5 rounded-lg overflow-hidden bg-slate-100 aspect-video flex items-center justify-center border border-slate-200/80">
+                <img id="img-{{ p.id }}" src="{{ p.image_url or '/product-images/' ~ p.id ~ '.png' }}" alt="{{ p.name }}" class="w-full h-full object-cover">
+                <label for="upload-{{ p.id }}" class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white">
+                  <i class="fa-solid fa-camera text-xl mb-1 text-white"></i>
+                  <span class="text-xs font-medium">Change Photo</span>
+                  <input type="file" id="upload-{{ p.id }}" accept="image/*" class="hidden" onchange="uploadProductImage('{{ p.id }}', this)">
+                </label>
               </div>
 
-              <!-- Price Editor Row -->
-              <div class="pt-3 border-t border-slate-100 flex items-center justify-between space-x-2">
-                <div class="flex items-center space-x-1.5 flex-1">
-                  <span class="text-xs font-bold text-slate-400 font-mono">ETB</span>
-                  <input type="number" id="price-input-{{ p.id }}" value="{{ p.price or 0 }}" step="5" class="w-24 px-2.5 py-1 text-sm font-bold font-mono rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+              <div class="flex items-start justify-between mb-1">
+                <div class="flex-1 pr-2">
+                  <h3 class="font-bold text-slate-900 text-xs">{{ p.name }}</h3>
+                  {% if p.min_order %}
+                  <span class="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded font-medium inline-block mt-0.5">Min: {{ p.min_order }} pcs</span>
+                  {% endif %}
                 </div>
-                <div class="flex items-center space-x-1.5">
-                  <button onclick="savePrice('{{ p.id }}')" class="px-3.5 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition flex items-center space-x-1 shadow-xs">
-                    <i class="fa-solid fa-floppy-disk"></i>
-                    <span>Save</span>
+                <div class="flex items-center space-x-1">
+                  <span class="text-[11px] text-slate-400">{{ p.unit }}</span>
+                  <button onclick="deleteProduct('{{ p.id }}', '{{ p.name }}')" class="p-1 text-slate-300 hover:text-rose-600 transition" title="Delete">
+                    <i class="fa-regular fa-trash-can text-xs"></i>
                   </button>
                 </div>
               </div>
+              <p class="text-xs text-slate-500 mb-3 line-clamp-2">{{ p.description }}</p>
             </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
 
-      <!-- ============================================================== -->
-      <!-- TAB 4: DESIGNS & READY TEMPLATES CATALOG                       -->
-      <!-- ============================================================== -->
-      <div id="tab-designs" class="tab-pane hidden space-y-6">
-        <div class="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-card">
-          <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 flex-wrap gap-3">
-            <div>
-              <h2 class="text-lg font-bold text-slate-900 tracking-tight">Artwork Templates & Ready Designs</h2>
-              <p class="text-xs text-slate-500 mt-0.5">Customers can browse and select these pre-made design collections inside the Telegram bot.</p>
-            </div>
-            <div class="flex items-center space-x-2.5">
-              <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold font-mono" id="design-count-badge">
-                {{ designs|length }} Designs Active
-              </span>
-              <button onclick="openAddDesignModal()" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
-                <i class="fa-solid fa-plus"></i>
-                <span>Add New Design</span>
+            <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between space-x-2">
+              <div class="flex items-center space-x-1 flex-1">
+                <span class="text-xs font-semibold text-slate-400 font-mono">ETB</span>
+                <input type="number" id="price-input-{{ p.id }}" value="{{ p.price or 0 }}" step="5" class="w-20 px-2 py-1 text-xs font-bold font-mono rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white">
+              </div>
+              <button onclick="savePrice('{{ p.id }}')" class="px-3 py-1 rounded bg-brand-500 hover:bg-brand-600 text-white text-xs font-medium transition shadow-xs">
+                Save
               </button>
             </div>
           </div>
-
-          <!-- Product Categories Filter Chips -->
-          <div class="flex items-center space-x-2 overflow-x-auto pb-3 mb-4">
-            <button onclick="filterDesigns('all')" id="des-filter-all" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white whitespace-nowrap shadow-xs">
-              All Products
-            </button>
-            {% for prod_id, sub_list in design_categories.items() %}
-            <button onclick="filterDesigns('{{ prod_id }}')" id="des-filter-{{ prod_id }}" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 whitespace-nowrap shadow-xs">
-              {{ prod_id.replace('_', ' ').title() }}
-            </button>
-            {% endfor %}
-          </div>
-
-          <!-- Designs Gallery Grid -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5" id="designs-grid">
-            {% for d in designs %}
-            <div class="design-card rounded-2xl border border-slate-200 bg-white hover:border-brand-400 transition shadow-subtle hover:shadow-card overflow-hidden flex flex-col justify-between group" data-product="{{ d.product_id }}" data-title="{{ d.title.lower() }}" data-sub="{{ d.subproduct.lower() }}" id="des-card-{{ d.id }}">
-              <div>
-                <div class="relative bg-slate-100 aspect-square overflow-hidden border-b border-slate-100">
-                  <img src="{{ d.image_url }}" alt="{{ d.title }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                  <span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-slate-950/80 backdrop-blur-xs text-white text-[10px] font-bold">
-                    {{ d.product_name }}
-                  </span>
-                  <span class="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-brand-500/95 backdrop-blur-xs text-white text-[10px] font-bold">
-                    {{ d.subproduct }}
-                  </span>
-                </div>
-                <div class="p-3.5">
-                  <h4 class="font-bold text-slate-900 text-xs mb-1 line-clamp-1">{{ d.title }}</h4>
-                  <p class="text-[11px] text-slate-500 line-clamp-2 mb-2">{{ d.description or 'Curated print artwork collection.' }}</p>
-                  <div class="text-[10px] text-slate-400 font-mono">Added: {{ d.created_at[:10] }}</div>
-                </div>
-              </div>
-              <div class="p-3 pt-0 flex justify-end">
-                <button onclick="deleteDesign('{{ d.id }}', '{{ d.title }}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition text-xs flex items-center space-x-1" title="Delete Design">
-                  <i class="fa-regular fa-trash-can"></i>
-                  <span class="text-[11px]">Remove</span>
-                </button>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
+          {% endfor %}
         </div>
       </div>
+    </div>
 
-      <!-- ============================================================== -->
-      <!-- TAB 5: PORTFOLIO & REAL WORKS SHOWCASE                         -->
-      <!-- ============================================================== -->
-      <div id="tab-portfolio" class="tab-pane hidden space-y-6">
-        <div class="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-card">
-          <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 flex-wrap gap-3">
+    <!-- ============================================================== -->
+    <!-- TAB 4: DESIGNS & TEMPLATES                                     -->
+    <!-- ============================================================== -->
+    <div id="tab-designs" class="tab-pane hidden space-y-5">
+      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100 flex-wrap gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Artwork & Ready Designs</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Curated templates available for clients to pick in Telegram.</p>
+          </div>
+          <button onclick="openAddDesignModal()" class="px-3.5 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-xs">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Add Design</span>
+          </button>
+        </div>
+
+        <!-- Filter Chips -->
+        <div class="flex items-center space-x-1.5 overflow-x-auto pb-2.5 mb-3">
+          <button onclick="filterDesigns('all')" id="des-filter-all" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-white whitespace-nowrap">
+            All Products
+          </button>
+          {% for prod_id, sub_list in design_categories.items() %}
+          <button onclick="filterDesigns('{{ prod_id }}')" id="des-filter-{{ prod_id }}" class="px-3 py-1 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">
+            {{ prod_id.replace('_', ' ').title() }}
+          </button>
+          {% endfor %}
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="designs-grid">
+          {% for d in designs %}
+          <div class="design-card rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition shadow-xs overflow-hidden flex flex-col justify-between group" data-product="{{ d.product_id }}">
             <div>
-              <h2 class="text-lg font-bold text-slate-900 tracking-tight">Our Works / Portfolio Showcase</h2>
-              <p class="text-xs text-slate-500 mt-0.5">Showcase real finished prints to potential clients directly inside the Telegram Bot under <code class="text-brand-700 bg-brand-50 px-1 py-0.5 rounded">/portfolio</code>.</p>
-            </div>
-            <button onclick="openAddPortfolioModal()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
-              <i class="fa-solid fa-plus"></i>
-              <span>Add Showcase Item</span>
-            </button>
-          </div>
-
-          {% if portfolio %}
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {% for item in portfolio %}
-            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-subtle hover:shadow-card transition flex flex-col justify-between group">
-              <div>
-                <div class="h-44 bg-slate-100 relative overflow-hidden">
-                  <img src="{{ item.image_url }}" alt="{{ item.title }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                  <span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-slate-950/80 backdrop-blur-xs text-white text-[10px] font-bold">
-                    {{ item.category }}
-                  </span>
-                </div>
-                <div class="p-3.5">
-                  <h4 class="font-bold text-slate-900 text-xs mb-1 line-clamp-1">{{ item.title }}</h4>
-                  <p class="text-[11px] text-slate-500 line-clamp-2 mb-2">{{ item.description }}</p>
-                  <div class="text-[10px] text-slate-400 font-mono">{{ item.created_at[:10] if item.created_at else 'Recent' }}</div>
-                </div>
+              <div class="relative bg-slate-100 aspect-square overflow-hidden border-b border-slate-100">
+                <img src="{{ d.image_url }}" alt="{{ d.title }}" class="w-full h-full object-cover">
+                <span class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-slate-900/80 text-white text-[10px] font-medium">
+                  {{ d.product_name }}
+                </span>
               </div>
-              <div class="p-3 pt-0 flex justify-end">
-                <button onclick="deletePortfolioItem('{{ item.id }}', '{{ item.title }}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition text-xs flex items-center space-x-1" title="Remove Showcase Item">
-                  <i class="fa-regular fa-trash-can"></i>
-                  <span class="text-[11px]">Remove</span>
-                </button>
+              <div class="p-3">
+                <h4 class="font-bold text-slate-900 text-xs truncate">{{ d.title }}</h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">{{ d.subproduct }}</p>
               </div>
             </div>
-            {% endfor %}
+            <div class="p-3 pt-0 flex justify-end">
+              <button onclick="deleteDesign('{{ d.id }}', '{{ d.title }}')" class="p-1 text-slate-300 hover:text-rose-600 transition text-xs" title="Delete">
+                <i class="fa-regular fa-trash-can"></i>
+              </button>
+            </div>
           </div>
-          {% else %}
-          <div class="text-center py-16 text-slate-400 text-xs">
-            <i class="fa-solid fa-star text-4xl text-slate-300 mb-2"></i>
-            <p>No showcase items added yet. Click "+ Add Showcase Item" to feature your printing work!</p>
-          </div>
-          {% endif %}
+          {% endfor %}
         </div>
       </div>
+    </div>
 
-    </main>
-  </div>
-
-  <!-- ============================================================== -->
-  <!-- MODALS (FROSTED GLASS INTERFACE)                               -->
-  <!-- ============================================================== -->
-
-  <!-- Modal: Payment Receipt Viewer -->
-  <div id="receipt-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-modal border border-slate-100 flex flex-col">
-      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
-        <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-receipt text-amber-500"></i>
-          <h3 id="receipt-title" class="font-bold text-slate-900 text-sm">Payment Screenshot Proof</h3>
+    <!-- ============================================================== -->
+    <!-- TAB 5: PORTFOLIO SHOWCASE                                      -->
+    <!-- ============================================================== -->
+    <div id="tab-portfolio" class="tab-pane hidden space-y-5">
+      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100 flex-wrap gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Portfolio Showcase</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Finished prints showcased to potential clients under /portfolio in Telegram.</p>
+          </div>
+          <button onclick="openAddPortfolioModal()" class="px-3.5 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-xs">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Add Showcase Item</span>
+          </button>
         </div>
-        <button onclick="closeReceiptModal()" class="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
+
+        {% if portfolio %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          {% for item in portfolio %}
+          <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:border-slate-300 transition flex flex-col justify-between">
+            <div>
+              <div class="h-36 bg-slate-100 relative overflow-hidden">
+                <img src="{{ item.image_url }}" alt="{{ item.title }}" class="w-full h-full object-cover">
+                <span class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-slate-900/80 text-white text-[10px] font-medium">
+                  {{ item.category }}
+                </span>
+              </div>
+              <div class="p-3">
+                <h4 class="font-bold text-slate-900 text-xs truncate">{{ item.title }}</h4>
+                <p class="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{{ item.description }}</p>
+              </div>
+            </div>
+            <div class="p-3 pt-0 flex justify-end">
+              <button onclick="deletePortfolioItem('{{ item.id }}', '{{ item.title }}')" class="p-1 text-slate-300 hover:text-rose-600 transition text-xs" title="Delete">
+                <i class="fa-regular fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12 text-slate-400">
+          <i class="fa-solid fa-star text-3xl text-slate-300 mb-2"></i>
+          <p class="text-xs">No showcase items added yet.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- MODALS: SETTINGS (USERNAME & PASSWORD CHANGE)                  -->
+  <!-- ============================================================== -->
+  <div id="modal-settings" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm">Account & Security Settings</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Change your login username and password.</p>
+        </div>
+        <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-      <div class="p-4 flex flex-col items-center justify-center bg-slate-950 min-h-[340px] relative">
-        <div id="receipt-loading" class="text-white text-xs flex items-center space-x-2 py-8">
-          <i class="fa-solid fa-circle-notch fa-spin text-amber-400 text-base"></i>
-          <span>Fetching high-resolution receipt from cloud...</span>
+
+      <form id="form-settings" onsubmit="submitCredentialsChange(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Current Password *</label>
+          <input type="password" id="set-current-pwd" required placeholder="Enter your current password" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs">
         </div>
-        <img id="receipt-img" src="" alt="Payment Receipt" class="max-h-[500px] object-contain rounded-xl hidden" onload="document.getElementById('receipt-loading').classList.add('hidden'); this.classList.remove('hidden');" onerror="document.getElementById('receipt-loading').innerHTML='⚠️ Loading image directly from Telegram. Tap Open Full Image below to view.';">
+
+        <div class="pt-2 border-t border-slate-100">
+          <label class="block font-semibold text-slate-700 mb-1">New Username *</label>
+          <input type="text" id="set-new-username" required value="{{ admin_username }}" placeholder="e.g. admin" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs font-mono">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">New Password *</label>
+          <input type="password" id="set-new-pwd" required minlength="4" placeholder="Enter new password (min. 4 chars)" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Confirm New Password *</label>
+          <input type="password" id="set-confirm-pwd" required minlength="4" placeholder="Re-enter new password" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-1">
+          <input type="checkbox" id="set-toggle-show" onchange="toggleSettingsPasswordVisibility(this.checked)" class="rounded text-brand-600 border-slate-300">
+          <label for="set-toggle-show" class="text-xs text-slate-500 cursor-pointer">Show passwords</label>
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 font-medium hover:bg-slate-50">Cancel</button>
+          <button type="submit" id="btn-save-settings" class="px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-semibold transition">
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Payment Receipt Viewer -->
+  <div id="receipt-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-xl border border-slate-200 flex flex-col">
+      <div class="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <h3 id="receipt-title" class="font-bold text-slate-900 text-xs">Payment Receipt</h3>
+        <button onclick="closeReceiptModal()" class="w-7 h-7 rounded-full hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
       </div>
-      <div class="p-3.5 border-t border-slate-100 flex justify-between items-center bg-slate-50/80">
-        <span class="text-[11px] text-slate-400">Official CBE / Telebirr transaction screenshot</span>
-        <a id="receipt-download-link" href="" target="_blank" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition flex items-center space-x-1.5 shadow-xs">
-          <i class="fa-solid fa-up-right-from-square text-[10px]"></i>
-          <span>Open Full Original</span>
+      <div class="p-3 bg-slate-900 min-h-[300px] flex items-center justify-center">
+        <img id="receipt-img" src="" alt="Receipt" class="max-h-[460px] object-contain rounded-lg">
+      </div>
+      <div class="p-3 border-t border-slate-100 flex justify-between items-center bg-slate-50">
+        <span class="text-xs text-slate-500">Official screenshot</span>
+        <a id="receipt-download-link" href="" target="_blank" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition">
+          Open Original
         </a>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Customer Uploaded Artwork Gallery -->
-  <div id="modal-artwork" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-modal border border-slate-100 space-y-4 max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 flex-shrink-0">
-        <div>
-          <h3 id="artwork-modal-title" class="font-bold text-slate-900 text-base">Customer Uploaded Artwork</h3>
-          <p class="text-xs text-slate-400">High-resolution uncompressed files sent by client for printing.</p>
-        </div>
-        <button onclick="closeArtworkModal()" class="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
+  <!-- Modal: Customer Artwork Gallery -->
+  <div id="modal-artwork" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-xl border border-slate-200 space-y-3.5 max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100 flex-shrink-0">
+        <h3 id="artwork-modal-title" class="font-bold text-slate-900 text-sm">Customer Uploaded Artwork</h3>
+        <button onclick="closeArtworkModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark"></i></button>
       </div>
-
-      <div id="artwork-gallery" class="overflow-y-auto space-y-3 flex-1 pr-1">
-        <!-- Rendered dynamically by JS -->
-      </div>
-
-      <div class="flex justify-end pt-3 border-t border-slate-100 flex-shrink-0">
-        <button onclick="closeArtworkModal()" class="px-5 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50">Close Gallery</button>
+      <div id="artwork-gallery" class="overflow-y-auto space-y-2 flex-1 pr-1"></div>
+      <div class="flex justify-end pt-2 border-t border-slate-100 flex-shrink-0">
+        <button onclick="closeArtworkModal()" class="px-4 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Close</button>
       </div>
     </div>
   </div>
 
   <!-- Modal: Rejection Reason Dialog -->
-  <div id="modal-reject" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-modal border border-slate-100">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <div class="flex items-center space-x-2 text-rose-600">
-          <i class="fa-solid fa-triangle-exclamation text-lg"></i>
-          <h3 class="font-bold text-slate-900 text-sm">Reject Order & Request Re-upload</h3>
-        </div>
+  <div id="modal-reject" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-slate-200 space-y-3.5">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-sm">Reject Order & Request Re-upload</h3>
         <button onclick="closeRejectModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div class="mt-4 space-y-4">
-        <p class="text-xs text-slate-600">
-          Order: <strong id="reject-modal-order-code" class="text-slate-900 font-mono"></strong>.
-          The bot will immediately send a direct message (DM) to the customer with your rejection note and an interactive button to re-upload.
-        </p>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1.5">Quick Reason Template:</label>
-          <select id="reject-preset" onchange="applyRejectPreset(this.value)" class="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white">
-            <option value="">-- Choose a standard reason --</option>
-            <option value="Image was sent as a compressed photo and is too blurry for printing. Please re-send as an uncompressed File/Document (📎).">Image is compressed / blurry — re-send as File/Document (📎)</option>
-            <option value="The image resolution is too low for this print size. Please provide a higher-resolution file.">Image resolution is too low</option>
-            <option value="The payment receipt screenshot is unreadable or the deposit amount does not match 50%. Please re-upload your valid receipt.">Payment receipt illegible / wrong amount</option>
-            <option value="Artwork dimensions / aspect ratio do not fit this product. Please provide updated artwork.">Artwork dimensions don't fit</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1.5">Custom Reason Message to Customer:</label>
-          <textarea id="reject-custom-reason" rows="3" class="w-full text-xs p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none" placeholder="Explain why the artwork or receipt was rejected and what they should send..."></textarea>
-        </div>
-        <div class="flex justify-end space-x-2 pt-2">
-          <button onclick="closeRejectModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
-          <button onclick="submitRejectOrder()" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center space-x-1.5 cursor-pointer">
-            <i class="fa-solid fa-ban"></i>
-            <span>Send Rejection & DM Customer</span>
-          </button>
-        </div>
+      <p class="text-xs text-slate-600">
+        Order: <strong id="reject-modal-order-code" class="text-slate-900 font-mono"></strong>. The bot will send a direct message (DM) to the customer with this reason.
+      </p>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Standard Reasons:</label>
+        <select id="reject-preset" onchange="applyRejectPreset(this.value)" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50">
+          <option value="">-- Choose a standard reason --</option>
+          <option value="Image was sent as a compressed photo and is too blurry for printing. Please re-send as an uncompressed File/Document (📎).">Image compressed / blurry - re-send as File/Document</option>
+          <option value="The image resolution is too low for this print size. Please provide a higher-resolution file.">Image resolution is too low</option>
+          <option value="The payment receipt screenshot is unreadable or the deposit amount does not match 50%. Please re-upload your valid receipt.">Payment receipt illegible / wrong amount</option>
+          <option value="Artwork dimensions / aspect ratio do not fit this product. Please provide updated artwork.">Artwork dimensions don't fit</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Custom Message to Customer:</label>
+        <textarea id="reject-custom-reason" rows="3" class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500" placeholder="Explain why the artwork or receipt was rejected..."></textarea>
+      </div>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeRejectModal()" class="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
+        <button onclick="submitRejectOrder()" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs">
+          Reject & Notify Customer
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Printable Production Slip -->
-  <div id="slip-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-modal border border-slate-200 font-sans" id="printable-slip">
+  <!-- Modal: Printable Production Packing Slip -->
+  <div id="slip-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-xl border border-slate-200" id="printable-slip">
       <div class="border-b border-dashed border-slate-300 pb-3 mb-3 text-center">
-        <h2 class="font-extrabold text-xl text-slate-900 uppercase tracking-wide">Selora Prints</h2>
-        <p class="text-xs text-slate-500">Order Production & Packing Slip</p>
-        <span id="slip-code" class="inline-block mt-1 font-mono font-bold text-sm bg-slate-100 px-3 py-1 rounded-lg text-slate-900 border border-slate-200"></span>
+        <h2 class="font-bold text-base text-slate-900 uppercase">Selora Prints</h2>
+        <p class="text-xs text-slate-500">Order Packing Slip</p>
+        <span id="slip-code" class="inline-block mt-1 font-mono font-bold text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-900"></span>
       </div>
       <div class="space-y-2 text-xs text-slate-700 mb-4">
         <div><strong>Customer:</strong> <span id="slip-customer"></span></div>
-        <div><strong>Items:</strong> <p id="slip-items" class="mt-0.5 font-medium text-slate-900 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono"></p></div>
+        <div><strong>Items:</strong> <p id="slip-items" class="mt-0.5 font-medium text-slate-900 bg-slate-50 p-2 rounded border border-slate-100"></p></div>
         <div><strong>Need By:</strong> <span id="slip-deadline"></span></div>
         <div><strong>Delivery:</strong> <span id="slip-delivery"></span> (<span id="slip-location"></span>)</div>
-        <div><strong>Special Notes:</strong> <span id="slip-notes" class="italic text-slate-500"></span></div>
+        <div><strong>Notes:</strong> <span id="slip-notes" class="italic text-slate-500"></span></div>
         <div class="pt-2 border-t border-dashed border-slate-200 text-slate-600">
-          <strong>Deposit Status:</strong> 50% Pre-payment Verified &#x2705;
+          <strong>Deposit:</strong> 50% Verified
         </div>
       </div>
       <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100 print:hidden">
-        <button onclick="closeSlipModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">Close</button>
-        <button onclick="window.print()" class="px-5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold hover:bg-brand-600 flex items-center space-x-1.5 shadow-sm">
+        <button onclick="closeSlipModal()" class="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Close</button>
+        <button onclick="window.print()" class="px-4 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-semibold hover:bg-brand-600 flex items-center space-x-1">
           <i class="fa-solid fa-print"></i>
-          <span>Print Slip</span>
+          <span>Print</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Add New Catalog Product -->
-  <div id="add-product-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-modal border border-slate-100">
-      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
-        <div class="flex items-center space-x-2">
-          <div class="w-8 h-8 rounded-xl bg-brand-500 text-white flex items-center justify-center text-sm shadow-sm">
-            <i class="fa-solid fa-plus"></i>
-          </div>
-          <h3 class="font-bold text-slate-900 text-sm">Add New Product to Catalog</h3>
-        </div>
-        <button onclick="closeAddProductModal()" class="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+  <!-- Modal: Add Product -->
+  <div id="add-product-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-slate-200">
+      <div class="p-1 border-b border-slate-100 flex items-center justify-between pb-3 mb-3">
+        <h3 class="font-bold text-slate-900 text-sm">Add New Product</h3>
+        <button onclick="closeAddProductModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
       </div>
-
-      <form id="add-product-form" onsubmit="submitAddProduct(event)" class="p-6 space-y-4">
+      <form id="add-product-form" onsubmit="submitAddProduct(event)" class="space-y-3.5 text-xs">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Product Name (with emoji optional) *</label>
-          <input type="text" id="new-prod-name" required placeholder="e.g. &#x2728; Acrylic Keychains, &#x1F455; Custom T-Shirt" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+          <label class="block font-semibold text-slate-700 mb-1">Product Name *</label>
+          <input type="text" id="new-prod-name" required placeholder="e.g. Stickers, Mug" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs">
         </div>
-
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Price in ETB (Birr) *</label>
-            <input type="number" id="new-prod-price" required step="5" min="0" placeholder="e.g. 250" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 font-mono font-bold">
+            <label class="block font-semibold text-slate-700 mb-1">Price (ETB) *</label>
+            <input type="number" id="new-prod-price" required step="5" min="0" placeholder="e.g. 200" class="w-full px-3 py-2 rounded-lg border border-slate-200 font-mono text-xs">
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Unit Description</label>
-            <input type="text" id="new-prod-unit" placeholder="e.g. per piece, each, pack of 5" value="each" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <label class="block font-semibold text-slate-700 mb-1">Unit Description</label>
+            <input type="text" id="new-prod-unit" placeholder="each / per piece" value="each" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs">
           </div>
         </div>
-
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Minimum Order Qty</label>
-            <input type="number" id="new-prod-min-order" min="1" placeholder="e.g. 10" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <label class="block font-semibold text-slate-700 mb-1">Min. Order Qty</label>
+            <input type="number" id="new-prod-min-order" min="1" placeholder="e.g. 10" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs">
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Product Photo</label>
-            <input type="file" id="new-prod-image" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
+            <label class="block font-semibold text-slate-700 mb-1">Product Image</label>
+            <input type="file" id="new-prod-image" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-slate-100">
           </div>
         </div>
-
-        <div class="flex items-center space-x-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
-          <input type="checkbox" id="new-prod-has-designs" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
-          <label for="new-prod-has-designs" class="text-xs font-semibold text-slate-700 cursor-pointer">
-            Needs Selora Design Templates (Uncheck if item only uses personal photos, e.g. Polaroids, Minibooks)
+        <div class="flex items-center space-x-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+          <input type="checkbox" id="new-prod-has-designs" checked class="rounded text-brand-600">
+          <label for="new-prod-has-designs" class="text-xs text-slate-700 cursor-pointer">
+            Has Ready Design Templates
           </label>
         </div>
-
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Description / Details</label>
-          <textarea id="new-prod-desc" rows="2" placeholder="e.g. High resolution custom printed on premium material with glossy finish." class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"></textarea>
+          <label class="block font-semibold text-slate-700 mb-1">Description</label>
+          <textarea id="new-prod-desc" rows="2" placeholder="Brief product description..." class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs"></textarea>
         </div>
-
-        <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-          <button type="button" onclick="closeAddProductModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">Cancel</button>
-          <button type="submit" id="btn-submit-add-product" class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
-            <i class="fa-solid fa-cloud-arrow-up"></i>
-            <span>Add to Catalog & Live Bot</span>
+        <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeAddProductModal()" class="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50">Cancel</button>
+          <button type="submit" id="btn-submit-add-product" class="px-4 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold">
+            Add to Store
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Modal: Add New Design -->
-  <div id="modal-add-design" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-modal border border-slate-100 space-y-4">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <div>
-          <h3 class="font-bold text-slate-900 text-sm">Add New Design Template</h3>
-          <p class="text-xs text-slate-400">Artwork for customer selection inside the Telegram Bot.</p>
-        </div>
-        <button onclick="closeAddDesignModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+  <!-- Modal: Add Design -->
+  <div id="modal-add-design" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-slate-200 space-y-3.5 text-xs">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-sm">Add Design Template</h3>
+        <button onclick="closeAddDesignModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
       </div>
-
-      <form id="form-add-design" onsubmit="submitAddDesign(event)" class="space-y-3.5 text-xs">
+      <form id="form-add-design" onsubmit="submitAddDesign(event)" class="space-y-3">
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Select Product *</label>
-          <select id="des-prod-id" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs">
+          <label class="block font-semibold text-slate-700 mb-1">Product *</label>
+          <select id="des-prod-id" required class="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-xs">
             {% for p in products %}
             <option value="{{ p.id }}">{{ p.name }} ({{ p.id }})</option>
             {% endfor %}
           </select>
         </div>
-
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Sub-Product / Style Collection *</label>
-          <input type="text" id="des-subproduct" required placeholder="e.g. Anime & Manga, Dark Academia, Minimalist, Floral..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs">
+          <label class="block font-semibold text-slate-700 mb-1">Style Collection *</label>
+          <input type="text" id="des-subproduct" required placeholder="e.g. Minimalist, Anime" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs">
         </div>
-
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Design Title *</label>
-          <input type="text" id="des-title" required placeholder="e.g. Studio Ghibli Totoro Aesthetic" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs">
+          <label class="block font-semibold text-slate-700 mb-1">Design Title *</label>
+          <input type="text" id="des-title" required placeholder="e.g. Vintage Botanical" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs">
         </div>
-
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Description (Optional)</label>
-          <textarea id="des-desc" rows="2" placeholder="Brief note about color, paper finish, or theme..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs"></textarea>
+          <label class="block font-semibold text-slate-700 mb-1">Artwork File (PNG/JPG) *</label>
+          <input type="file" id="des-file" accept="image/*" required class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-slate-100">
         </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Design Image Artwork (PNG/JPG) *</label>
-          <input type="file" id="des-file" accept="image/*" required class="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-brand-50 file:text-brand-700 file:font-bold hover:file:bg-brand-100">
-        </div>
-
-        <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-          <button type="button" onclick="closeAddDesignModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">Cancel</button>
-          <button type="submit" id="btn-save-design" class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
-            <i class="fa-solid fa-cloud-arrow-up"></i>
-            <span>Upload & Save Design</span>
+        <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeAddDesignModal()" class="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50">Cancel</button>
+          <button type="submit" id="btn-save-design" class="px-4 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold">
+            Upload Design
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Modal: Add Showcase Portfolio Item -->
-  <div id="modal-add-portfolio" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-modal border border-slate-100 space-y-4">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <div>
-          <h3 class="font-bold text-slate-900 text-sm">Add Portfolio Showcase Item</h3>
-          <p class="text-xs text-slate-400">Display real past prints to showcase quality to potential clients in Telegram.</p>
-        </div>
-        <button onclick="closeAddPortfolioModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+  <!-- Modal: Add Portfolio Item -->
+  <div id="modal-add-portfolio" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-slate-200 space-y-3.5 text-xs">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-sm">Add Showcase Item</h3>
+        <button onclick="closeAddPortfolioModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
       </div>
-
-      <form id="form-add-portfolio" onsubmit="submitAddPortfolio(event)" class="space-y-3.5 text-xs">
+      <form id="form-add-portfolio" onsubmit="submitAddPortfolio(event)" class="space-y-3">
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Title *</label>
-          <input type="text" id="port-title" required placeholder="e.g. Holographic Cyberpunk Stickers, Luxury Foil Business Cards..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs">
+          <label class="block font-semibold text-slate-700 mb-1">Title *</label>
+          <input type="text" id="port-title" required placeholder="e.g. Holographic Stickers" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs">
         </div>
-
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Category *</label>
-          <input type="text" id="port-cat" required placeholder="e.g. Stickers, Bookmarks, Photo Books, Business Cards, Mugs..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs">
+          <label class="block font-semibold text-slate-700 mb-1">Category *</label>
+          <input type="text" id="port-cat" required placeholder="e.g. Stickers, Bookmarks, Mugs" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs">
         </div>
-
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Description (Optional)</label>
-          <textarea id="port-desc" rows="2" placeholder="Brief note about the finish, client story, or print details..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs"></textarea>
+          <label class="block font-semibold text-slate-700 mb-1">Description (Optional)</label>
+          <textarea id="port-desc" rows="2" placeholder="Brief note..." class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs"></textarea>
         </div>
-
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Showcase Photo</label>
-          <input type="file" id="port-image" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+          <label class="block font-semibold text-slate-700 mb-1">Showcase Photo</label>
+          <input type="file" id="port-image" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-slate-100">
         </div>
-
-        <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-          <button type="button" onclick="closeAddPortfolioModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">Cancel</button>
-          <button type="submit" id="btn-submit-add-portfolio" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
-            <i class="fa-solid fa-cloud-arrow-up"></i>
-            <span>Add to Showcase</span>
+        <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeAddPortfolioModal()" class="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50">Cancel</button>
+          <button type="submit" id="btn-submit-add-portfolio" class="px-4 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold">
+            Add to Showcase
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ============================================================== -->
-  <!-- TOAST NOTIFICATION CONTAINER                                   -->
-  <!-- ============================================================== -->
-  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
   <!-- ============================================================== -->
-  <!-- CORE JAVASCRIPT SYSTEM & CHART LOGIC                           -->
+  <!-- JAVASCRIPT SYSTEM & CHART LOGIC                                -->
   <!-- ============================================================== -->
   <script>
-    // ─── MODERN TOAST NOTIFICATION SYSTEM ───
+    // ─── TOAST NOTIFICATION ───
     function showToast(message, type = 'success') {
       const container = document.getElementById('toast-container');
       const toast = document.createElement('div');
-      toast.className = `pointer-events-auto flex items-center space-x-2.5 px-4 py-3 rounded-2xl shadow-modal text-xs font-bold text-white transition-all transform duration-300 translate-y-4 opacity-0 ${
-        type === 'success' ? 'bg-slate-900 border border-emerald-500/30' :
-        type === 'error' ? 'bg-rose-950 border border-rose-500/40 text-rose-100' :
-        'bg-slate-900 border border-slate-700'
+      toast.className = `pointer-events-auto flex items-center space-x-2 px-3.5 py-2.5 rounded-xl shadow-lg text-xs font-medium text-white transition-all transform duration-200 translate-y-3 opacity-0 ${
+        type === 'success' ? 'bg-slate-900 border border-slate-700' :
+        type === 'error' ? 'bg-rose-900 border border-rose-700' :
+        'bg-slate-800'
       }`;
 
-      const icon = type === 'success' ? '<i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>' :
-                   type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-rose-400 text-sm"></i>' :
-                   '<i class="fa-solid fa-circle-info text-blue-400 text-sm"></i>';
+      const icon = type === 'success' ? '<i class="fa-solid fa-circle-check text-emerald-400"></i>' :
+                   type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-rose-400"></i>' :
+                   '<i class="fa-solid fa-circle-info text-blue-400"></i>';
 
       toast.innerHTML = `${icon}<span>${message}</span>`;
       container.appendChild(toast);
 
       requestAnimationFrame(() => {
-        toast.classList.remove('translate-y-4', 'opacity-0');
+        toast.classList.remove('translate-y-3', 'opacity-0');
       });
 
       setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-y-2');
-        setTimeout(() => toast.remove(), 300);
+        toast.classList.add('opacity-0', 'translate-y-1');
+        setTimeout(() => toast.remove(), 250);
       }, 3500);
     }
 
     function copyToClipboard(text) {
       navigator.clipboard.writeText(text).then(() => {
-        showToast(`Copied "${text}" to clipboard!`, 'success');
+        showToast(`Copied ${text} to clipboard!`);
       });
     }
 
-    // ─── TAB NAVIGATION SYSTEM ───
+    // ─── TAB NAVIGATION ───
     function switchTab(tabId) {
       document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
       const activePane = document.getElementById(`tab-${tabId}`);
       if (activePane) activePane.classList.remove('hidden');
 
-      // Update Desktop Sidebar Buttons
-      document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
-        btn.className = 'sidebar-nav-btn w-full px-3 py-2.5 rounded-xl text-xs font-medium flex items-center justify-between text-slate-400 hover:text-white hover:bg-white/5 transition';
-      });
-      const activeNav = document.getElementById(`nav-${tabId}-btn`);
-      if (activeNav) {
-        activeNav.className = 'sidebar-nav-btn w-full px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between text-white bg-white/10 shadow-xs border border-white/5 transition';
-      }
+      // Update Desktop Tabs
+      const tabs = ['orders', 'sales', 'products', 'designs', 'portfolio'];
+      tabs.forEach(id => {
+        const btn = document.getElementById(`tab-${id}-btn`);
+        if (btn) {
+          if (id === tabId) {
+            btn.className = 'nav-tab px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 text-white transition';
+          } else {
+            btn.className = 'nav-tab px-3.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition';
+          }
+        }
 
-      // Update Mobile Tab Buttons
-      const mobileBtns = ['orders', 'sales', 'products', 'designs', 'portfolio'];
-      mobileBtns.forEach(id => {
         const mBtn = document.getElementById(`tab-${id}-mobile`);
         if (mBtn) {
           if (id === tabId) {
-            mBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white whitespace-nowrap';
+            mBtn.className = 'nav-tab-mobile px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white whitespace-nowrap';
           } else {
-            mBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 whitespace-nowrap';
+            mBtn.className = 'nav-tab-mobile px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap';
           }
         }
       });
@@ -1373,43 +1133,16 @@
       }
     }
 
-    // ─── GLOBAL ⌘K SHORTCUT SEARCH ───
-    document.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        const input = document.getElementById('global-search-input');
-        if (input) input.focus();
-      }
-      if (e.key === 'Escape') {
-        closeReceiptModal();
-        closeArtworkModal();
-        closeRejectModal();
-        closeSlipModal();
-        closeAddProductModal();
-        closeAddDesignModal();
-        closeAddPortfolioModal();
-      }
-    });
-
-    function handleGlobalSearch(val) {
-      switchTab('orders');
-      const orderSearch = document.getElementById('order-search');
-      if (orderSearch) {
-        orderSearch.value = val;
-        filterOrders();
-      }
-    }
-
-    // ─── STATUS FILTERING & SEARCH IN ORDERS GRID ───
+    // ─── STATUS FILTERING ───
     let currentStatusFilter = 'all';
 
     function filterByStatus(status) {
       currentStatusFilter = status;
       document.querySelectorAll('.status-filter-btn').forEach(btn => {
         if (btn.dataset.status === status) {
-          btn.className = 'status-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-xs transition whitespace-nowrap';
+          btn.className = 'status-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white transition whitespace-nowrap';
         } else {
-          btn.className = 'status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs transition whitespace-nowrap flex items-center space-x-1';
+          btn.className = 'status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap';
         }
       });
       filterOrders();
@@ -1444,7 +1177,7 @@
       }
     }
 
-    // ─── DATA GRID SORTING ───
+    // ─── DATA TABLE SORTING ───
     let currentSortCol = null;
     let currentSortAsc = true;
 
@@ -1488,16 +1221,9 @@
       rows.forEach(r => tbody.appendChild(r));
     }
 
-    // ─── ORDER LIFECYCLE API ACTIONS ───
+    // ─── ORDER LIFECYCLE ACTIONS ───
     async function updateOrderStatus(orderCode, action) {
-      const actionLabels = {
-        approve: 'verify the 50% deposit and send order to production',
-        ready: 'mark this order ready and dispatch delivery notification DM to customer',
-        complete: 'mark order completely fulfilled',
-        cancel: 'cancel this order'
-      };
-
-      if (!confirm(`Are you sure you want to ${actionLabels[action] || action} for order ${orderCode}?`)) {
+      if (!confirm(`Are you sure you want to perform "${action}" on order ${orderCode}?`)) {
         return;
       }
 
@@ -1505,17 +1231,17 @@
         const res = await fetch(`/api/orders/${orderCode}/${action}`, { method: 'POST' });
         const data = await res.json();
         if (data.success) {
-          showToast(`Order ${orderCode} status updated successfully!`, 'success');
-          setTimeout(() => location.reload(), 700);
+          showToast(`Order ${orderCode} updated successfully.`);
+          setTimeout(() => location.reload(), 600);
         } else {
-          showToast(data.detail || data.error || 'Failed to update order status', 'error');
+          showToast(data.detail || data.error || 'Failed to update order', 'error');
         }
       } catch (err) {
         showToast('Network error while updating status', 'error');
       }
     }
 
-    // ─── REJECTION MODAL HANDLERS ───
+    // ─── REJECTION MODAL ───
     let currentRejectOrderCode = null;
 
     function openRejectModal(orderCode) {
@@ -1541,7 +1267,7 @@
       if (!currentRejectOrderCode) return;
       const reason = document.getElementById('reject-custom-reason').value.trim();
       if (!reason) {
-        showToast('Please provide or select a rejection reason for the client.', 'error');
+        showToast('Please provide a rejection reason.', 'error');
         return;
       }
 
@@ -1553,20 +1279,91 @@
         });
         const data = await res.json();
         if (data.success) {
-          showToast(`Order ${currentRejectOrderCode} rejected & DM dispatched!`, 'success');
+          showToast(`Order ${currentRejectOrderCode} rejected and customer notified.`);
           closeRejectModal();
-          setTimeout(() => location.reload(), 700);
+          setTimeout(() => location.reload(), 600);
         } else {
           showToast(data.detail || 'Rejection failed', 'error');
         }
       } catch (err) {
-        showToast('Network error while rejecting order', 'error');
+        showToast('Network error while rejecting', 'error');
       }
     }
 
-    // ─── MODAL CONTROLS: RECEIPT, ARTWORK, PRODUCTION SLIP ───
+    // ─── SETTINGS MODAL: USERNAME & PASSWORD CHANGE ───
+    function openSettingsModal() {
+      document.getElementById('set-current-pwd').value = '';
+      document.getElementById('set-new-pwd').value = '';
+      document.getElementById('set-confirm-pwd').value = '';
+      document.getElementById('modal-settings').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('modal-settings').classList.add('hidden');
+    }
+
+    function toggleSettingsPasswordVisibility(show) {
+      const type = show ? 'text' : 'password';
+      document.getElementById('set-current-pwd').type = type;
+      document.getElementById('set-new-pwd').type = type;
+      document.getElementById('set-confirm-pwd').type = type;
+    }
+
+    async function submitCredentialsChange(event) {
+      event.preventDefault();
+      const currentPwd = document.getElementById('set-current-pwd').value;
+      const newUsername = document.getElementById('set-new-username').value.trim();
+      const newPwd = document.getElementById('set-new-pwd').value;
+      const confirmPwd = document.getElementById('set-confirm-pwd').value;
+
+      if (!newUsername) {
+        showToast('Username cannot be empty', 'error');
+        return;
+      }
+
+      if (newPwd !== confirmPwd) {
+        showToast('New passwords do not match!', 'error');
+        return;
+      }
+
+      if (newPwd.length < 4) {
+        showToast('Password must be at least 4 characters', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btn-save-settings');
+      const origText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+
+      try {
+        const res = await fetch('/api/settings/credentials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            current_password: currentPwd,
+            new_username: newUsername,
+            new_password: newPwd
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('Credentials updated successfully!');
+          closeSettingsModal();
+        } else {
+          showToast(data.detail || 'Failed to update credentials', 'error');
+        }
+      } catch (err) {
+        showToast('Network error while updating credentials', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = origText;
+      }
+    }
+
+    // ─── RECEIPT & ARTWORK MODALS ───
     function viewReceipt(url, orderCode) {
-      document.getElementById('receipt-title').innerText = `Payment Receipt Proof — Order ${orderCode}`;
+      document.getElementById('receipt-title').innerText = `Payment Receipt - Order ${orderCode}`;
       document.getElementById('receipt-download-link').href = url;
       document.getElementById('receipt-img').src = url;
       document.getElementById('receipt-modal').classList.remove('hidden');
@@ -1577,7 +1374,7 @@
     }
 
     function viewCustomerArtwork(filesData, orderCode) {
-      document.getElementById('artwork-modal-title').innerText = `Customer Artwork — Order ${orderCode}`;
+      document.getElementById('artwork-modal-title').innerText = `Customer Artwork - Order ${orderCode}`;
       const gallery = document.getElementById('artwork-gallery');
       gallery.innerHTML = '';
 
@@ -1589,27 +1386,25 @@
       }
 
       if (!files || files.length === 0) {
-        gallery.innerHTML = '<p class="text-xs text-slate-400 p-8 text-center bg-slate-50 rounded-2xl">No custom design files attached to this order.</p>';
+        gallery.innerHTML = '<p class="text-xs text-slate-400 p-6 text-center bg-slate-50 rounded-xl">No files attached.</p>';
       } else {
         files.forEach((f, idx) => {
           const item = document.createElement('div');
-          item.className = 'p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-3';
+          item.className = 'p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-3';
           item.innerHTML = `
             <div class="flex items-center space-x-3 overflow-hidden">
-              <img src="${f.url}" alt="Artwork ${idx + 1}" class="w-16 h-16 object-cover rounded-xl border border-slate-200 bg-white flex-shrink-0" onerror="this.src='/product-images/stickers.png'">
+              <img src="${f.url}" alt="Artwork ${idx + 1}" class="w-14 h-14 object-cover rounded-lg border border-slate-200 bg-white flex-shrink-0" onerror="this.src='/product-images/stickers.png'">
               <div class="overflow-hidden">
-                <p class="text-xs font-bold text-slate-900 truncate">${f.original_name || f.filename}</p>
-                <p class="text-[11px] text-purple-700 font-bold mt-0.5">${f.file_type || 'Print Quality Artwork'}</p>
+                <p class="text-xs font-semibold text-slate-900 truncate">${f.original_name || f.filename}</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">${f.file_type || 'Artwork'}</p>
               </div>
             </div>
             <div class="flex items-center space-x-2 flex-shrink-0">
-              <a href="${f.url}" target="_blank" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center space-x-1 shadow-xs">
-                <i class="fa-solid fa-up-right-from-square text-[10px]"></i>
-                <span>Open Full</span>
+              <a href="${f.url}" target="_blank" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium">
+                Open
               </a>
-              <a href="${f.url}" download="${f.original_name || f.filename}" class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center space-x-1.5 shadow-xs">
-                <i class="fa-solid fa-download text-xs"></i>
-                <span>Download Print File</span>
+              <a href="${f.url}" download="${f.original_name || f.filename}" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium">
+                Download
               </a>
             </div>
           `;
@@ -1639,7 +1434,7 @@
       document.getElementById('slip-modal').classList.add('hidden');
     }
 
-    // ─── CATALOG & PRICE EDITING ───
+    // ─── PRODUCTS & PRICES ───
     async function savePrice(productId) {
       const input = document.getElementById(`price-input-${productId}`);
       const newPrice = parseFloat(input.value);
@@ -1655,7 +1450,7 @@
         });
         const data = await res.json();
         if (data.success) {
-          showToast(`Price updated to ${newPrice} ETB! Synced to Telegram Bot.`, 'success');
+          showToast(`Price updated to ${newPrice} ETB!`);
         } else {
           showToast('Failed to update price', 'error');
         }
@@ -1679,12 +1474,12 @@
         if (data.success) {
           const img = document.getElementById(`img-${productId}`);
           if (img) img.src = data.image_url + '?t=' + Date.now();
-          showToast('Product photo updated successfully!', 'success');
+          showToast('Product photo updated!');
         } else {
-          showToast('Image upload failed: ' + (data.detail || 'Error'), 'error');
+          showToast('Upload failed', 'error');
         }
       } catch (err) {
-        showToast('Network error while uploading image', 'error');
+        showToast('Network error uploading image', 'error');
       }
     }
 
@@ -1700,9 +1495,8 @@
     async function submitAddProduct(event) {
       event.preventDefault();
       const btn = document.getElementById('btn-submit-add-product');
-      const origText = btn.innerHTML;
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...';
+      btn.innerText = 'Saving...';
 
       const name = document.getElementById('new-prod-name').value;
       const price = document.getElementById('new-prod-price').value;
@@ -1730,9 +1524,9 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast(`"${name}" added to catalog & live Telegram Bot!`, 'success');
+          showToast(`"${name}" added to catalog!`);
           closeAddProductModal();
-          setTimeout(() => location.reload(), 700);
+          setTimeout(() => location.reload(), 600);
         } else {
           showToast('Failed to add product: ' + (data.detail || 'Error'), 'error');
         }
@@ -1740,25 +1534,23 @@
         showToast('Network error adding product', 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = origText;
+        btn.innerText = 'Add to Store';
       }
     }
 
     async function deleteProduct(productId, productName) {
-      if (!confirm(`Are you sure you want to remove "${productName}" from the catalog?\nIt will also be removed from the Telegram Bot and Mini App.`)) {
-        return;
-      }
+      if (!confirm(`Remove "${productName}" from the catalog?`)) return;
       try {
         const res = await fetch(`/api/products/${productId}`, { method: 'DELETE' });
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast(`"${productName}" removed from catalog.`, 'success');
-          setTimeout(() => location.reload(), 700);
+          showToast(`"${productName}" removed.`);
+          setTimeout(() => location.reload(), 600);
         } else {
           showToast('Failed to delete product', 'error');
         }
       } catch (err) {
-        showToast('Network error while deleting product', 'error');
+        showToast('Network error while deleting', 'error');
       }
     }
 
@@ -1766,11 +1558,11 @@
     function filterDesigns(prodId) {
       const cards = document.querySelectorAll('.design-card');
       document.querySelectorAll('#tab-designs button[id^="des-filter-"]').forEach(btn => {
-        btn.className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 whitespace-nowrap shadow-xs';
+        btn.className = 'px-3 py-1 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap';
       });
       const activeBtn = document.getElementById(`des-filter-${prodId}`);
       if (activeBtn) {
-        activeBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white whitespace-nowrap shadow-xs';
+        activeBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-white whitespace-nowrap';
       }
 
       cards.forEach(card => {
@@ -1794,15 +1586,14 @@
     async function submitAddDesign(e) {
       e.preventDefault();
       const btn = document.getElementById('btn-save-design');
-      const origText = btn.innerHTML;
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Uploading...';
+      btn.innerText = 'Uploading...';
 
       const formData = new FormData();
       formData.append('product_id', document.getElementById('des-prod-id').value);
       formData.append('subproduct', document.getElementById('des-subproduct').value);
       formData.append('title', document.getElementById('des-title').value);
-      formData.append('description', document.getElementById('des-desc').value);
+      formData.append('description', '');
       formData.append('file', document.getElementById('des-file').files[0]);
 
       try {
@@ -1812,33 +1603,33 @@
         });
         const data = await res.json();
         if (data.success) {
-          showToast('Design artwork uploaded and active in Telegram Bot!', 'success');
+          showToast('Design uploaded successfully!');
           closeAddDesignModal();
-          setTimeout(() => location.reload(), 700);
+          setTimeout(() => location.reload(), 600);
         } else {
-          showToast('Upload failed: ' + (data.detail || 'Error'), 'error');
+          showToast('Upload failed', 'error');
         }
       } catch (err) {
         showToast('Network error while saving design', 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = origText;
+        btn.innerText = 'Upload Design';
       }
     }
 
     async function deleteDesign(designId, title) {
-      if (!confirm(`Are you sure you want to delete design "${title}"?`)) return;
+      if (!confirm(`Delete design "${title}"?`)) return;
       try {
         const res = await fetch(`/api/designs/${designId}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.success) {
-          showToast(`Design "${title}" deleted.`, 'success');
-          setTimeout(() => location.reload(), 700);
+          showToast(`Design "${title}" deleted.`);
+          setTimeout(() => location.reload(), 600);
         } else {
           showToast('Delete failed', 'error');
         }
       } catch (err) {
-        showToast('Network error while deleting design', 'error');
+        showToast('Network error', 'error');
       }
     }
 
@@ -1855,9 +1646,8 @@
     async function submitAddPortfolio(e) {
       e.preventDefault();
       const btn = document.getElementById('btn-submit-add-portfolio');
-      const origText = btn.innerHTML;
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...';
+      btn.innerText = 'Saving...';
 
       const formData = new FormData();
       formData.append('title', document.getElementById('port-title').value);
@@ -1875,17 +1665,17 @@
         });
         const data = await res.json();
         if (data.success) {
-          showToast('Showcase item published to /portfolio in Telegram!', 'success');
+          showToast('Item added to portfolio!');
           closeAddPortfolioModal();
-          setTimeout(() => location.reload(), 700);
+          setTimeout(() => location.reload(), 600);
         } else {
           showToast('Failed to add portfolio item', 'error');
         }
       } catch (err) {
-        showToast('Network error adding showcase item', 'error');
+        showToast('Network error', 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = origText;
+        btn.innerText = 'Add to Showcase';
       }
     }
 
@@ -1895,17 +1685,17 @@
         const res = await fetch(`/api/portfolio/${itemId}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.success) {
-          showToast(`Showcase item "${title}" removed.`, 'success');
-          setTimeout(() => location.reload(), 700);
+          showToast(`Showcase item "${title}" removed.`);
+          setTimeout(() => location.reload(), 600);
         } else {
-          showToast('Failed to delete showcase item', 'error');
+          showToast('Failed to delete', 'error');
         }
       } catch (err) {
-        showToast('Network error while deleting showcase item', 'error');
+        showToast('Network error', 'error');
       }
     }
 
-    // ─── SALES & FINANCIAL CHARTS (CHART.JS 4.4) ───
+    // ─── CHARTS (CHART.JS) ───
     let chartsRendered = false;
 
     function renderSalesCharts() {
@@ -1918,13 +1708,9 @@
       const productRevenues = {{ analytics.product_revenues | tojson }};
       const statusCounts = {{ analytics.status_counts | tojson }};
 
-      // 1. Revenue Trajectory Area Chart
+      // Line Chart
       const trendCtx = document.getElementById('chart-revenue-trend');
       if (trendCtx) {
-        const gradient = trendCtx.getContext('2d').createLinearGradient(0, 0, 0, 280);
-        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
-        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
-
         new Chart(trendCtx, {
           type: 'line',
           data: {
@@ -1935,16 +1721,14 @@
             datasets: [{
               label: 'Gross Sales (ETB)',
               data: dailyValues,
-              borderColor: '#10B981',
-              backgroundColor: gradient,
+              borderColor: '#0f172a',
+              backgroundColor: 'rgba(15, 23, 42, 0.05)',
               fill: true,
-              tension: 0.35,
+              tension: 0.3,
               pointRadius: 4,
-              pointHoverRadius: 6,
-              pointBackgroundColor: '#10B981',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              borderWidth: 2.5,
+              pointBackgroundColor: '#0f172a',
+              pointBorderColor: '#fff',
+              borderWidth: 2,
             }]
           },
           options: {
@@ -1953,28 +1737,18 @@
             plugins: {
               legend: { display: false },
               tooltip: {
-                backgroundColor: '#0F172A',
-                titleColor: '#F8FAFC',
-                bodyColor: '#F8FAFC',
-                cornerRadius: 12,
-                padding: 12,
-                boxPadding: 4,
                 callbacks: {
                   label: ctx => ` ${ctx.parsed.y.toLocaleString()} ETB`
                 }
               }
             },
             scales: {
-              x: {
-                grid: { display: false },
-                ticks: { font: { family: 'Plus Jakarta Sans', size: 10 }, color: '#94A3B8' }
-              },
+              x: { grid: { display: false }, ticks: { font: { size: 10 } } },
               y: {
                 beginAtZero: true,
-                grid: { color: '#F1F5F9' },
+                grid: { color: '#f1f5f9' },
                 ticks: {
                   font: { family: 'JetBrains Mono', size: 10 },
-                  color: '#94A3B8',
                   callback: v => v.toLocaleString() + ' ETB'
                 }
               }
@@ -1983,13 +1757,9 @@
         });
       }
 
-      // 2. Product Revenue Bar Chart
+      // Bar Chart
       const prodCtx = document.getElementById('chart-product-revenue');
       if (prodCtx) {
-        const colors = [
-          '#F59E0B', '#10B981', '#6366F1', '#3B82F6', '#EC4899',
-          '#8B5CF6', '#14B8A6', '#F97316', '#06B6D4', '#84CC16'
-        ];
         new Chart(prodCtx, {
           type: 'bar',
           data: {
@@ -1997,10 +1767,9 @@
             datasets: [{
               label: 'Revenue (ETB)',
               data: productRevenues,
-              backgroundColor: colors.slice(0, productLabels.length),
-              borderRadius: 8,
-              borderSkipped: false,
-              maxBarThickness: 36,
+              backgroundColor: '#f59e0b',
+              borderRadius: 6,
+              maxBarThickness: 32,
             }]
           },
           options: {
@@ -2009,25 +1778,18 @@
             plugins: {
               legend: { display: false },
               tooltip: {
-                backgroundColor: '#0F172A',
-                cornerRadius: 12,
-                padding: 12,
                 callbacks: {
                   label: ctx => ` ${ctx.parsed.y.toLocaleString()} ETB`
                 }
               }
             },
             scales: {
-              x: {
-                grid: { display: false },
-                ticks: { font: { family: 'Plus Jakarta Sans', size: 10 }, color: '#64748B' }
-              },
+              x: { grid: { display: false }, ticks: { font: { size: 10 } } },
               y: {
                 beginAtZero: true,
-                grid: { color: '#F1F5F9' },
+                grid: { color: '#f1f5f9' },
                 ticks: {
                   font: { family: 'JetBrains Mono', size: 10 },
-                  color: '#94A3B8',
                   callback: v => v.toLocaleString() + ' ETB'
                 }
               }
@@ -2036,13 +1798,13 @@
         });
       }
 
-      // 3. Status Funnel Doughnut
+      // Doughnut
       const doughCtx = document.getElementById('chart-status-doughnut');
       if (doughCtx) {
         new Chart(doughCtx, {
           type: 'doughnut',
           data: {
-            labels: ['Review Pending', 'In Production', 'Ready to Ship', 'Completed', 'Re-uploaded'],
+            labels: ['Pending Review', 'In Production', 'Ready to Ship', 'Completed', 'Re-uploaded'],
             datasets: [{
               data: [
                 statusCounts.pending_review || 0,
@@ -2051,32 +1813,24 @@
                 statusCounts.completed || 0,
                 statusCounts.reuploaded || 0
               ],
-              backgroundColor: ['#FBBF24', '#8B5CF6', '#3B82F6', '#10B981', '#F97316'],
-              borderWidth: 3,
+              backgroundColor: ['#f59e0b', '#3b82f6', '#6366f1', '#10b981', '#f97316'],
+              borderWidth: 2,
               borderColor: '#ffffff',
-              hoverOffset: 6,
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '68%',
+            cutout: '65%',
             plugins: {
               legend: {
                 position: 'bottom',
                 labels: {
                   boxWidth: 8,
-                  boxHeight: 8,
-                  font: { family: 'Plus Jakarta Sans', size: 10 },
-                  color: '#64748B',
-                  padding: 12,
+                  font: { size: 10 },
+                  padding: 10,
                   usePointStyle: true,
                 }
-              },
-              tooltip: {
-                backgroundColor: '#0F172A',
-                cornerRadius: 12,
-                padding: 10,
               }
             }
           }
@@ -2084,48 +1838,43 @@
       }
     }
 
-    // ─── LIVE BACKGROUND REFRESH & CHIME ───
-    let knownOrdersCount = {{ orders|length }};
+    // ─── REFRESH & SHORTCUTS ───
+    function refreshData() {
+      const spinner = document.getElementById('refresh-spinner');
+      if (spinner) spinner.classList.add('fa-spin');
+      showToast('Refreshing data...');
+      setTimeout(() => location.reload(), 400);
+    }
 
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeReceiptModal();
+        closeArtworkModal();
+        closeRejectModal();
+        closeSlipModal();
+        closeAddProductModal();
+        closeAddDesignModal();
+        closeAddPortfolioModal();
+        closeSettingsModal();
+      }
+    });
+
+    // Background live check every 15s
+    let knownOrdersCount = {{ orders|length }};
     async function checkLiveOrders() {
       try {
         const res = await fetch('/api/orders');
         if (res.status === 200) {
           const data = await res.json();
           if (data.orders && data.orders.length > knownOrdersCount) {
-            playOrderChime();
-            showToast('🔔 New customer order received in real-time!', 'success');
+            showToast('New customer order received!');
             knownOrdersCount = data.orders.length;
-            setTimeout(() => location.reload(), 1200);
+            setTimeout(() => location.reload(), 1000);
           }
         }
       } catch (e) {}
     }
-
-    function playOrderChime() {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.6);
-      } catch(e) {}
-    }
-
-    function refreshData() {
-      const spinner = document.getElementById('refresh-spinner');
-      if (spinner) spinner.classList.add('fa-spin');
-      showToast('Refreshing live data...', 'info');
-      setTimeout(() => location.reload(), 400);
-    }
-
-    setInterval(checkLiveOrders, 10000);
+    setInterval(checkLiveOrders, 15000);
   </script>
 </body>
 </html>

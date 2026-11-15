@@ -95,6 +95,10 @@ def init_db():
                 last_seen TEXT,
                 total_orders INTEGER DEFAULT 0
             );
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            );
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS recipient_name TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_files TEXT;
@@ -134,6 +138,12 @@ def init_db():
                 total_orders INTEGER DEFAULT 0
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        """)
         conn.commit()
 
         # Migration: check if new columns exist for existing tables
@@ -169,6 +179,62 @@ def init_db():
 
         conn.commit()
     conn.close()
+
+def get_setting(key: str, default: str = "") -> str:
+    """Retrieve a persistent setting from the database."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(q("SELECT value FROM settings WHERE key = ?", is_pg), (key,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return row[0]
+    return default
+
+def set_setting(key: str, value: str):
+    """Save or update a persistent setting in the database."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    if is_pg:
+        cursor.execute("""
+            INSERT INTO settings (key, value) VALUES (%s, %s)
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+        """, (key, value))
+    else:
+        cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+    conn.commit()
+    conn.close()
+
+def get_admin_credentials() -> tuple[str, str]:
+    """Return the active dashboard admin username and password."""
+    import config
+    username = get_setting("admin_username", "") or config.DASHBOARD_USERNAME
+    password = get_setting("admin_password", "") or config.DASHBOARD_PASSWORD
+    return username, password
+
+def update_admin_credentials(new_username: str, new_password: str):
+    """Update admin username and password persistently in DB and sync to .env if present."""
+    set_setting("admin_username", new_username)
+    set_setting("admin_password", new_password)
+
+    # Sync to local .env file if it exists
+    env_file = Path(__file__).resolve().parent.parent / ".env"
+    if env_file.exists():
+        try:
+            import re
+            content = env_file.read_text(encoding="utf-8")
+            if "DASHBOARD_USERNAME=" in content:
+                content = re.sub(r"^DASHBOARD_USERNAME=.*$", f"DASHBOARD_USERNAME={new_username}", content, flags=re.MULTILINE)
+            else:
+                content += f"\nDASHBOARD_USERNAME={new_username}"
+            if "DASHBOARD_PASSWORD=" in content:
+                content = re.sub(r"^DASHBOARD_PASSWORD=.*$", f"DASHBOARD_PASSWORD={new_password}", content, flags=re.MULTILINE)
+            else:
+                content += f"\nDASHBOARD_PASSWORD={new_password}"
+            env_file.write_text(content, encoding="utf-8")
+            logger.info("Updated DASHBOARD credentials in .env file.")
+        except Exception as e:
+            logger.warning(f"Could not update .env file: {e}")
 
 def save_order(
     user_id: int,
