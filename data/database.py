@@ -96,6 +96,7 @@ def init_db():
             );
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS recipient_name TEXT;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_files TEXT;
         """)
         conn.commit()
     else:
@@ -142,7 +143,8 @@ def init_db():
             "payment_status": "TEXT DEFAULT 'pending_review'",
             "updated_at": "TEXT",
             "phone": "TEXT",
-            "recipient_name": "TEXT"
+            "recipient_name": "TEXT",
+            "customer_files": "TEXT DEFAULT '[]'"
         }
 
         for col, col_type in new_cols.items():
@@ -171,7 +173,8 @@ def save_order(
     payment_status: str = "pending_review",
     status: str = "pending",
     phone: Optional[str] = None,
-    recipient_name: Optional[str] = None
+    recipient_name: Optional[str] = None,
+    customer_files: Optional[str] = "[]"
 ) -> str:
     """Save order to database and return generated order code (e.g. SP-1001)."""
     conn, is_pg = get_connection()
@@ -184,15 +187,15 @@ def save_order(
             delivery_type, delivery_location, notes, has_attachment,
             payment_screenshot_file_id, payment_screenshot_filename,
             payment_status, status, created_at, updated_at,
-            phone, recipient_name
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            phone, recipient_name, customer_files
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     params = (
         user_id, full_name, username or "", items, deadline,
         delivery_type, delivery_location, notes, 1 if has_attachment else 0,
         payment_screenshot_file_id, payment_screenshot_filename,
         payment_status, status, created_at, created_at,
-        phone or "", recipient_name or full_name
+        phone or "", recipient_name or full_name, customer_files or "[]"
     )
 
     if is_pg:
@@ -265,6 +268,24 @@ def get_order_by_code(order_code: str) -> Optional[Dict[str, Any]]:
     conn, is_pg = get_connection()
     cursor = conn.cursor()
     cursor.execute(q("SELECT * FROM orders WHERE order_code = ?", is_pg), (order_code,))
+    result = fetch_one(cursor, is_pg)
+    conn.close()
+    return result
+
+def get_order_by_receipt_filename(filename: str) -> Optional[Dict[str, Any]]:
+    """Retrieve order matching a payment screenshot filename."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(q("SELECT * FROM orders WHERE payment_screenshot_filename = ?", is_pg), (filename,))
+    result = fetch_one(cursor, is_pg)
+    conn.close()
+    return result
+
+def get_order_by_customer_file(filename: str) -> Optional[Dict[str, Any]]:
+    """Retrieve order containing a specific customer uploaded file."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(q("SELECT * FROM orders WHERE customer_files LIKE ?", is_pg), (f"%{filename}%",))
     result = fetch_one(cursor, is_pg)
     conn.close()
     return result

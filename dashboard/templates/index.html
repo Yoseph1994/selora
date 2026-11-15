@@ -175,6 +175,14 @@
                   {% if o.notes and o.notes != 'None' %}
                   <p class="text-xs text-slate-400 truncate mt-0.5"><i class="fa-regular fa-note-sticky mr-1"></i>{{ o.notes }}</p>
                   {% endif %}
+                  {% if o.customer_files and o.customer_files != '[]' %}
+                  <div class="mt-2">
+                    <button onclick='viewCustomerArtwork({{ o.customer_files|tojson }}, "{{ o.order_code }}")' class="px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-800 text-[11px] font-semibold transition flex items-center space-x-1.5 shadow-xs">
+                      <i class="fa-solid fa-images text-purple-600"></i>
+                      <span>View Custom Artwork</span>
+                    </button>
+                  </div>
+                  {% endif %}
                 </td>
                 <td class="py-4 px-4 whitespace-nowrap">
                   <div class="text-xs font-semibold text-slate-800">{{ o.delivery_type }}</div>
@@ -412,13 +420,42 @@
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-      <div class="p-4 flex items-center justify-center bg-slate-900 min-h-[300px]">
-        <img id="receipt-img" src="" alt="Payment Receipt" class="max-h-[500px] object-contain rounded-lg">
+      <div class="p-4 flex flex-col items-center justify-center bg-slate-900 min-h-[320px] relative">
+        <div id="receipt-loading" class="text-white text-xs flex items-center space-x-2 py-8">
+          <i class="fa-solid fa-circle-notch fa-spin text-amber-400"></i>
+          <span>Loading receipt from cloud storage...</span>
+        </div>
+        <img id="receipt-img" src="" alt="Payment Receipt" class="max-h-[500px] object-contain rounded-lg hidden" onload="document.getElementById('receipt-loading').classList.add('hidden'); this.classList.remove('hidden');" onerror="document.getElementById('receipt-loading').innerHTML='⚠️ Loading image directly from Telegram. Tap Open Full Image below to view.';">
       </div>
-      <div class="p-3 border-t border-slate-100 flex justify-end bg-slate-50">
-        <a id="receipt-download-link" href="" target="_blank" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700 transition">
-          Open Full Image
+      <div class="p-3 border-t border-slate-100 flex justify-between items-center bg-slate-50">
+        <span class="text-[11px] text-slate-500">Tap below to open or download full resolution</span>
+        <a id="receipt-download-link" href="" target="_blank" class="px-3.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700 transition flex items-center space-x-1.5">
+          <i class="fa-solid fa-up-right-from-square text-[10px]"></i>
+          <span>Open Full Image</span>
         </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Customer Uploaded Artwork & Files -->
+  <div id="modal-artwork" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 flex-shrink-0">
+        <div>
+          <h3 id="artwork-modal-title" class="font-bold text-slate-900 text-sm">Customer Uploaded Artwork</h3>
+          <p class="text-xs text-slate-400">Original high-resolution design files for printing.</p>
+        </div>
+        <button onclick="closeArtworkModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div id="artwork-gallery" class="overflow-y-auto space-y-3 flex-1 pr-1">
+        <!-- Rendered dynamically by JS -->
+      </div>
+
+      <div class="flex justify-end pt-3 border-t border-slate-100 flex-shrink-0">
+        <button onclick="closeArtworkModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Close</button>
       </div>
     </div>
   </div>
@@ -729,13 +766,66 @@
 
     function viewReceipt(imgUrl, orderCode) {
       document.getElementById('receipt-title').innerText = 'Payment Receipt — ' + orderCode;
-      document.getElementById('receipt-img').src = imgUrl;
+      const loader = document.getElementById('receipt-loading');
+      const img = document.getElementById('receipt-img');
+      loader.classList.remove('hidden');
+      loader.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-amber-400 mr-2"></i><span>Loading receipt from cloud storage...</span>';
+      img.classList.add('hidden');
+      img.src = imgUrl;
       document.getElementById('receipt-download-link').href = imgUrl;
       document.getElementById('receipt-modal').classList.remove('hidden');
     }
 
     function closeReceiptModal() {
       document.getElementById('receipt-modal').classList.add('hidden');
+    }
+
+    function viewCustomerArtwork(filesData, orderCode) {
+      document.getElementById('artwork-modal-title').innerText = `Customer Artwork — Order ${orderCode}`;
+      const gallery = document.getElementById('artwork-gallery');
+      gallery.innerHTML = '';
+
+      let files = [];
+      try {
+        files = typeof filesData === 'string' ? JSON.parse(filesData) : filesData;
+      } catch (e) {
+        files = [];
+      }
+
+      if (!files || files.length === 0) {
+        gallery.innerHTML = '<p class="text-xs text-slate-400 p-8 text-center bg-slate-50 rounded-2xl">No custom design files attached to this order.</p>';
+      } else {
+        files.forEach((f, idx) => {
+          const item = document.createElement('div');
+          item.className = 'p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-3';
+          item.innerHTML = `
+            <div class="flex items-center space-x-3 overflow-hidden">
+              <img src="${f.url}" alt="Artwork ${idx + 1}" class="w-16 h-16 object-cover rounded-xl border border-slate-200 bg-white flex-shrink-0" onerror="this.src='/product-images/stickers.png'">
+              <div class="overflow-hidden">
+                <p class="text-xs font-bold text-slate-900 truncate">${f.original_name || f.filename}</p>
+                <p class="text-[11px] text-purple-700 font-medium mt-0.5">${f.file_type || 'Print Quality Artwork'}</p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2 flex-shrink-0">
+              <a href="${f.url}" target="_blank" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center space-x-1 shadow-xs">
+                <i class="fa-solid fa-up-right-from-square text-[10px]"></i>
+                <span>Open Full</span>
+              </a>
+              <a href="${f.url}" download="${f.original_name || f.filename}" class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center space-x-1.5 shadow-xs">
+                <i class="fa-solid fa-download text-xs"></i>
+                <span>Download Print File</span>
+              </a>
+            </div>
+          `;
+          gallery.appendChild(item);
+        });
+      }
+
+      document.getElementById('modal-artwork').classList.remove('hidden');
+    }
+
+    function closeArtworkModal() {
+      document.getElementById('modal-artwork').classList.add('hidden');
     }
 
     async function updateOrderStatus(orderCode, action) {

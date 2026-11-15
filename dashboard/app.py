@@ -22,6 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = BASE_DIR / "templates"
 RECEIPTS_DIR = BASE_DIR.parent / "data" / "receipts"
 RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)
+CUSTOMER_UPLOADS_DIR = BASE_DIR.parent / "data" / "customer_uploads"
+CUSTOMER_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 PRODUCT_IMAGES_DIR = BASE_DIR.parent / "data" / "products_images"
 PRODUCT_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 DESIGNS_IMAGES_DIR = BASE_DIR.parent / "data" / "designs_images"
@@ -31,9 +33,77 @@ app = FastAPI(title="Selora Prints Dashboard")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 # Mount static directories
-app.mount("/receipts", StaticFiles(directory=str(RECEIPTS_DIR)), name="receipts")
 app.mount("/product-images", StaticFiles(directory=str(PRODUCT_IMAGES_DIR)), name="product_images")
 app.mount("/designs-images", StaticFiles(directory=str(DESIGNS_IMAGES_DIR)), name="designs_images")
+
+# Smart On-Demand Static & Cloud Handlers
+@app.get("/receipts/{filename}")
+async def serve_receipt(filename: str):
+    """Serve payment receipt, downloading on demand from Telegram if container restarted."""
+    dest_path = RECEIPTS_DIR / filename
+    if dest_path.exists():
+        return FileResponse(dest_path)
+
+    # Fallback to Telegram Bot API
+    order = database.get_order_by_receipt_filename(filename)
+    if order and order.get("payment_screenshot_file_id") and config.BOT_TOKEN:
+        file_id = order["payment_screenshot_file_id"]
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/getFile?file_id={file_id}") as info_resp:
+                    if info_resp.status == 200:
+                        tg_info = await info_resp.json()
+                        if tg_info.get("ok"):
+                            file_path = tg_info["result"]["file_path"]
+                            dl_url = f"https://api.telegram.org/file/bot{config.BOT_TOKEN}/{file_path}"
+                            async with session.get(dl_url) as dl_resp:
+                                if dl_resp.status == 200:
+                                    content = await dl_resp.read()
+                                    with open(dest_path, "wb") as f:
+                                        f.write(content)
+                                    return FileResponse(dest_path)
+        except Exception as e:
+            logger.error(f"Failed to fetch receipt on demand from Telegram: {e}")
+
+    raise HTTPException(status_code=404, detail="Receipt image not found")
+
+@app.get("/customer-uploads/{filename}")
+async def serve_customer_upload(filename: str):
+    """Serve customer artwork, downloading on demand from Telegram if container restarted."""
+    dest_path = CUSTOMER_UPLOADS_DIR / filename
+    if dest_path.exists():
+        return FileResponse(dest_path)
+
+    # Fallback to Telegram Bot API
+    order = database.get_order_by_customer_file(filename)
+    if order and order.get("customer_files") and config.BOT_TOKEN:
+        try:
+            import json
+            files_list = json.loads(order["customer_files"])
+            file_id = None
+            for item in files_list:
+                if item.get("filename") == filename:
+                    file_id = item.get("file_id")
+                    break
+
+            if file_id:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(f"https://api.telegram.org/bot{config.BOT_TOKEN}/getFile?file_id={file_id}") as info_resp:
+                        if info_resp.status == 200:
+                            tg_info = await info_resp.json()
+                            if tg_info.get("ok"):
+                                file_path = tg_info["result"]["file_path"]
+                                dl_url = f"https://api.telegram.org/file/bot{config.BOT_TOKEN}/{file_path}"
+                                async with session.get(dl_url) as dl_resp:
+                                    if dl_resp.status == 200:
+                                        content = await dl_resp.read()
+                                        with open(dest_path, "wb") as f:
+                                            f.write(content)
+                                        return FileResponse(dest_path)
+        except Exception as e:
+            logger.error(f"Failed to fetch customer upload on demand: {e}")
+
+    raise HTTPException(status_code=404, detail="Customer artwork not found")
 
 AUTH_COOKIE_NAME = "selora_auth_session"
 

@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -33,6 +34,8 @@ RECEIPTS_DIR = Path(__file__).resolve().parent.parent / "data" / "receipts"
 RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)
 DESIGNS_IMAGES_DIR = Path(__file__).resolve().parent.parent / "data" / "designs_images"
 DESIGNS_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+CUSTOMER_UPLOADS_DIR = Path(__file__).resolve().parent.parent / "data" / "customer_uploads"
+CUSTOMER_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 class OrderFSM(StatesGroup):
     waiting_for_product = State()
@@ -600,12 +603,14 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
         return
 
     if mode == "single":
-        await state.update_data(design_mode="single", photos=[])
+        await state.update_data(design_mode="single", photos=[], customer_files=[])
         await state.set_state(OrderFSM.waiting_for_photos)
         await callback.message.edit_text(
-            f"📸 *UPLOAD DESIGN / ARTWORK*\n"
+            f"📸 *UPLOAD DESIGN / ARTWORK (HIGH QUALITY)*\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
             f"This design will be printed on all *{qty} copies* of {prod_name}.\n\n"
+            "✨ *For 100% Uncompressed Print Quality:* Tap 📎 (paperclip) and select **'File / Document'** so Telegram does not compress your image!\n"
+            "📷 Regular high-resolution photos are also fully accepted.\n\n"
             "👉 *Please send your photo or artwork file now:*",
             parse_mode="Markdown",
             reply_markup=get_cancel_keyboard()
@@ -614,7 +619,7 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
         return
 
     if mode == "multi":
-        await state.update_data(design_mode="multi", photos=[])
+        await state.update_data(design_mode="multi", photos=[], customer_files=[])
         await state.set_state(OrderFSM.waiting_for_photos)
 
         done_btn = InlineKeyboardMarkup(inline_keyboard=[
@@ -623,9 +628,10 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
         ])
 
         await callback.message.edit_text(
-            f"📸 *UPLOAD {qty} PHOTOS*\n"
+            f"📸 *UPLOAD {qty} PHOTOS (FULL RESOLUTION)*\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
             f"Send your photos one by one or as an album.\n\n"
+            "✨ *Pro-Tip for Best Print Quality:* You can send as uncompressed **'Files / Documents'** (📎) or regular photos.\n\n"
             f"• *Progress:* `0 / {qty} photos received`\n\n"
             "Send your photos now (or tap *Done Uploading* when finished):",
             parse_mode="Markdown",
@@ -698,23 +704,57 @@ async def process_photo_upload(message: types.Message, state: FSMContext):
     data = await state.get_data()
     mode = data.get("design_mode", "single")
     qty = data.get("quantity", 1)
+    user = message.from_user
 
-    file_id = message.photo[-1].file_id if message.photo else message.document.file_id
+    customer_files = data.get("customer_files", [])
+    file_idx = len(customer_files) + 1
+
+    if message.document:
+        file_id = message.document.file_id
+        orig_name = message.document.file_name or f"document_{file_idx}.jpg"
+        ext = Path(orig_name).suffix.lower() or ".jpg"
+        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_{file_idx}{ext}"
+        file_type = "Document (Uncompressed)"
+    else:
+        best_photo = message.photo[-1]
+        file_id = best_photo.file_id
+        orig_name = f"photo_{best_photo.width}x{best_photo.height}.jpg"
+        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_{file_idx}.jpg"
+        file_type = f"Photo ({best_photo.width}x{best_photo.height})"
+
+    dest_path = CUSTOMER_UPLOADS_DIR / filename
+    try:
+        await message.bot.download(file_id, destination=dest_path)
+    except Exception as err:
+        logger.warning(f"Could not download artwork locally: {err}")
+
+    file_entry = {
+        "file_id": file_id,
+        "filename": filename,
+        "original_name": orig_name,
+        "file_type": file_type,
+        "url": f"/customer-uploads/{filename}"
+    }
+    customer_files.append(file_entry)
 
     if mode == "single":
-        await state.update_data(file_id=file_id, file_type="photo" if message.photo else "document")
-        await message.answer("✅ Artwork received successfully! 🎨")
+        await state.update_data(
+            file_id=file_id,
+            file_type="document" if message.document else "photo",
+            customer_files=customer_files
+        )
+        await message.answer(f"✅ *Artwork received in full quality!* ({file_type}) 🎨", parse_mode="Markdown")
         await advance_to_deadline_picker(message, state)
         return
 
     # Multi photo mode
     photos = data.get("photos", [])
     photos.append(file_id)
-    await state.update_data(photos=photos, file_id=photos[0])
+    await state.update_data(photos=photos, file_id=photos[0], customer_files=customer_files)
 
     count = len(photos)
     if count >= qty:
-        await message.answer(f"🎉 *All {count}/{qty} photos received successfully!* 💛", parse_mode="Markdown")
+        await message.answer(f"🎉 *All {count}/{qty} photos received in full quality!* 💛", parse_mode="Markdown")
         await advance_to_deadline_picker(message, state)
     else:
         done_btn = InlineKeyboardMarkup(inline_keyboard=[
@@ -722,7 +762,7 @@ async def process_photo_upload(message: types.Message, state: FSMContext):
             [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
         ])
         await message.answer(
-            f"📸 *Received photo {count} of {qty}!*\n\n"
+            f"📸 *Received photo {count} of {qty}!* (`{orig_name}`)\n\n"
             f"Send more photos or tap *Done Uploading* when you're finished:",
             parse_mode="Markdown",
             reply_markup=done_btn
@@ -1063,13 +1103,14 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         delivery_type=data.get('delivery_type', ''),
         delivery_location=data.get('delivery_location', ''),
         notes=notes_combined,
-        has_attachment=bool(data.get('file_id')),
+        has_attachment=bool(data.get('file_id') or data.get('customer_files')),
         payment_screenshot_file_id=screenshot_file_id,
         payment_screenshot_filename=temp_filename,
         payment_status="pending_review",
         status="pending",
         phone=data.get('phone', ''),
-        recipient_name=data.get('recipient_name', user.full_name)
+        recipient_name=data.get('recipient_name', user.full_name),
+        customer_files=json.dumps(data.get('customer_files', []))
     )
 
     # 1. Customer confirmation

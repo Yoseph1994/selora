@@ -37,9 +37,11 @@ async def handle_payment_approval(callback: types.CallbackQuery):
 
     # Update Admin Caption
     new_caption = (
-        callback.message.caption + f"\n\n✅ *PAYMENT APPROVED* by {callback.from_user.full_name} at {timestamp}\n"
+        (callback.message.caption or "") + f"\n\n✅ *PAYMENT APPROVED* by {callback.from_user.full_name} at {timestamp}\n"
         "Status: `In Production`"
     )
+    if len(new_caption) > 1020:
+        new_caption = new_caption[:1015] + "..."
     await callback.message.edit_caption(
         caption=new_caption,
         parse_mode="Markdown",
@@ -87,8 +89,10 @@ async def handle_payment_rejection(callback: types.CallbackQuery):
 
     # Update Admin Caption
     new_caption = (
-        callback.message.caption + f"\n\n❌ *PAYMENT REJECTED* by {callback.from_user.full_name} at {timestamp}"
+        (callback.message.caption or "") + f"\n\n❌ *PAYMENT REJECTED* by {callback.from_user.full_name} at {timestamp}"
     )
+    if len(new_caption) > 1020:
+        new_caption = new_caption[:1015] + "..."
     await callback.message.edit_caption(
         caption=new_caption,
         parse_mode="Markdown",
