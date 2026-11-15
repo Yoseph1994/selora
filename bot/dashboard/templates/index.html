@@ -1511,21 +1511,22 @@
         gallery.innerHTML = '<p class="text-xs text-slate-400 p-6 text-center bg-slate-50 rounded-xl">No files attached.</p>';
       } else {
         files.forEach((f, idx) => {
+          const fileUrl = f.url || (f.filename ? '/customer-uploads/' + f.filename : '/product-images/stickers.png');
           const item = document.createElement('div');
           item.className = 'p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-3';
           item.innerHTML = `
             <div class="flex items-center space-x-3 overflow-hidden">
-              <img src="${f.url}" alt="Artwork ${idx + 1}" class="w-14 h-14 object-cover rounded-lg border border-slate-200 bg-white flex-shrink-0" onerror="this.src='/product-images/stickers.png'">
+              <img src="${fileUrl}" alt="Artwork ${idx + 1}" class="w-14 h-14 object-cover rounded-lg border border-slate-200 bg-white flex-shrink-0" onerror="this.src='/product-images/stickers.png'">
               <div class="overflow-hidden">
                 <p class="text-xs font-semibold text-slate-900 truncate">${f.original_name || f.filename}</p>
                 <p class="text-[11px] text-slate-500 mt-0.5">${f.file_type || 'Artwork'}</p>
               </div>
             </div>
             <div class="flex items-center space-x-2 flex-shrink-0">
-              <a href="${f.url}" target="_blank" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium">
+              <a href="${fileUrl}" target="_blank" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium">
                 Open
               </a>
-              <a href="${f.url}" download="${f.original_name || f.filename}" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium">
+              <a href="${fileUrl}" download="${f.original_name || f.filename}" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium">
                 Download
               </a>
             </div>

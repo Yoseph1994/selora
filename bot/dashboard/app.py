@@ -191,6 +191,7 @@ async def webapp_store(request: Request):
         context={
             "products": products_data.get("products", []),
             "designs": designs_data.get("designs", []),
+            "portfolio": database.get_portfolio_items(),
             "store_name": config.STORE_NAME,
             "cbe_account": config.PAYMENT_CBE_ACCOUNT,
             "cbe_name": config.PAYMENT_CBE_NAME,
@@ -258,9 +259,10 @@ async def webapp_submit_order(payload: WebappOrderRequest):
 
 @app.get("/api/webapp/config")
 async def webapp_get_config():
-    """Retrieve active store config, payment accounts, products, and designs for Mini App."""
+    """Retrieve active store config, payment accounts, products, designs, and portfolio from DB."""
     products_data = database.get_products_data()
     designs_data = database.get_designs_data()
+    portfolio_data = database.get_portfolio_items()
     return {
         "ok": True,
         "store": {
@@ -273,7 +275,8 @@ async def webapp_get_config():
             "support_username": "Yosef_selora"
         },
         "products": products_data.get("products", []),
-        "designs": designs_data.get("designs", [])
+        "designs": designs_data.get("designs", []),
+        "portfolio": portfolio_data
     }
 
 @app.get("/api/webapp/track/{order_code}")
@@ -283,6 +286,7 @@ async def webapp_track_order(order_code: str):
     order = database.get_order_by_code(clean_code)
     if not order:
         return {"ok": False, "error": f"No order found matching '{clean_code}'"}
+    enrich_order_data(order)
     return {
         "ok": True,
         "order": {
@@ -297,9 +301,139 @@ async def webapp_track_order(order_code: str):
             "phone": order.get("phone") or "",
             "notes": order.get("notes") or "",
             "created_at": order["created_at"],
-            "rejection_reason": order.get("rejection_reason")
+            "rejection_reason": order.get("rejection_reason") or "",
+            "custom_instructions": order.get("custom_instructions") or "",
+            "artwork_files": order.get("artwork_files") or []
         }
     }
+
+@app.post("/api/webapp/order/{order_code}/reupload-receipt")
+async def webapp_reupload_receipt(
+    order_code: str,
+    receipt_file: UploadFile = File(...),
+    notes: Optional[str] = Form("")
+):
+    """Allow customer in Mini App to re-upload deposit proof if order was rejected."""
+    clean_code = order_code.strip().upper()
+    order = database.get_order_by_code(clean_code)
+    if not order:
+        raise HTTPException(status_code=404, detail=f"Order {clean_code} not found")
+
+    ext = Path(receipt_file.filename).suffix or ".jpg"
+    rec_name = f"reupload_rec_{clean_code}_{int(time.time())}{ext}"
+    rec_path = RECEIPTS_DIR / rec_name
+    content = await receipt_file.read()
+    with open(rec_path, "wb") as f:
+        f.write(content)
+
+    database.update_order_receipt(clean_code, file_id="", filename=rec_name)
+
+    # Notify admin with new receipt photo and approval buttons
+    if config.ADMIN_CHAT_ID:
+        admin_text = (
+            f"🔄 *UPDATED PAYMENT RECEIPT RE-UPLOADED! — {clean_code}*\n"
+            f"👤 *Customer:* {order.get('full_name')} (@{order.get('username') or 'none'})\n"
+            f"🏷 *Items:* {order.get('items')}\n"
+            f"📞 *Phone:* {order.get('phone')}\n"
+            f"📝 *Customer Note:* {notes.strip() if notes else 'Updated receipt attached'}\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "👉 Please verify the new payment receipt below:"
+        )
+        approval_keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "✅ Approve 50% Deposit", "callback_data": f"pay_approve:{clean_code}"},
+                    {"text": "❌ Reject Again", "callback_data": f"pay_reject:{clean_code}"}
+                ],
+                [
+                    {"text": "💬 DM Customer", "url": f"tg://user?id={order.get('user_id')}"},
+                    {"text": "🌐 View on Dashboard", "url": config.DASHBOARD_PUBLIC_URL}
+                ]
+            ]
+        }
+        await send_telegram_photo(int(config.ADMIN_CHAT_ID), rec_path, admin_text, approval_keyboard)
+
+    # Notify customer via DM
+    if order.get("user_id"):
+        cust_text = (
+            f"✓ *Updated Receipt Received for Order `{clean_code}`!*\n\n"
+            "Our studio team has been notified and is verifying your updated payment proof. You will be notified once verified!"
+        )
+        await send_telegram_notification(order["user_id"], cust_text)
+
+    return {"ok": True, "message": "Receipt re-uploaded successfully", "order_code": clean_code}
+
+@app.post("/api/webapp/order/{order_code}/reupload-artwork")
+async def webapp_reupload_artwork(
+    order_code: str,
+    artwork_file: Optional[UploadFile] = File(None),
+    artwork_files: Optional[list[UploadFile]] = File(None),
+    notes: Optional[str] = Form("")
+):
+    """Allow customer in Mini App to re-upload print artwork files if order was rejected."""
+    clean_code = order_code.strip().upper()
+    order = database.get_order_by_code(clean_code)
+    if not order:
+        raise HTTPException(status_code=404, detail=f"Order {clean_code} not found")
+
+    files_to_process = []
+    if artwork_files and isinstance(artwork_files, list):
+        files_to_process.extend(artwork_files)
+    if artwork_file and hasattr(artwork_file, "filename") and artwork_file.filename and artwork_file not in files_to_process:
+        files_to_process.append(artwork_file)
+
+    if not files_to_process:
+        raise HTTPException(status_code=400, detail="No artwork files provided")
+
+    new_files_list = []
+    for f in files_to_process:
+        ext = Path(f.filename).suffix or ".jpg"
+        clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', Path(f.filename).stem)[:30]
+        art_name = f"reupload_art_{clean_code}_{int(time.time())}_{clean_base}_{len(new_files_list)}{ext}"
+        art_path = CUSTOMER_UPLOADS_DIR / art_name
+        content = await f.read()
+        with open(art_path, "wb") as out_f:
+            out_f.write(content)
+        new_files_list.append({
+            "filename": art_name,
+            "file_id": None,
+            "type": "customer_artwork",
+            "original_name": f.filename,
+            "url": f"/customer-uploads/{art_name}"
+        })
+
+    database.update_order_artwork(clean_code, customer_files=json.dumps(new_files_list))
+
+    # Notify admin
+    if config.ADMIN_CHAT_ID:
+        admin_text = (
+            f"🔄 *UPDATED ARTWORK RE-UPLOADED! — {clean_code}*\n"
+            f"👤 *Customer:* {order.get('full_name')} (@{order.get('username') or 'none'})\n"
+            f"🏷 *Items:* {order.get('items')}\n"
+            f"📎 *Files:* {len(new_files_list)} new file(s) attached\n"
+            f"📝 *Customer Note:* {notes.strip() if notes else 'Updated artwork files uploaded'}\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "👉 Please review the updated artwork in the Selora Dashboard."
+        )
+        markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "💬 DM Customer", "url": f"tg://user?id={order.get('user_id')}"},
+                    {"text": "🌐 View on Dashboard", "url": config.DASHBOARD_PUBLIC_URL}
+                ]
+            ]
+        }
+        await send_telegram_notification(int(config.ADMIN_CHAT_ID), admin_text, markup)
+
+    # Notify customer via DM
+    if order.get("user_id"):
+        cust_text = (
+            f"✓ *Updated Artwork Received for Order `{clean_code}`!*\n\n"
+            "Our studio team has received your updated print file(s) and is reviewing them for production."
+        )
+        await send_telegram_notification(order["user_id"], cust_text)
+
+    return {"ok": True, "message": "Artwork re-uploaded successfully", "order_code": clean_code}
 
 @app.post("/api/webapp/order-full")
 async def webapp_submit_order_full(
@@ -349,7 +483,8 @@ async def webapp_submit_order_full(
                     "filename": art_name,
                     "file_id": None,
                     "type": "customer_artwork",
-                    "original_name": f.filename
+                    "original_name": f.filename,
+                    "url": f"/customer-uploads/{art_name}"
                 })
                 has_attachment = True
             except Exception as e:
@@ -374,9 +509,9 @@ async def webapp_submit_order_full(
     note_parts = []
     if design_note:
         note_parts.append(f"Design: {design_note}")
-    if notes:
-        note_parts.append(notes.strip())
-    if transaction_ref:
+    if notes and notes.strip():
+        note_parts.append(f"Custom Note: {notes.strip()}")
+    if transaction_ref and transaction_ref.strip():
         note_parts.append(f"Ref: {transaction_ref.strip()}")
     if payment_method:
         note_parts.append(f"Paid via {payment_method}")
@@ -629,8 +764,9 @@ def enrich_order_data(o: dict) -> dict:
         parts = [p.strip() for p in cleaned_notes.split("|") if p.strip()]
         cust_parts = []
         for p in parts:
-            if not re.match(r"^(Deposit|Total|GPS|Ready Design|Design Note):\s*", p, re.IGNORECASE):
-                if p.lower() not in ("none", "null", "n/a", "placed via webapp"):
+            if not re.match(r"^(Deposit|Total|GPS|Ready Design|Design Note|Design|Paid via|Ref|Payment Method):\s*", p, re.IGNORECASE):
+                p_lower = p.lower()
+                if p_lower not in ("none", "null", "n/a", "placed via webapp") and not p_lower.startswith(("customer artwork", "ready design", "selora custom design")):
                     cust_parts.append(p)
         o["custom_instructions"] = " | ".join(cust_parts) if cust_parts else ""
 
@@ -1067,7 +1203,7 @@ async def delete_design_api(design_id: str):
 
 # ─── PORTFOLIO / OUR WORKS ENDPOINTS ─────────────────────────
 
-@app.get("/api/portfolio", dependencies=[Depends(require_api_auth)])
+@app.get("/api/portfolio")
 async def get_portfolio_api():
     """Retrieve all showcase portfolio works."""
     return {"items": database.get_portfolio_items()}

@@ -99,6 +99,36 @@ def init_db():
                 key TEXT PRIMARY KEY,
                 value TEXT
             );
+            CREATE TABLE IF NOT EXISTS products (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                price REAL,
+                unit TEXT DEFAULT 'per piece',
+                min_order INTEGER DEFAULT 1,
+                description TEXT,
+                image_url TEXT,
+                has_ready_designs INTEGER DEFAULT 1,
+                created_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS designs (
+                id TEXT PRIMARY KEY,
+                product_id TEXT,
+                product_name TEXT,
+                subproduct TEXT,
+                category TEXT,
+                title TEXT,
+                description TEXT,
+                image_url TEXT,
+                created_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS portfolio (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                category TEXT,
+                description TEXT,
+                image_url TEXT,
+                created_at TEXT
+            );
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS recipient_name TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_files TEXT;
@@ -144,6 +174,42 @@ def init_db():
                 value TEXT
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS products (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                price REAL,
+                unit TEXT DEFAULT 'per piece',
+                min_order INTEGER DEFAULT 1,
+                description TEXT,
+                image_url TEXT,
+                has_ready_designs INTEGER DEFAULT 1,
+                created_at TEXT
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS designs (
+                id TEXT PRIMARY KEY,
+                product_id TEXT,
+                product_name TEXT,
+                subproduct TEXT,
+                category TEXT,
+                title TEXT,
+                description TEXT,
+                image_url TEXT,
+                created_at TEXT
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS portfolio (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                category TEXT,
+                description TEXT,
+                image_url TEXT,
+                created_at TEXT
+            )
+        """)
         conn.commit()
 
         # Migration: check if new columns exist for existing tables
@@ -178,6 +244,87 @@ def init_db():
                 pass
 
         conn.commit()
+
+    # Seed products if empty
+    try:
+        cursor.execute(q("SELECT COUNT(*) FROM products", is_pg))
+        count_row = cursor.fetchone()
+        count = count_row[0] if not is_pg else (list(count_row.values())[0] if isinstance(count_row, dict) else count_row[0])
+        if count == 0 and PRODUCTS_FILE.exists():
+            with open(PRODUCTS_FILE, "r", encoding="utf-8") as pf:
+                pdata = json.load(pf)
+            for p in pdata.get("products", []):
+                cursor.execute(
+                    q("INSERT INTO products (id, name, price, unit, min_order, description, image_url, has_ready_designs, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", is_pg),
+                    (
+                        p["id"],
+                        p["name"],
+                        p.get("price"),
+                        p.get("unit", "per piece"),
+                        p.get("min_order", 1),
+                        p.get("description", ""),
+                        p.get("image_url", ""),
+                        1 if p.get("has_ready_designs", True) else 0,
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    )
+                )
+            conn.commit()
+            logger.info("Seeded products table in database from products.json")
+    except Exception as e:
+        logger.warning(f"Product seed notice: {e}")
+
+    # Seed designs if empty
+    try:
+        cursor.execute(q("SELECT COUNT(*) FROM designs", is_pg))
+        count_row = cursor.fetchone()
+        count = count_row[0] if not is_pg else (list(count_row.values())[0] if isinstance(count_row, dict) else count_row[0])
+        if count == 0 and DESIGNS_FILE.exists():
+            with open(DESIGNS_FILE, "r", encoding="utf-8") as df:
+                ddata = json.load(df)
+            for d in ddata.get("designs", []):
+                cursor.execute(
+                    q("INSERT INTO designs (id, product_id, product_name, subproduct, category, title, description, image_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", is_pg),
+                    (
+                        d["id"],
+                        d.get("product_id", ""),
+                        d.get("product_name", ""),
+                        d.get("subproduct", ""),
+                        d.get("category", ""),
+                        d.get("title", ""),
+                        d.get("description", ""),
+                        d.get("image_url", ""),
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    )
+                )
+            conn.commit()
+            logger.info("Seeded designs table in database from designs.json")
+    except Exception as e:
+        logger.warning(f"Design seed notice: {e}")
+
+    # Seed portfolio if empty
+    try:
+        cursor.execute(q("SELECT COUNT(*) FROM portfolio", is_pg))
+        count_row = cursor.fetchone()
+        count = count_row[0] if not is_pg else (list(count_row.values())[0] if isinstance(count_row, dict) else count_row[0])
+        if count == 0 and PORTFOLIO_FILE.exists():
+            with open(PORTFOLIO_FILE, "r", encoding="utf-8") as portf:
+                portdata = json.load(portf)
+            for item in portdata.get("items", []):
+                cursor.execute(
+                    q("INSERT INTO portfolio (id, title, category, description, image_url, created_at) VALUES (?, ?, ?, ?, ?, ?)", is_pg),
+                    (
+                        item["id"],
+                        item.get("title", ""),
+                        item.get("category", ""),
+                        item.get("description", ""),
+                        item.get("image_url", ""),
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    )
+                )
+            conn.commit()
+            logger.info("Seeded portfolio table in database from portfolio.json")
+    except Exception as e:
+        logger.warning(f"Portfolio seed notice: {e}")
 
     # Sanitize existing orders if notes had REJECTED REASON appended historically
     try:
@@ -641,58 +788,83 @@ def get_sales_analytics() -> Dict[str, Any]:
         "status_counts": status_counts,
     }
 
-# Product catalog management
+# Product catalog management (Stored directly in SQL Database)
 def get_products_data() -> Dict[str, Any]:
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
     try:
-        with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        cursor.execute(q("SELECT id, name, price, unit, min_order, description, image_url, has_ready_designs FROM products ORDER BY id", is_pg))
+        rows = fetch_all(cursor, is_pg)
+        products = []
+        for r in rows:
+            products.append({
+                "id": r["id"],
+                "name": r["name"],
+                "price": float(r["price"]) if r["price"] is not None else None,
+                "unit": r["unit"],
+                "min_order": int(r["min_order"]) if r["min_order"] is not None else 1,
+                "description": r["description"] or "",
+                "image_url": r["image_url"] or f"/product-images/{r['id']}.png",
+                "has_ready_designs": bool(r["has_ready_designs"])
+            })
+        return {"products": products}
     except Exception as e:
-        logger.error(f"Error reading products.json: {e}")
+        logger.error(f"Error reading products from DB: {e}")
         return {"products": []}
+    finally:
+        conn.close()
 
 def update_product_price(product_id: str, new_price: float) -> bool:
-    """Update a product's price dynamically in products.json."""
+    """Update a product's price dynamically in the database."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
     try:
-        with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        found = False
-        for p in data.get("products", []):
-            if p["id"] == product_id:
-                p["price"] = new_price
-                found = True
-                break
-
-        if found:
-            with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            return True
-        return False
+        cursor.execute(q("UPDATE products SET price = ? WHERE id = ?", is_pg), (new_price, product_id))
+        conn.commit()
+        try:
+            if PRODUCTS_FILE.exists():
+                with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for p in data.get("products", []):
+                    if p["id"] == product_id:
+                        p["price"] = new_price
+                        break
+                with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+        return cursor.rowcount > 0
     except Exception as e:
-        logger.error(f"Failed to update product price: {e}")
+        logger.error(f"Failed to update product price in DB: {e}")
         return False
+    finally:
+        conn.close()
 
 def update_product_image(product_id: str, image_url: str) -> bool:
-    """Update a product's image URL dynamically in products.json."""
+    """Update a product's image URL dynamically in the database."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
     try:
-        with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        found = False
-        for p in data.get("products", []):
-            if p["id"] == product_id:
-                p["image_url"] = image_url
-                found = True
-                break
-
-        if found:
-            with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            return True
-        return False
+        cursor.execute(q("UPDATE products SET image_url = ? WHERE id = ?", is_pg), (image_url, product_id))
+        conn.commit()
+        try:
+            if PRODUCTS_FILE.exists():
+                with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for p in data.get("products", []):
+                    if p["id"] == product_id:
+                        p["image_url"] = image_url
+                        break
+                with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+        return cursor.rowcount > 0
     except Exception as e:
-        logger.error(f"Failed to update product image: {e}")
+        logger.error(f"Failed to update product image in DB: {e}")
         return False
+    finally:
+        conn.close()
 
 def add_product(
     name: str,
@@ -704,67 +876,84 @@ def add_product(
     product_id: Optional[str] = None,
     has_ready_designs: bool = True
 ) -> Dict[str, Any]:
-    """Add a new product to products.json catalog."""
+    """Add a new product to the database."""
     import re
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
     try:
-        with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        products = data.setdefault("products", [])
-
         if not product_id:
-            # Generate clean alphanumeric slug
             clean = re.sub(r"[^\w\s-]", "", name.lower()).strip()
             base_id = re.sub(r"[-\s]+", "_", clean) or "item"
             product_id = base_id
             counter = 1
-            existing_ids = {p["id"] for p in products}
-            while product_id in existing_ids:
+            cursor.execute(q("SELECT id FROM products WHERE id = ?", is_pg), (product_id,))
+            while cursor.fetchone():
                 product_id = f"{base_id}_{counter}"
                 counter += 1
+                cursor.execute(q("SELECT id FROM products WHERE id = ?", is_pg), (product_id,))
+
+        created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        min_ord = int(min_order) if min_order and int(min_order) > 1 else 1
+        img = image_url or f"/product-images/{product_id}.png"
+        has_ready_int = 1 if has_ready_designs else 0
+
+        cursor.execute(
+            q("INSERT INTO products (id, name, price, unit, min_order, description, image_url, has_ready_designs, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", is_pg),
+            (product_id, name.strip(), float(price) if price is not None else 0.0, unit.strip() or "each", min_ord, description.strip(), img, has_ready_int, created_at)
+        )
+        conn.commit()
 
         new_item = {
             "id": product_id,
             "name": name.strip(),
             "price": float(price) if price is not None else 0.0,
             "unit": unit.strip() or "each",
+            "min_order": min_ord,
             "description": description.strip() or f"High quality custom printed {name.strip()} from Selora Prints.",
-            "image_url": image_url or f"/product-images/{product_id}.png",
+            "image_url": img,
             "has_ready_designs": bool(has_ready_designs)
         }
-        if min_order and int(min_order) > 1:
-            new_item["min_order"] = int(min_order)
 
-        products.append(new_item)
+        try:
+            if PRODUCTS_FILE.exists():
+                with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+                    pdata = json.load(f)
+                pdata.setdefault("products", []).append(new_item)
+                with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(pdata, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
 
-        with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-
-        logger.info(f"Successfully added new product: {product_id} ({name})")
+        logger.info(f"Successfully added new product to DB: {product_id} ({name})")
         return new_item
     except Exception as e:
-        logger.error(f"Failed to add product: {e}")
+        logger.error(f"Failed to add product to DB: {e}")
         raise e
+    finally:
+        conn.close()
 
 def delete_product(product_id: str) -> bool:
-    """Remove a product from products.json by ID."""
+    """Remove a product from database by ID."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
     try:
-        with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        products = data.get("products", [])
-        initial_len = len(products)
-        data["products"] = [p for p in products if p["id"] != product_id]
-
-        if len(data["products"]) < initial_len:
-            with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            logger.info(f"Successfully deleted product: {product_id}")
-            return True
-        return False
+        cursor.execute(q("DELETE FROM products WHERE id = ?", is_pg), (product_id,))
+        conn.commit()
+        try:
+            if PRODUCTS_FILE.exists():
+                with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+                    pdata = json.load(f)
+                pdata["products"] = [p for p in pdata.get("products", []) if p["id"] != product_id]
+                with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(pdata, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+        return cursor.rowcount > 0
     except Exception as e:
-        logger.error(f"Failed to delete product: {e}")
+        logger.error(f"Failed to delete product from DB: {e}")
         return False
+    finally:
+        conn.close()
 
 def get_orders_by_user(user_id: int) -> List[Dict[str, Any]]:
     """Retrieve all orders placed by a specific customer."""
@@ -785,22 +974,37 @@ def get_all_customers_user_ids() -> List[int]:
     return [r[0] for r in rows if r[0]]
 
 # -------------------------------------------------------------
-# DYNAMIC DESIGNS & SUBPRODUCTS MANAGEMENT
+# DYNAMIC DESIGNS & SUBPRODUCTS MANAGEMENT (Stored in SQL DB)
 # -------------------------------------------------------------
 
 def get_designs_data() -> Dict[str, Any]:
-    """Load raw designs data from designs.json."""
-    if not DESIGNS_FILE.exists():
-        return {"designs": []}
+    """Fetch all designs from designs table in DB."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
     try:
-        with open(DESIGNS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        cursor.execute(q("SELECT id, product_id, product_name, subproduct, category, title, description, image_url FROM designs ORDER BY id", is_pg))
+        rows = fetch_all(cursor, is_pg)
+        designs = []
+        for r in rows:
+            designs.append({
+                "id": r["id"],
+                "product_id": r.get("product_id") or "",
+                "product_name": r.get("product_name") or "",
+                "subproduct": r.get("subproduct") or "",
+                "category": r.get("category") or r.get("subproduct") or "Curated",
+                "title": r.get("title") or "",
+                "description": r.get("description") or "",
+                "image_url": r.get("image_url") or f"/designs-images/{r['id']}.png"
+            })
+        return {"designs": designs}
     except Exception as e:
-        logger.error(f"Error reading designs.json: {e}")
+        logger.error(f"Error reading designs from DB: {e}")
         return {"designs": []}
+    finally:
+        conn.close()
 
 def get_designs(product_id: Optional[str] = None, subproduct: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Fetch designs filtered optionally by product_id and/or subproduct."""
+    """Fetch designs filtered optionally by product_id and/or subproduct from DB."""
     data = get_designs_data()
     designs = data.get("designs", [])
     if product_id and product_id != "all":
@@ -810,12 +1014,29 @@ def get_designs(product_id: Optional[str] = None, subproduct: Optional[str] = No
     return designs
 
 def get_design_by_id(design_id: str) -> Optional[Dict[str, Any]]:
-    """Retrieve a single design by its ID."""
-    data = get_designs_data()
-    for d in data.get("designs", []):
-        if d.get("id") == design_id:
-            return d
-    return None
+    """Retrieve a single design by its ID from DB."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(q("SELECT id, product_id, product_name, subproduct, category, title, description, image_url FROM designs WHERE id = ?", is_pg), (design_id,))
+        r = fetch_one(cursor, is_pg)
+        if not r:
+            return None
+        return {
+            "id": r["id"],
+            "product_id": r.get("product_id") or "",
+            "product_name": r.get("product_name") or "",
+            "subproduct": r.get("subproduct") or "",
+            "category": r.get("category") or r.get("subproduct") or "Curated",
+            "title": r.get("title") or "",
+            "description": r.get("description") or "",
+            "image_url": r.get("image_url") or f"/designs-images/{r['id']}.png"
+        }
+    except Exception as e:
+        logger.error(f"Error fetching design {design_id}: {e}")
+        return None
+    finally:
+        conn.close()
 
 def add_design(
     title: str,
@@ -826,63 +1047,92 @@ def add_design(
     product_name: Optional[str] = None,
     design_id: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Add a new design or subproduct design to designs.json."""
+    """Add a new design to designs table in DB."""
     import re
-    data = get_designs_data()
-    designs = data.setdefault("designs", [])
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    try:
+        if not design_id:
+            clean = re.sub(r"[^\w\s-]", "", title.lower()).strip()
+            clean_slug = re.sub(r'[-\s]+', '_', clean)
+            base_id = f"des_{product_id}_{clean_slug}" if clean_slug else f"des_{int(datetime.now().timestamp())}"
+            design_id = base_id
+            counter = 1
+            cursor.execute(q("SELECT id FROM designs WHERE id = ?", is_pg), (design_id,))
+            while cursor.fetchone():
+                design_id = f"{base_id}_{counter}"
+                counter += 1
+                cursor.execute(q("SELECT id FROM designs WHERE id = ?", is_pg), (design_id,))
 
-    if not design_id:
-        clean = re.sub(r"[^\w\s-]", "", title.lower()).strip()
-        clean_slug = re.sub(r'[-\s]+', '_', clean)
-        base_id = f"des_{product_id}_{clean_slug}" if clean_slug else f"des_{int(datetime.now().timestamp())}"
-        design_id = base_id
-        counter = 1
-        existing_ids = {d.get("id") for d in designs}
-        while design_id in existing_ids:
-            design_id = f"{base_id}_{counter}"
-            counter += 1
-
-    if not product_name:
-        prod_data = get_products_data()
-        for p in prod_data.get("products", []):
-            if p["id"] == product_id:
-                product_name = p["name"]
-                break
         if not product_name:
-            product_name = product_id.replace("_", " ").title()
+            cursor.execute(q("SELECT name FROM products WHERE id = ?", is_pg), (product_id,))
+            p_row = cursor.fetchone()
+            if p_row:
+                product_name = p_row[0] if not is_pg else p_row["name"]
+            else:
+                product_name = product_id.replace("_", " ").title()
 
-    new_design = {
-        "id": design_id,
-        "title": title.strip(),
-        "product_id": product_id.strip(),
-        "product_name": product_name.strip(),
-        "subproduct": subproduct.strip(),
-        "description": description.strip(),
-        "image_url": image_url or f"/designs-images/{design_id}.png",
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
+        created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        img = image_url or f"/designs-images/{design_id}.png"
+        cat = subproduct.strip() or "Curated"
 
-    designs.append(new_design)
+        cursor.execute(
+            q("INSERT INTO designs (id, product_id, product_name, subproduct, category, title, description, image_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", is_pg),
+            (design_id, product_id.strip(), product_name.strip(), subproduct.strip(), cat, title.strip(), description.strip(), img, created_at)
+        )
+        conn.commit()
 
-    with open(DESIGNS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+        new_design = {
+            "id": design_id,
+            "title": title.strip(),
+            "product_id": product_id.strip(),
+            "product_name": product_name.strip(),
+            "subproduct": subproduct.strip(),
+            "category": cat,
+            "description": description.strip(),
+            "image_url": img,
+            "created_at": created_at
+        }
 
-    logger.info(f"Added new design: {design_id} - {title} ({subproduct})")
-    return new_design
+        try:
+            if DESIGNS_FILE.exists():
+                with open(DESIGNS_FILE, "r", encoding="utf-8") as f:
+                    ddata = json.load(f)
+                ddata.setdefault("designs", []).append(new_design)
+                with open(DESIGNS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(ddata, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+        return new_design
+    except Exception as e:
+        logger.error(f"Failed to add design to DB: {e}")
+        raise e
+    finally:
+        conn.close()
 
 def delete_design(design_id: str) -> bool:
-    """Delete a design by ID."""
-    data = get_designs_data()
-    designs = data.get("designs", [])
-    initial_len = len(designs)
-    data["designs"] = [d for d in designs if d.get("id") != design_id]
-
-    if len(data["designs"]) < initial_len:
-        with open(DESIGNS_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        logger.info(f"Deleted design: {design_id}")
-        return True
-    return False
+    """Delete a design by ID from DB."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(q("DELETE FROM designs WHERE id = ?", is_pg), (design_id,))
+        conn.commit()
+        try:
+            if DESIGNS_FILE.exists():
+                with open(DESIGNS_FILE, "r", encoding="utf-8") as f:
+                    ddata = json.load(f)
+                ddata["designs"] = [d for d in ddata.get("designs", []) if d.get("id") != design_id]
+                with open(DESIGNS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(ddata, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+        return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Failed to delete design from DB: {e}")
+        return False
+    finally:
+        conn.close()
 
 def get_design_categories() -> Dict[str, List[str]]:
     """Return dictionary mapping product_ids to unique subproduct names."""
@@ -928,44 +1178,100 @@ def set_user_language(user_id: int, lang: str, full_name: str = "", username: st
     conn.commit()
     conn.close()
 
-# ─── PORTFOLIO / OUR WORKS ────────────────────────────────────
+# ─── PORTFOLIO / OUR WORKS (Stored in SQL DB) ─────────────────
 
 def get_portfolio_items() -> List[Dict[str, Any]]:
-    """Get list of showcased past works."""
-    if not PORTFOLIO_FILE.exists():
-        return []
+    """Get list of showcased past works from database."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
     try:
-        with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
-            return json.load(f).get("items", [])
-    except Exception:
+        cursor.execute(q("SELECT id, title, category, description, image_url, created_at FROM portfolio ORDER BY id DESC", is_pg))
+        rows = fetch_all(cursor, is_pg)
+        items = []
+        for r in rows:
+            items.append({
+                "id": r["id"],
+                "title": r.get("title") or "",
+                "category": r.get("category") or "Merch",
+                "description": r.get("description") or "",
+                "image_url": r.get("image_url") or "",
+                "created_at": r.get("created_at") or ""
+            })
+        return items
+    except Exception as e:
+        logger.error(f"Error fetching portfolio from DB: {e}")
         return []
+    finally:
+        conn.close()
 
 def save_portfolio_items(items: List[Dict[str, Any]]):
-    with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
-        json.dump({"items": items}, f, indent=2, ensure_ascii=False)
+    try:
+        with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
+            json.dump({"items": items}, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
 
 def add_portfolio_item(title: str, category: str, description: str, image_url: str) -> Dict[str, Any]:
-    items = get_portfolio_items()
+    """Add a new past work item to portfolio table in DB."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
     new_id = f"work_{int(datetime.now().timestamp())}"
-    item = {
-        "id": new_id,
-        "title": title.strip(),
-        "category": category.strip(),
-        "description": description.strip(),
-        "image_url": image_url,
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    items.append(item)
-    save_portfolio_items(items)
-    return item
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        cursor.execute(
+            q("INSERT INTO portfolio (id, title, category, description, image_url, created_at) VALUES (?, ?, ?, ?, ?, ?)", is_pg),
+            (new_id, title.strip(), category.strip(), description.strip(), image_url.strip(), created_at)
+        )
+        conn.commit()
+
+        item = {
+            "id": new_id,
+            "title": title.strip(),
+            "category": category.strip(),
+            "description": description.strip(),
+            "image_url": image_url.strip(),
+            "created_at": created_at
+        }
+
+        try:
+            if PORTFOLIO_FILE.exists():
+                with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
+                    pdata = json.load(f)
+                pdata.setdefault("items", []).append(item)
+                with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
+                    json.dump(pdata, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+        return item
+    except Exception as e:
+        logger.error(f"Failed to add portfolio item to DB: {e}")
+        raise e
+    finally:
+        conn.close()
 
 def delete_portfolio_item(item_id: str) -> bool:
-    items = get_portfolio_items()
-    new_items = [i for i in items if i.get("id") != item_id]
-    if len(new_items) < len(items):
-        save_portfolio_items(new_items)
-        return True
-    return False
+    """Delete a past work from portfolio table in DB."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(q("DELETE FROM portfolio WHERE id = ?", is_pg), (item_id,))
+        conn.commit()
+        try:
+            if PORTFOLIO_FILE.exists():
+                with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
+                    pdata = json.load(f)
+                pdata["items"] = [i for i in pdata.get("items", []) if i.get("id") != item_id]
+                with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
+                    json.dump(pdata, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+        return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Failed to delete portfolio item from DB: {e}")
+        return False
+    finally:
+        conn.close()
 
 def update_order_artwork(order_code: str, customer_files: str) -> bool:
     """Update customer artwork files after re-upload and mark status as reuploaded."""

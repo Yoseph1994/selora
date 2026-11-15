@@ -188,6 +188,40 @@
       </div>
     </section>
 
+    <!-- TAB: WORKS & PORTFOLIO -->
+    <section id="tab-portfolio" class="space-y-4 hidden">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-bold text-white" id="portfolio-title">Past Works & Portfolio</h2>
+          <p class="text-xs text-slate-400 mt-0.5" id="portfolio-desc">Real print creations handcrafted by Selora Studio</p>
+        </div>
+      </div>
+
+      <!-- Portfolio Category Filter Pills -->
+      <div class="flex items-center space-x-1.5 overflow-x-auto hide-scrollbar text-xs pb-1">
+        <button onclick="setPortfolioCategory('all')" id="port-cat-all" class="port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-bold bg-white text-slate-950">
+          All Works
+        </button>
+        <button onclick="setPortfolioCategory('stickers')" id="port-cat-stickers" class="port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+          Stickers & Decals
+        </button>
+        <button onclick="setPortfolioCategory('books')" id="port-cat-books" class="port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+          Photo Books
+        </button>
+        <button onclick="setPortfolioCategory('cards')" id="port-cat-cards" class="port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+          Business Cards
+        </button>
+        <button onclick="setPortfolioCategory('merch')" id="port-cat-merch" class="port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+          Mugs & Gifts
+        </button>
+      </div>
+
+      <!-- Portfolio Grid -->
+      <div id="portfolio-grid" class="grid grid-cols-2 gap-3 pt-1">
+        <!-- Injected dynamically via JS from SQL portfolio database -->
+      </div>
+    </section>
+
     <!-- TAB 2: READY DESIGNS GALLERY -->
     <section id="tab-designs" class="space-y-4 hidden">
       <div class="flex items-center justify-between">
@@ -310,20 +344,24 @@
   </main>
 
   <!-- BOTTOM NAVIGATION BAR -->
-  <nav class="fixed bottom-0 left-0 right-0 z-30 bg-[#090d16]/95 backdrop-blur-xl border-t border-surface-border max-w-lg mx-auto px-4 py-2 flex items-center justify-around">
-    <button onclick="switchTab('catalog')" id="nav-catalog" class="nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-amber-400 font-bold">
+  <nav class="fixed bottom-0 left-0 right-0 z-30 bg-[#090d16]/95 backdrop-blur-xl border-t border-surface-border max-w-lg mx-auto px-2 py-2 flex items-center justify-around">
+    <button onclick="switchTab('catalog')" id="nav-catalog" class="nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-amber-400 font-bold">
       <i class="fa-solid fa-bag-shopping text-sm"></i>
       <span class="text-[10px] mt-0.5" id="nav-label-shop">Shop</span>
     </button>
-    <button onclick="switchTab('designs')" id="nav-designs" class="nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
+    <button onclick="switchTab('portfolio')" id="nav-portfolio" class="nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
+      <i class="fa-solid fa-images text-sm"></i>
+      <span class="text-[10px] mt-0.5" id="nav-label-works">Works</span>
+    </button>
+    <button onclick="switchTab('designs')" id="nav-designs" class="nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
       <i class="fa-solid fa-layer-group text-sm"></i>
       <span class="text-[10px] mt-0.5" id="nav-label-designs">Designs</span>
     </button>
-    <button onclick="switchTab('track')" id="nav-track" class="nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
+    <button onclick="switchTab('track')" id="nav-track" class="nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
       <i class="fa-solid fa-magnifying-glass text-sm"></i>
       <span class="text-[10px] mt-0.5" id="nav-label-track">Track</span>
     </button>
-    <button onclick="switchTab('info')" id="nav-info" class="nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
+    <button onclick="switchTab('info')" id="nav-info" class="nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
       <i class="fa-solid fa-circle-info text-sm"></i>
       <span class="text-[10px] mt-0.5" id="nav-label-studio">Studio</span>
     </button>
@@ -966,6 +1004,81 @@
     </div>
   </div>
 
+  <!-- RE-UPLOAD MODAL (FOR REJECTED RECEIPT OR ARTWORK) -->
+  <div id="reupload-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col justify-end hidden">
+    <div class="bg-[#0f1422] border-t border-surface-border rounded-t-3xl max-h-[90vh] flex flex-col shadow-2xl max-w-lg mx-auto w-full overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-4 py-3 border-b border-surface-border flex items-center justify-between">
+        <div>
+          <h3 id="reupload-modal-title" class="text-sm font-bold text-white">Re-upload File</h3>
+          <p id="reupload-modal-subtitle" class="text-[10px] text-slate-400">Order</p>
+        </div>
+        <button onclick="closeReuploadModal()" class="p-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-4 overflow-y-auto">
+        <div id="reupload-desc-box" class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200">
+          <!-- Populated via JS -->
+        </div>
+
+        <!-- File Upload Area -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Select New File <span class="text-rose-500 font-bold">*</span>
+          </label>
+          <div 
+            onclick="document.getElementById('reupload-file-input').click()"
+            class="border-2 border-dashed border-surface-border hover:border-amber-400/60 rounded-2xl p-5 text-center cursor-pointer transition bg-white/[0.02]"
+          >
+            <input 
+              type="file" 
+              id="reupload-file-input" 
+              class="hidden" 
+              onchange="handleReuploadFileChange(this)"
+            />
+            <div id="reupload-dropzone-content" class="space-y-2">
+              <i class="fa-solid fa-arrow-up-from-bracket text-xl text-amber-400"></i>
+              <div class="text-xs text-white font-medium">Click to choose file</div>
+              <div class="text-[10px] text-slate-500">Max size 25MB • JPG, PNG, WEBP, PDF</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional Notes -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Note for Studio (Optional)
+          </label>
+          <input 
+            type="text" 
+            id="reupload-notes-input" 
+            placeholder="e.g. Sent via CBEBirr reference #..."
+            class="w-full bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60"
+          />
+        </div>
+
+        <div id="reupload-error-box" class="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs hidden items-center space-x-2">
+          <i class="fa-solid fa-circle-exclamation text-rose-400 text-xs shrink-0"></i>
+          <span id="reupload-error-msg">Please select a file to upload.</span>
+        </div>
+      </div>
+
+      <!-- Footer submit button -->
+      <div class="p-3 bg-surface-card border-t border-surface-border flex items-center justify-end">
+        <button 
+          id="btn-reupload-submit"
+          type="button"
+          onclick="submitReupload()" 
+          class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1.5 active:scale-95 transition"
+        >
+          <span id="btn-reupload-txt">Submit Update</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT APPLICATION CORE -->
   <script>
     // ─── STATE MANAGEMENT ──────────────────────────────────────────
@@ -1010,9 +1123,12 @@
     const I18N = {
       en: {
         shop: 'Shop',
+        works: 'Works',
         designs: 'Designs',
         track: 'Track',
         studio: 'Studio',
+        portfolioTitle: 'Past Works & Portfolio',
+        portfolioDesc: 'Real print creations handcrafted by Selora Studio',
         depositBanner: '50% advance deposit required to start production. Remaining 50% paid upon pickup or delivery.',
         min: 'Min',
         order: 'Order',
@@ -1030,9 +1146,12 @@
       },
       am: {
         shop: 'ሱቅ',
+        works: 'ሥራዎች',
         designs: 'ዲዛይኖች',
         track: 'ክትትል',
         studio: 'ስቱዲዮ',
+        portfolioTitle: 'ያከናወናቸው ሥራዎች',
+        portfolioDesc: 'በሴሎራ ስቱዲዮ የተሰሩ እውነተኛ ህትመቶች',
         depositBanner: 'ስራ ለመጀመር 50% ቅድመ ክፍያ ያስፈልጋል። ቀሪው 50% ሲረከቡ ይከፈላል።',
         min: 'ዝቅተኛ',
         order: 'እዘዝ',
@@ -1053,6 +1172,7 @@
     // ─── DASHBOARD SYNC (JINJA2 + REALTIME API) ────────────────────
     const RAW_SERVER_PRODUCTS = {{ products | default([]) | tojson }};
     const RAW_SERVER_DESIGNS = {{ designs | default([]) | tojson }};
+    const RAW_SERVER_PORTFOLIO = {{ portfolio | default([]) | tojson }};
 
     function normalizeProducts(rawList) {
       if (!rawList || !rawList.length) return [];
@@ -1098,6 +1218,8 @@
 
     let PRODUCTS = normalizeProducts(RAW_SERVER_PRODUCTS);
     let DESIGNS = normalizeDesigns(RAW_SERVER_DESIGNS);
+    let PORTFOLIO = RAW_SERVER_PORTFOLIO || [];
+    let currentPortfolioCategory = 'all';
 
     // ─── INITIALIZATION ────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', () => {
@@ -1131,6 +1253,9 @@
       if (DESIGNS && DESIGNS.length) {
         renderDesigns(DESIGNS);
       }
+      if (PORTFOLIO && PORTFOLIO.length) {
+        renderPortfolio(PORTFOLIO);
+      }
 
       // Re-fetch in background so any new dashboard uploads appear instantly
       fetch('/api/webapp/config')
@@ -1144,6 +1269,10 @@
             if (data.designs && data.designs.length) {
               DESIGNS = normalizeDesigns(data.designs);
               renderDesigns(DESIGNS);
+            }
+            if (data.portfolio && data.portfolio.length) {
+              PORTFOLIO = data.portfolio;
+              renderPortfolio(PORTFOLIO);
             }
           }
         })
@@ -1272,19 +1401,122 @@
       renderProducts(filtered);
     }
 
+    // ─── RENDER PORTFOLIO / WORKS SHOWCASE ─────────────────────────
+    function renderPortfolio(items) {
+      const container = document.getElementById('portfolio-grid');
+      if (!container) return;
+      container.innerHTML = '';
+      if (!items || items.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-2 py-12 text-center text-slate-400 space-y-2">
+            <i class="fa-solid fa-images text-2xl text-slate-600"></i>
+            <p class="text-xs">No works found in this category.</p>
+          </div>
+        `;
+        return;
+      }
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "bg-surface-card border border-surface-border hover:border-amber-400/40 rounded-2xl overflow-hidden flex flex-col justify-between transition shadow-sm";
+        card.innerHTML = `
+          <div>
+            <div class="relative aspect-square w-full bg-[#0c101c] overflow-hidden">
+              <img 
+                src="${item.image_url}" 
+                alt="${item.title}" 
+                class="w-full h-full object-cover" 
+                loading="lazy"
+                onerror="this.src='/product-images/stickers.png'"
+              />
+              <div class="absolute top-2 left-2">
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#090d16]/85 backdrop-blur-md text-amber-300 border border-white/10">
+                  ${item.category || 'Custom Print'}
+                </span>
+              </div>
+            </div>
+            <div class="p-3">
+              <h3 class="font-bold text-xs text-white leading-tight line-clamp-1">${item.title}</h3>
+              <p class="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">${item.description || ''}</p>
+            </div>
+          </div>
+          <div class="p-3 pt-0">
+            <button 
+              type="button"
+              onclick="orderSimilarProduct('${(item.category || '').replace(/'/g, "\\'")}', '${(item.title || '').replace(/'/g, "\\'")}')"
+              class="w-full py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center justify-center space-x-1.5 transition active:scale-95"
+            >
+              <i class="fa-solid fa-cart-plus text-xs"></i>
+              <span>${currentLang === 'am' ? 'ይህን እዘዝ' : 'Order Similar'}</span>
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function setPortfolioCategory(cat) {
+      haptic('selection');
+      currentPortfolioCategory = cat;
+      document.querySelectorAll('.port-cat-pill').forEach(btn => {
+        btn.className = "port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300";
+      });
+      const activeBtn = document.getElementById(`port-cat-${cat}`);
+      if (activeBtn) {
+        activeBtn.className = "port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-bold bg-white text-slate-950";
+      }
+
+      if (cat === 'all') {
+        renderPortfolio(PORTFOLIO);
+      } else {
+        const filtered = PORTFOLIO.filter(item => {
+          const c = (item.category || '').toLowerCase();
+          const t = (item.title || '').toLowerCase();
+          if (cat === 'stickers') return c.includes('sticker') || t.includes('sticker');
+          if (cat === 'books') return c.includes('book') || t.includes('book');
+          if (cat === 'cards') return c.includes('card') || c.includes('bookmark') || t.includes('card') || t.includes('bookmark');
+          if (cat === 'merch') return c.includes('mug') || c.includes('puzzle') || t.includes('mug') || t.includes('puzzle');
+          return false;
+        });
+        renderPortfolio(filtered);
+      }
+    }
+
+    function orderSimilarProduct(category, title) {
+      const cat = (category || '').toLowerCase();
+      const t = (title || '').toLowerCase();
+      let matched = PRODUCTS.find(p => {
+        const pid = (p.id || '').toLowerCase();
+        const pcat = (p.category || '').toLowerCase();
+        const pname = (p.name || '').toLowerCase();
+        if (cat.includes('sticker') || t.includes('sticker')) return pid.includes('sticker') || pcat.includes('sticker');
+        if (cat.includes('puzzle') || t.includes('puzzle')) return pid.includes('puzzle');
+        if (cat.includes('mug') || t.includes('mug')) return pid.includes('mug');
+        if (cat.includes('card') || t.includes('card')) return pid.includes('card');
+        if (cat.includes('bookmark') || t.includes('bookmark')) return pid.includes('bookmark');
+        if (cat.includes('book') || t.includes('book')) return pid.includes('book');
+        return false;
+      });
+      if (!matched && PRODUCTS.length > 0) matched = PRODUCTS[0];
+      if (matched) {
+        openOrderModal(matched);
+      }
+    }
+
     // ─── TAB SWITCHING ─────────────────────────────────────────────
     function switchTab(tab) {
       haptic('selection');
       currentTab = tab;
-      ['catalog', 'designs', 'track', 'info'].forEach(t => {
+      ['catalog', 'portfolio', 'designs', 'track', 'info'].forEach(t => {
         const sec = document.getElementById(`tab-${t}`);
         const nav = document.getElementById(`nav-${t}`);
-        if (t === tab) {
-          sec.classList.remove('hidden');
-          nav.className = "nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-amber-400 font-bold";
-        } else {
-          sec.classList.add('hidden');
-          nav.className = "nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200";
+        if (sec && nav) {
+          if (t === tab) {
+            sec.classList.remove('hidden');
+            nav.className = "nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-amber-400 font-bold";
+          } else {
+            sec.classList.add('hidden');
+            nav.className = "nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200";
+          }
         }
       });
     }
@@ -2144,6 +2376,146 @@
       queryTrackOrder(code);
     }
 
+    // ─── RE-UPLOAD STATE & ACTIONS (REJECTED ORDERS) ───────────────
+    let reuploadTargetType = 'receipt'; // 'receipt' | 'artwork'
+    let reuploadOrderCode = '';
+    let reuploadSelectedFile = null;
+
+    function openReuploadModal(type, orderCode) {
+      haptic('medium');
+      reuploadTargetType = type;
+      reuploadOrderCode = orderCode;
+      reuploadSelectedFile = null;
+
+      const titleEl = document.getElementById('reupload-modal-title');
+      const subEl = document.getElementById('reupload-modal-subtitle');
+      const descBox = document.getElementById('reupload-desc-box');
+      const fileInput = document.getElementById('reupload-file-input');
+      const dropzone = document.getElementById('reupload-dropzone-content');
+      const errorBox = document.getElementById('reupload-error-box');
+      const notesInput = document.getElementById('reupload-notes-input');
+
+      errorBox.classList.add('hidden');
+      notesInput.value = '';
+      subEl.textContent = `Order: ${orderCode}`;
+
+      if (type === 'receipt') {
+        titleEl.textContent = currentLang === 'am' ? 'የክፍያ ደረሰኝ በድጋሚ ይላኩ' : 'Re-upload 50% Deposit Receipt';
+        descBox.innerHTML = `
+          <div class="flex items-start space-x-2">
+            <i class="fa-solid fa-circle-info text-amber-400 mt-0.5"></i>
+            <div>
+              <strong class="text-white">${currentLang === 'am' ? 'የባንክ ደረሰኝ ማስተካከያ' : 'Bank Deposit Slip Verification'}</strong>
+              <p class="text-[11px] mt-0.5 text-amber-200/90">${currentLang === 'am' ? 'እባክዎ ትክክለኛ የCBE ወይም የቴሌብር ደረሰኝ ስክሪንሾት ወይም ፎቶ ይላኩ።' : 'Please upload a clear screenshot or photo of your CBE or Telebirr transfer receipt.'}</p>
+            </div>
+          </div>
+        `;
+        fileInput.accept = 'image/*,application/pdf';
+        dropzone.innerHTML = `
+          <i class="fa-solid fa-receipt text-2xl text-amber-400"></i>
+          <div class="text-xs text-white font-medium">${currentLang === 'am' ? 'ደረሰኝ ለመምረጥ እዚህ ይጫኑ' : 'Click to choose receipt screenshot'}</div>
+          <div class="text-[10px] text-slate-500">JPG, PNG, WEBP, or PDF</div>
+        `;
+      } else {
+        titleEl.textContent = currentLang === 'am' ? 'የህትመት ፋይል በድጋሚ ይላኩ' : 'Re-upload Design Artwork';
+        descBox.innerHTML = `
+          <div class="flex items-start space-x-2">
+            <i class="fa-solid fa-circle-info text-amber-400 mt-0.5"></i>
+            <div>
+              <strong class="text-white">${currentLang === 'am' ? 'የህትመት ጥራት ማስተካከያ' : 'High-Resolution Artwork'}</strong>
+              <p class="text-[11px] mt-0.5 text-amber-200/90">${currentLang === 'am' ? 'እባክዎ ጥራቱ ያልቀነሰ ፎቶ ወይም ዲዛይን ፋይል ይላኩ።' : 'Please upload a high-resolution photo or design file so our studio can print with best quality.'}</p>
+            </div>
+          </div>
+        `;
+        fileInput.accept = 'image/*,application/pdf';
+        dropzone.innerHTML = `
+          <i class="fa-solid fa-file-arrow-up text-2xl text-amber-400"></i>
+          <div class="text-xs text-white font-medium">${currentLang === 'am' ? 'ፋይል ለመምረጥ እዚህ ይጫኑ' : 'Click to choose artwork or photo'}</div>
+          <div class="text-[10px] text-slate-500">JPG, PNG, WEBP, or PDF (up to 25MB)</div>
+        `;
+      }
+
+      document.getElementById('reupload-modal').classList.remove('hidden');
+    }
+
+    function closeReuploadModal() {
+      haptic('light');
+      document.getElementById('reupload-modal').classList.add('hidden');
+    }
+
+    function handleReuploadFileChange(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      reuploadSelectedFile = file;
+      haptic('selection');
+
+      const dropzone = document.getElementById('reupload-dropzone-content');
+      const errBox = document.getElementById('reupload-error-box');
+      errBox.classList.add('hidden');
+
+      dropzone.innerHTML = `
+        <i class="fa-solid fa-circle-check text-2xl text-emerald-400"></i>
+        <div class="text-xs text-white font-bold truncate max-w-xs mx-auto">${file.name}</div>
+        <div class="text-[10px] text-emerald-300 font-semibold">${(file.size / (1024 * 1024)).toFixed(2)} MB Ready</div>
+      `;
+    }
+
+    async function submitReupload() {
+      if (!reuploadSelectedFile) {
+        haptic('error');
+        const errBox = document.getElementById('reupload-error-box');
+        document.getElementById('reupload-error-msg').textContent = currentLang === 'am' ? 'እባክዎ ፋይል ይምረጡ' : 'Please select a file to upload';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.getElementById('btn-reupload-submit');
+      const txt = document.getElementById('btn-reupload-txt');
+      btn.disabled = true;
+      txt.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Uploading...`;
+
+      try {
+        const formData = new FormData();
+        const note = document.getElementById('reupload-notes-input').value.trim();
+        formData.append('notes', note);
+
+        let endpoint = '';
+        if (reuploadTargetType === 'receipt') {
+          formData.append('receipt_file', reuploadSelectedFile);
+          endpoint = `/api/webapp/order/${encodeURIComponent(reuploadOrderCode)}/reupload-receipt`;
+        } else {
+          formData.append('artwork_file', reuploadSelectedFile);
+          formData.append('artwork_files', reuploadSelectedFile);
+          endpoint = `/api/webapp/order/${encodeURIComponent(reuploadOrderCode)}/reupload-artwork`;
+        }
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+
+        if (res.ok && (data.ok || data.success)) {
+          haptic('success');
+          closeReuploadModal();
+          queryTrackOrder(reuploadOrderCode);
+        } else {
+          haptic('error');
+          const errBox = document.getElementById('reupload-error-box');
+          document.getElementById('reupload-error-msg').textContent = data?.detail || data?.error || 'Upload failed. Please try again.';
+          errBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        haptic('error');
+        const errBox = document.getElementById('reupload-error-box');
+        document.getElementById('reupload-error-msg').textContent = 'Network error while uploading.';
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        txt.textContent = currentLang === 'am' ? 'ይላኩ' : 'Submit Update';
+      }
+    }
+
     async function queryTrackOrder(code) {
       haptic('light');
       const errBox = document.getElementById('track-error-box');
@@ -2162,8 +2534,9 @@
         if (data?.ok && data?.order) {
           haptic('success');
           const o = data.order;
-          const statusUpper = (o.status || 'pending').toUpperCase();
-          const isDepositDone = o.payment_status === 'approved' || o.status !== 'pending';
+          const isRejected = o.status === 'rejected' || o.payment_status === 'rejected';
+          const statusUpper = isRejected ? 'REJECTED' : (o.status || 'pending').toUpperCase();
+          const isDepositDone = o.payment_status === 'approved' || (o.status !== 'pending' && !isRejected);
           const isPrintingDone = o.status === 'in_production' || o.status === 'ready' || o.status === 'completed';
           const isReadyDone = o.status === 'ready' || o.status === 'completed';
 
@@ -2173,29 +2546,59 @@
                 <span class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">Order Code</span>
                 <h3 class="text-base font-bold text-amber-400 tracking-wide">${o.order_code}</h3>
               </div>
-              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-amber-500/10 text-amber-300 border-amber-500/20'}">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${isRejected ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : (o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-amber-500/10 text-amber-300 border-amber-500/20')}">
                 ${statusUpper}
               </span>
             </div>
 
-            <div class="space-y-2 pt-1 text-xs">
-              <div class="flex items-center space-x-2">
-                <i class="fa-solid fa-circle-check text-emerald-400"></i>
-                <span class="text-white font-medium">1. Order Submitted & Received</span>
+            ${isRejected ? `
+              <div class="bg-rose-500/15 border border-rose-500/30 rounded-xl p-3.5 space-y-2.5">
+                <div class="flex items-center space-x-2 text-rose-300 font-bold text-xs">
+                  <i class="fa-solid fa-triangle-exclamation text-rose-400 text-sm"></i>
+                  <span>${currentLang === 'am' ? 'ማስተካከያ ያስፈልጋል፡ ትዕዛዝ አልተረጋገጠም' : 'Action Required: Order Needs Adjustment'}</span>
+                </div>
+                <p class="text-[11px] text-rose-200/90 leading-relaxed">
+                  <strong>${currentLang === 'am' ? 'ምክንያት፡' : 'Studio Note:'}</strong> ${o.rejection_reason || (currentLang === 'am' ? 'የክፍያ ደረሰኝ ወይም የህትመት ፋይል አልተረጋገጠም። እባክዎ እንደገና ይላኩ።' : 'Deposit receipt or artwork file could not be verified by studio admin.')}
+                </p>
+                <div class="flex items-center space-x-2 pt-1">
+                  <button 
+                    type="button"
+                    onclick="openReuploadModal('receipt', '${o.order_code}')"
+                    class="flex-1 py-2 px-2.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition active:scale-95"
+                  >
+                    <i class="fa-solid fa-receipt text-xs"></i>
+                    <span>${currentLang === 'am' ? 'ደረሰኝ በድጋሚ ላክ' : 'Re-Upload Receipt'}</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onclick="openReuploadModal('artwork', '${o.order_code}')"
+                    class="flex-1 py-2 px-2.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-surface-border text-slate-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition active:scale-95"
+                  >
+                    <i class="fa-solid fa-file-arrow-up text-xs"></i>
+                    <span>${currentLang === 'am' ? 'ፋይል በድጋሚ ላክ' : 'Re-Upload Artwork'}</span>
+                  </button>
+                </div>
               </div>
-              <div class="flex items-center space-x-2">
-                <i class="fa-solid ${isDepositDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'}"></i>
-                <span class="${isDepositDone ? 'text-white font-medium' : 'text-slate-500'}">2. 50% Deposit Verified</span>
+            ` : `
+              <div class="space-y-2 pt-1 text-xs">
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                  <span class="text-white font-medium">1. Order Submitted & Received</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid ${isDepositDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'}"></i>
+                  <span class="${isDepositDone ? 'text-white font-medium' : 'text-slate-500'}">2. 50% Deposit Verified</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid ${isPrintingDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'}"></i>
+                  <span class="${isPrintingDone ? 'text-white font-medium' : 'text-slate-500'}">3. Printing & Finishing</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid ${isReadyDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'}"></i>
+                  <span class="${isReadyDone ? 'text-white font-medium' : 'text-slate-500'}">4. Ready for Pickup / Delivery</span>
+                </div>
               </div>
-              <div class="flex items-center space-x-2">
-                <i class="fa-solid ${isPrintingDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'}"></i>
-                <span class="${isPrintingDone ? 'text-white font-medium' : 'text-slate-500'}">3. Printing & Finishing</span>
-              </div>
-              <div class="flex items-center space-x-2">
-                <i class="fa-solid ${isReadyDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'}"></i>
-                <span class="${isReadyDone ? 'text-white font-medium' : 'text-slate-500'}">4. Ready for Pickup / Delivery</span>
-              </div>
-            </div>
+            `}
 
             <div class="bg-black/30 rounded-xl p-3 space-y-1.5 text-xs text-slate-300">
               <div class="flex justify-between"><span class="text-slate-400">Items:</span><span class="font-medium text-white">${o.items}</span></div>
@@ -2230,11 +2633,20 @@
       document.getElementById('lang-label').textContent = currentLang === 'en' ? 'አማርኛ' : 'English';
       document.getElementById('deposit-banner-text').textContent = I18N[currentLang].depositBanner;
       document.getElementById('nav-label-shop').textContent = I18N[currentLang].shop;
+      const navWorks = document.getElementById('nav-label-works');
+      if (navWorks) navWorks.textContent = I18N[currentLang].works;
       document.getElementById('nav-label-designs').textContent = I18N[currentLang].designs;
       document.getElementById('nav-label-track').textContent = I18N[currentLang].track;
       document.getElementById('nav-label-studio').textContent = I18N[currentLang].studio;
+      const pTitle = document.getElementById('portfolio-title');
+      if (pTitle) pTitle.textContent = I18N[currentLang].portfolioTitle;
+      const pDesc = document.getElementById('portfolio-desc');
+      if (pDesc) pDesc.textContent = I18N[currentLang].portfolioDesc;
 
       renderProducts(PRODUCTS);
+      if (PORTFOLIO && PORTFOLIO.length) {
+        renderPortfolio(PORTFOLIO);
+      }
     }
   </script>
 </body>
