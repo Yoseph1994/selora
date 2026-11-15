@@ -47,6 +47,17 @@ async def cancel_order(message: types.Message, state: FSMContext):
         reply_markup=get_main_menu_keyboard()
     )
 
+def get_deadline_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="⚡ Urgent: in 2 days (+200 ETB)", callback_data="dl_choice:urgent_2_days")
+        ],
+        [
+            InlineKeyboardButton(text="🗓 Standard: in 3-4 days", callback_data="dl_choice:standard_3_days"),
+            InlineKeyboardButton(text="📅 Next Week", callback_data="dl_choice:next_week")
+        ]
+    ])
+
 @router.callback_query(F.data == "cancel_order")
 async def callback_cancel_order(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
@@ -66,8 +77,15 @@ async def start_order(message: types.Message, state: FSMContext):
         "📱 *SELORA ORDER ASSISTANT*\n"
         "`[ 🟡 ⚪ ⚪ ⚪ ] Step 1 of 4: Select Items`\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "1️⃣ *What items would you like to order and how many?*\n"
-        "_(e.g., 20 Bookmarks, 1 Mug, and 10 A4 Sticker Posters)_\n\n"
+        "1️⃣ *What items would you like to order and how many?*\n\n"
+        "⚠️ *Minimum Order Quantities:*\n"
+        "• Stickers: Min 15 pcs\n"
+        "• Bookmarks: Min 2 pcs\n"
+        "• Business Cards: Min 50 pcs\n"
+        "• Polaroid Prints: Min 10 pcs\n"
+        "• Sticker Posters: Min 10 pcs\n"
+        "• Minibooks & Other Items: 1 pc\n\n"
+        "_(e.g., 20 Stickers, 1 Mini Book (White), and 2 Bookmarks)_\n\n"
         "Type your items below (or tap *❌ Cancel* anytime):",
         parse_mode="Markdown",
         reply_markup=get_cancel_keyboard()
@@ -81,8 +99,15 @@ async def callback_start_order(callback: types.CallbackQuery, state: FSMContext)
         "📱 *SELORA ORDER ASSISTANT*\n"
         "`[ 🟡 ⚪ ⚪ ⚪ ] Step 1 of 4: Select Items`\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "1️⃣ *What items would you like to order and how many?*\n"
-        "_(e.g., 20 Bookmarks, 1 Mug, and 10 A4 Sticker Posters)_\n\n"
+        "1️⃣ *What items would you like to order and how many?*\n\n"
+        "⚠️ *Minimum Order Quantities:*\n"
+        "• Stickers: Min 15 pcs\n"
+        "• Bookmarks: Min 2 pcs\n"
+        "• Business Cards: Min 50 pcs\n"
+        "• Polaroid Prints: Min 10 pcs\n"
+        "• Sticker Posters: Min 10 pcs\n"
+        "• Minibooks & Other Items: 1 pc\n\n"
+        "_(e.g., 20 Stickers, 1 Mini Book (White), and 2 Bookmarks)_\n\n"
         "Type your items below:",
         parse_mode="Markdown",
         reply_markup=get_cancel_keyboard()
@@ -99,17 +124,73 @@ async def process_items(message: types.Message, state: FSMContext):
         "📱 *SELORA ORDER ASSISTANT*\n"
         "`[ 🟢 🟡 ⚪ ⚪ ] Step 2 of 4: Timing & Deadline`\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "2️⃣ *When do you need it by?* 🗓\n\n"
-        "_(e.g., Tomorrow, this Friday, next week, or urgent today)_",
+        "2️⃣ *When do you need your order by?* 🗓\n\n"
+        "⏱ *Turnaround Policy:*\n"
+        "• 🟢 *Standard:* 3+ days (regular price)\n"
+        "• ⚡ *Urgent Rush:* In 2 days (*+200 ETB rush fee*)\n"
+        "• ⛔ *Next-day (tomorrow):* Cannot be accepted due to drying & binding time.\n\n"
+        "Tap an option below or type your deadline:",
         parse_mode="Markdown",
-        reply_markup=get_cancel_keyboard()
+        reply_markup=get_deadline_keyboard()
     )
+
+@router.callback_query(OrderFSM.waiting_for_deadline, F.data.startswith("dl_choice:"))
+async def process_deadline_callback(callback: types.CallbackQuery, state: FSMContext):
+    choice = callback.data.split(":")[1]
+    if choice == "urgent_2_days":
+        deadline = "⚡ Urgent Rush (in 2 days) [+200 ETB]"
+        rush_fee = 200
+    elif choice == "standard_3_days":
+        deadline = "Standard (in 3-4 days)"
+        rush_fee = 0
+    else:
+        deadline = "Next Week"
+        rush_fee = 0
+
+    await state.update_data(deadline=deadline, rush_fee=rush_fee)
+    await state.set_state(OrderFSM.waiting_for_delivery_type)
+
+    rush_note = " _(+200 ETB rush fee)_" if rush_fee > 0 else ""
+    await callback.message.edit_text(f"✅ Selected Timing: *{deadline}*{rush_note}", parse_mode="Markdown")
+    await callback.message.answer(
+        "📱 *SELORA ORDER ASSISTANT*\n"
+        "`[ 🟢 🟢 🟡 ⚪ ] Step 3 of 4: Delivery Method`\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "3️⃣ *How would you like to receive your order?*\n\n"
+        "• 🏪 *Free Store Pickup:* Ledeta Store\n"
+        "• 🚚 *Yango Delivery:* Delivered across Addis Ababa (fee paid by you upon receipt)",
+        parse_mode="Markdown",
+        reply_markup=get_delivery_choice_keyboard()
+    )
+    await callback.answer()
 
 @router.message(OrderFSM.waiting_for_deadline)
 async def process_deadline(message: types.Message, state: FSMContext):
     if not message.text or message.text == "❌ Cancel":
         return
-    await state.update_data(deadline=message.text.strip())
+
+    text_lower = message.text.lower().strip()
+    tomorrow_words = ["tomorrow", "tomorow", "nege", "ነገ", "today", "tonight", "ዛሬ", "1 day", "1day", "one day"]
+    if any(w in text_lower for w in tomorrow_words):
+        await message.answer(
+            "⚠️ *Orders cannot be accepted for tomorrow!*\n\n"
+            "Custom printing, binding, and drying require at least 48 hours.\n\n"
+            "• Earliest possible: **In 2 days** (Urgent Rush, *+200 ETB fee*)\n"
+            "• Standard turnaround: **3+ days** (regular pricing)\n\n"
+            "Please select an option below or type a date at least 2 days away:",
+            parse_mode="Markdown",
+            reply_markup=get_deadline_keyboard()
+        )
+        return
+
+    urgent_words = ["urgent", "rush", "2 days", "2days", "in 2 days", "2 ቀን", "ሁለት ቀን"]
+    is_urgent = any(w in text_lower for w in urgent_words)
+    rush_fee = 200 if is_urgent else 0
+    deadline = message.text.strip()
+    if is_urgent and "(+200 ETB)" not in deadline:
+        deadline += " (⚡ Urgent: +200 ETB rush fee)"
+
+    await state.update_data(deadline=deadline, rush_fee=rush_fee)
     await state.set_state(OrderFSM.waiting_for_delivery_type)
     await message.answer(
         "📱 *SELORA ORDER ASSISTANT*\n"
@@ -117,7 +198,7 @@ async def process_deadline(message: types.Message, state: FSMContext):
         "━━━━━━━━━━━━━━━━━━━━\n"
         "3️⃣ *How would you like to receive your order?*\n\n"
         "• 🏪 *Free Store Pickup:* Ledeta Store\n"
-        "• 🚚 *Yango Delivery:* Delivered to your address (delivery fee covered by you upon receipt)",
+        "• 🚚 *Yango Delivery:* Delivered across Addis Ababa (fee paid by you upon receipt)",
         parse_mode="Markdown",
         reply_markup=get_delivery_choice_keyboard()
     )
@@ -194,6 +275,8 @@ async def process_files_or_notes(message: types.Message, state: FSMContext):
     )
 
     data = await state.get_data()
+    rush_fee = data.get("rush_fee", 0)
+    rush_line = "\n• ⚡ *Urgent Rush Fee:* `+200 ETB` (2-day turnaround)" if rush_fee > 0 else ""
 
     # Step 4: Pre-payment deposit instructions
     payment_prompt = (
@@ -202,7 +285,7 @@ async def process_files_or_notes(message: types.Message, state: FSMContext):
         "━━━━━━━━━━━━━━━━━━━━\n"
         "📋 *Order Summary:*\n"
         f"• *Items:* {data.get('items')}\n"
-        f"• *Need by:* {data.get('deadline')}\n"
+        f"• *Need by:* {data.get('deadline')}{rush_line}\n"
         f"• *Delivery:* {data.get('delivery_type')} ({data.get('delivery_location')})\n"
         f"• *Notes/Files:* {data.get('notes')}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -290,8 +373,9 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
     # 2. Notify Store Owner / Admin with Approval Buttons
     if config.ADMIN_CHAT_ID:
         try:
+            rush_badge = "\n⚡ *PRIORITY:* URGENT 2-DAY RUSH (+200 ETB fee included)" if data.get("rush_fee", 0) > 0 else ""
             admin_text = (
-                f"🚨 *NEW ORDER & PAYMENT SUBMITTED! — {order_code}*\n"
+                f"🚨 *NEW ORDER & PAYMENT SUBMITTED! — {order_code}*{rush_badge}\n"
                 f"⏰ *Time:* {timestamp}\n"
                 f"👤 *Customer:* [{user.full_name}](tg://user?id={user.id}) ({username_str})\n"
                 f"🆔 *Telegram ID:* `{user.id}`\n"

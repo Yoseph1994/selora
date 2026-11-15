@@ -365,6 +365,21 @@ async def upload_product_image_api(product_id: str, file: UploadFile = File(...)
         with open(dest_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
+        # Overwrite canonical product file so Telegram and Dashboard find it immediately
+        try:
+            canonical_path = PRODUCT_IMAGES_DIR / f"{product_id}{ext}"
+            shutil.copyfile(dest_path, canonical_path)
+            # Ensure a PNG copy exists for Telegram fallback
+            if ext != ".png":
+                try:
+                    from PIL import Image
+                    with Image.open(dest_path) as im:
+                        im.convert("RGB").save(PRODUCT_IMAGES_DIR / f"{product_id}.png", "PNG")
+                except Exception:
+                    pass
+        except Exception as err:
+            logger.warning(f"Could not update canonical product image: {err}")
+
         image_url = f"/product-images/{filename}"
         success = database.update_product_image(product_id, image_url)
         if not success:

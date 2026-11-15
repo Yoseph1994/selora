@@ -5,13 +5,15 @@
   "location": "Ledeta, Addis Ababa",
   "pickup_info": "Free pickup directly from our store in Ledeta.",
   "delivery_info": "Delivered across Addis Ababa via Yango (delivery fee is covered by customer upon receipt).",
+  "turnaround_policy": "Standard turnaround is 3+ days. Urgent rush orders needed in 2 days incur an additional 200 ETB rush fee. Orders cannot be accepted for next-day (tomorrow).",
   "products": [
     {
       "id": "stickers",
       "name": "🏷 Stickers",
       "price": 20,
       "unit": "per piece",
-      "description": "High-quality custom printed stickers, vibrant colors and durable finish.",
+      "min_order": 15,
+      "description": "High-quality custom printed stickers, vibrant colors and durable finish. Minimum order: 15 pieces.",
       "image_url": "/product-images/stickers.png"
     },
     {
@@ -19,7 +21,8 @@
       "name": "🔖 Bookmarks",
       "price": 50,
       "unit": "per piece",
-      "description": "Beautiful custom printed bookmarks for book lovers and students.",
+      "min_order": 2,
+      "description": "Beautiful custom printed bookmarks for book lovers and students. Minimum order: 2 pieces.",
       "image_url": "/product-images/bookmarks.png"
     },
     {
@@ -27,8 +30,18 @@
       "name": "💼 Business Cards",
       "price": 10,
       "unit": "per piece",
-      "description": "Professional high-resolution business cards for your brand and networking.",
+      "min_order": 50,
+      "description": "Professional high-resolution business cards for your brand and networking. Minimum order: 50 pieces.",
       "image_url": "/product-images/business_cards.png"
+    },
+    {
+      "id": "polaroid",
+      "name": "📸 Polaroid Prints",
+      "price": null,
+      "unit": "per piece",
+      "min_order": 10,
+      "description": "Classic vintage-style polaroid photo prints of your favorite pictures and memories. Minimum order: 10 pieces.",
+      "image_url": "/product-images/polaroid.png"
     },
     {
       "id": "mini_notebook",
@@ -47,20 +60,44 @@
       "image_url": "/product-images/notebook.png"
     },
     {
-      "id": "minibook",
-      "name": "📖 Minibook",
+      "id": "minibook_white",
+      "name": "📖 Mini Book (White)",
       "price": 600,
       "unit": "each",
-      "description": "Custom bound minibook, ideal for memories, collections, and custom prints.",
+      "description": "Custom bound pocket minibook with elegant white cover. Perfect for memories and photos.",
       "image_url": "/product-images/minibook.png"
     },
     {
-      "id": "polaroid",
-      "name": "📸 Polaroid Prints",
-      "price": null,
-      "unit": "custom / per print pack",
-      "description": "Classic vintage-style polaroid photo prints of your favorite pictures and memories.",
-      "image_url": "/product-images/polaroid.png"
+      "id": "minibook_black",
+      "name": "📖 Mini Book (Black)",
+      "price": 700,
+      "unit": "each",
+      "description": "Sleek custom bound pocket minibook with premium black cover.",
+      "image_url": "/product-images/minibook.png"
+    },
+    {
+      "id": "book_medium",
+      "name": "📖 Medium Photo Book",
+      "price": 800,
+      "unit": "each",
+      "description": "Medium-sized custom photo book with high resolution prints and binding.",
+      "image_url": "/product-images/minibook.png"
+    },
+    {
+      "id": "book_a5",
+      "name": "📖 A5 Photo Book",
+      "price": 1000,
+      "unit": "each",
+      "description": "A5 premium custom bound photo book for collections and special occasions.",
+      "image_url": "/product-images/notebook.png"
+    },
+    {
+      "id": "book_a4",
+      "name": "📖 A4 Photo Book",
+      "price": 1500,
+      "unit": "each",
+      "description": "Large A4 luxury custom photo book for portfolios, weddings, and milestones.",
+      "image_url": "/product-images/notebook.png"
     },
     {
       "id": "mug",
@@ -82,18 +119,18 @@
       "id": "sticker_poster_a5",
       "name": "🟢 Sticker Poster A5",
       "price": 40,
-      "unit": "per piece (Min order: 10)",
+      "unit": "per piece",
       "min_order": 10,
-      "description": "Peel & stick wall/glass/smooth surface poster in A5 size. Minimum order 10 pieces.",
+      "description": "Peel & stick wall/glass/smooth surface poster in A5 size. Minimum order: 10 pieces.",
       "image_url": "/product-images/sticker_poster_a5.png"
     },
     {
       "id": "sticker_poster_a4",
       "name": "🟢 Sticker Poster A4",
       "price": 70,
-      "unit": "per piece (Min order: 10)",
+      "unit": "per piece",
       "min_order": 10,
-      "description": "Peel & stick wall/glass/smooth surface poster in A4 size. Minimum order 10 pieces.",
+      "description": "Peel & stick wall/glass/smooth surface poster in A4 size. Minimum order: 10 pieces.",
       "image_url": "/product-images/sticker_poster_a4.png"
     }
   ]

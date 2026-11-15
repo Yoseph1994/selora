@@ -24,20 +24,27 @@ PRODUCT_IMAGES_DIR = Path(__file__).resolve().parent.parent / "data" / "products
 CATALOG_TEXT = (
     "💛 *Welcome to Selora Prints!*\n"
     "Thanks for messaging us! Here's our complete price list:\n\n"
-    "🏷 *Stickers:* 20 birr\n"
-    "🔖 *Bookmarks:* 50 birr\n"
-    "💼 *Business cards:* 10 birr\n"
+    "🏷 *Stickers:* 20 birr _(Min order: 15 pieces)_\n"
+    "🔖 *Bookmarks:* 50 birr _(Min order: 2 pieces)_\n"
+    "💼 *Business cards:* 10 birr _(Min order: 50 pieces)_\n"
+    "📸 *Polaroid prints:* Available upon request _(Min order: 10 pieces)_\n"
     "📓 *Mini notebook:* 200 birr\n"
-    "📔 *Notebook:* 500 birr\n"
-    "📖 *Minibook:* 600 birr\n"
-    "📸 *Polaroid prints:* Available upon request\n"
-    "☕ *Mug:* 1500 birr\n"
-    "🧩 *Puzzle:* 1500 birr\n\n"
-    "🟢 *STICKER POSTER*\n"
-    "_(Peel & stick: wall, glass, smooth surface)_\n"
-    "• *A5* = 40 birr\n"
-    "• *A4* = 70 birr\n"
-    "_(Minimum order: 10 pieces)_\n\n"
+    "📔 *Notebook:* 500 birr\n\n"
+    "📖 *PHOTO BOOKS & MINIBOOKS:*\n"
+    "• Mini White = 600 birr\n"
+    "• Mini Black = 700 birr\n"
+    "• Medium = 800 birr\n"
+    "• A5 = 1,000 birr\n"
+    "• A4 = 1,500 birr\n\n"
+    "☕ *Mug:* 1,500 birr\n"
+    "🧩 *Puzzle:* 1,500 birr\n\n"
+    "🟢 *STICKER POSTER* _(Peel & stick: wall, glass, smooth surface)_\n"
+    "• *A5* = 40 birr _(Min order: 10 pieces)_\n"
+    "• *A4* = 70 birr _(Min order: 10 pieces)_\n\n"
+    "⏱ *ORDER TURNAROUND & RUSH POLICY:*\n"
+    "• 🟢 *Standard:* 3+ days (normal pricing)\n"
+    "• ⚡ *Urgent Rush (in 2 days):* +200 birr rush fee\n"
+    "• ⛔ *Next-day (tomorrow):* Cannot be accepted due to drying & binding time.\n\n"
     "✨ *Tap below to browse visual design cards or place an order!*"
 )
 
@@ -64,6 +71,8 @@ def get_product_card(index: int):
     prev_idx = (idx - 1) % len(products)
     next_idx = (idx + 1) % len(products)
 
+    clean_short_name = p['name'].split()[1] if len(p['name'].split()) > 1 else p['name']
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="◀ Prev", callback_data=f"cat_nav:{prev_idx}"),
@@ -71,7 +80,7 @@ def get_product_card(index: int):
             InlineKeyboardButton(text="Next ▶", callback_data=f"cat_nav:{next_idx}")
         ],
         [
-            InlineKeyboardButton(text=f"🛍️ Order {p['name'].split()[1] if len(p['name'].split()) > 1 else p['name']}", callback_data=f"order_this:{p['id']}")
+            InlineKeyboardButton(text=f"🛍️ Order {clean_short_name}", callback_data=f"order_this:{p['id']}")
         ],
         [
             InlineKeyboardButton(text="📋 Full Price List", callback_data="show_catalog"),
@@ -81,7 +90,7 @@ def get_product_card(index: int):
 
     image_path = None
     # 1. Check if image_url points to a local file
-    custom_url = p.get("image_url", "")
+    custom_url = p.get("image_url", "").split("?")[0]
     if custom_url.startswith("/product-images/"):
         fname = custom_url.replace("/product-images/", "")
         cand = PRODUCT_IMAGES_DIR / fname

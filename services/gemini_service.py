@@ -32,6 +32,10 @@ STORE INFORMATION:
 - Store Pickup: Free pickup directly from our store in Ledeta.
 - Delivery: Delivered across Addis Ababa via Yango. The customer pays the delivery fee directly to the Yango driver upon arrival.
 - 50% Advance Pre-Payment: All orders require a 50% deposit before production begins.
+- Turnaround & Rush Order Policy:
+  • Standard production turnaround is 3+ days (normal pricing).
+  • Urgent Rush Orders: Needed within 2 days require an additional +200 ETB rush fee.
+  • NEXT-DAY (TOMORROW) ORDERS CANNOT BE ACCEPTED under any circumstances due to printing, binding, and drying time.
 - Payment Accounts:
   • Commercial Bank of Ethiopia (CBE): {config.PAYMENT_CBE_ACCOUNT} (Name: {config.PAYMENT_CBE_NAME})
   • Telebirr: {config.PAYMENT_TELEBIRR} (Name: {config.PAYMENT_TELEBIRR_NAME})
