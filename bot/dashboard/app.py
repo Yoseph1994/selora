@@ -36,6 +36,11 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.mount("/product-images", StaticFiles(directory=str(PRODUCT_IMAGES_DIR)), name="product_images")
 app.mount("/designs-images", StaticFiles(directory=str(DESIGNS_IMAGES_DIR)), name="designs_images")
 
+# Mount Next.js Telegram Mini App
+MINIAPP_OUT_DIR = BASE_DIR.parent.parent / "miniapp" / "out"
+if MINIAPP_OUT_DIR.exists():
+    app.mount("/miniapp", StaticFiles(directory=str(MINIAPP_OUT_DIR), html=True), name="miniapp")
+
 # Smart On-Demand Static & Cloud Handlers
 @app.get("/receipts/{filename}")
 async def serve_receipt(filename: str):
@@ -148,9 +153,11 @@ class WebappOrderRequest(BaseModel):
     phone: Optional[str] = ""
     recipient_name: Optional[str] = ""
 
-@app.get("/app", response_class=HTMLResponse)
+@app.get("/app")
 async def webapp_store(request: Request):
-    """Telegram Mini App visual storefront."""
+    """Telegram Mini App visual storefront (serves Next.js Mini App)."""
+    if MINIAPP_OUT_DIR.exists():
+        return RedirectResponse(url="/miniapp/", status_code=303)
     products_data = database.get_products_data()
     return templates.TemplateResponse(
         request=request,

@@ -17,7 +17,6 @@ ENV/
 # Node & Next.js
 node_modules/
 .next/
-out/
 .tgcloud/
 .DS_Store
 *.log
