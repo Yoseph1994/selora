@@ -1,0 +1,100 @@
+{
+  "store_name": "Selora Prints",
+  "currency": "ETB",
+  "currency_name": "Birr",
+  "location": "Ledeta, Addis Ababa",
+  "pickup_info": "Free pickup directly from our store in Ledeta.",
+  "delivery_info": "Delivered across Addis Ababa via Yango (delivery fee is covered by customer upon receipt).",
+  "products": [
+    {
+      "id": "stickers",
+      "name": "🏷 Stickers",
+      "price": 20,
+      "unit": "per piece",
+      "description": "High-quality custom printed stickers, vibrant colors and durable finish.",
+      "image_url": "/product-images/stickers.png"
+    },
+    {
+      "id": "bookmarks",
+      "name": "🔖 Bookmarks",
+      "price": 50,
+      "unit": "per piece",
+      "description": "Beautiful custom printed bookmarks for book lovers and students.",
+      "image_url": "/product-images/bookmarks.png"
+    },
+    {
+      "id": "business_cards",
+      "name": "💼 Business Cards",
+      "price": 10,
+      "unit": "per piece",
+      "description": "Professional high-resolution business cards for your brand and networking.",
+      "image_url": "/product-images/business_cards.png"
+    },
+    {
+      "id": "mini_notebook",
+      "name": "📓 Mini Notebook",
+      "price": 200,
+      "unit": "each",
+      "description": "Compact, portable pocket-sized notebook for quick notes and sketches.",
+      "image_url": "/product-images/mini_notebook.png"
+    },
+    {
+      "id": "notebook",
+      "name": "📔 Notebook",
+      "price": 500,
+      "unit": "each",
+      "description": "Standard custom branded/aesthetic notebook with high quality paper.",
+      "image_url": "/product-images/notebook.png"
+    },
+    {
+      "id": "minibook",
+      "name": "📖 Minibook",
+      "price": 600,
+      "unit": "each",
+      "description": "Custom bound minibook, ideal for memories, collections, and custom prints.",
+      "image_url": "/product-images/minibook.png"
+    },
+    {
+      "id": "polaroid",
+      "name": "📸 Polaroid Prints",
+      "price": null,
+      "unit": "custom / per print pack",
+      "description": "Classic vintage-style polaroid photo prints of your favorite pictures and memories.",
+      "image_url": "/product-images/polaroid.png"
+    },
+    {
+      "id": "mug",
+      "name": "☕ Mug",
+      "price": 1500,
+      "unit": "each",
+      "description": "Custom printed ceramic mug, dishwasher and microwave safe. Great for gifts!",
+      "image_url": "/product-images/mug.png"
+    },
+    {
+      "id": "puzzle",
+      "name": "🧩 Puzzle",
+      "price": 1500,
+      "unit": "each",
+      "description": "Personalized custom photo jigsaw puzzle. A fun and thoughtful gift.",
+      "image_url": "/product-images/puzzle.png"
+    },
+    {
+      "id": "sticker_poster_a5",
+      "name": "🟢 Sticker Poster A5",
+      "price": 40,
+      "unit": "per piece (Min order: 10)",
+      "min_order": 10,
+      "description": "Peel & stick wall/glass/smooth surface poster in A5 size. Minimum order 10 pieces.",
+      "image_url": "/product-images/sticker_poster_a5.png"
+    },
+    {
+      "id": "sticker_poster_a4",
+      "name": "🟢 Sticker Poster A4",
+      "price": 70,
+      "unit": "per piece (Min order: 10)",
+      "min_order": 10,
+      "description": "Peel & stick wall/glass/smooth surface poster in A4 size. Minimum order 10 pieces.",
+      "image_url": "/product-images/sticker_poster_a4.png"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# Sensitive credentials
+.env
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+*.db-journal
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Temporary exports
+data/selora_orders_export.csv

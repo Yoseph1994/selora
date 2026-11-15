@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Selora Prints — Store</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fffbeb',
+              100: '#fef3c7',
+              200: '#fde68a',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              900: '#78350f'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Smooth transitions and touch optimization */
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans pb-28">
+
+  <!-- App Header -->
+  <header class="bg-white border-b border-slate-200/80 sticky top-0 z-30 px-4 py-3 shadow-xs">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-9 h-9 rounded-xl bg-brand-500 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+          S
+        </div>
+        <div>
+          <h1 class="font-extrabold text-base text-slate-900 leading-tight">Selora Prints</h1>
+          <p class="text-[11px] text-slate-500 flex items-center space-x-1">
+            <span>📍 Ledeta, Addis Ababa</span>
+            <span>•</span>
+            <span class="text-brand-600 font-medium">50% Advance</span>
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-1.5">
+        <span class="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-semibold">
+          🚚 Yango Ready
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Banner announcement -->
+  <div class="mx-4 mt-3 p-3 rounded-2xl bg-gradient-to-r from-brand-500 to-amber-500 text-white shadow-sm flex items-center justify-between">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-wider text-brand-100">Custom Prints & Gifts</p>
+      <h3 class="text-sm font-bold mt-0.5">High Quality Stickers, Posters & Mugs</h3>
+    </div>
+    <span class="text-2xl">💛</span>
+  </div>
+
+  <!-- Category Filter Pills -->
+  <div class="flex items-center space-x-2 px-4 py-3 overflow-x-auto hide-scrollbar">
+    <button onclick="filterCategory('all')" id="btn-cat-all" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white whitespace-nowrap transition shadow-xs">
+      All Items
+    </button>
+    <button onclick="filterCategory('prints')" id="btn-cat-prints" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 whitespace-nowrap transition shadow-xs">
+      🏷 Stickers & Bookmarks
+    </button>
+    <button onclick="filterCategory('posters')" id="btn-cat-posters" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 whitespace-nowrap transition shadow-xs">
+      🟢 Posters
+    </button>
+    <button onclick="filterCategory('notebooks')" id="btn-cat-notebooks" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 whitespace-nowrap transition shadow-xs">
+      📓 Notebooks
+    </button>
+    <button onclick="filterCategory('gifts')" id="btn-cat-gifts" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 whitespace-nowrap transition shadow-xs">
+      ☕ Mugs & Puzzles
+    </button>
+  </div>
+
+  <!-- Products Grid -->
+  <main class="px-4 grid grid-cols-2 gap-3.5">
+    {% for p in products %}
+    <div class="product-card bg-white rounded-2xl border border-slate-200/80 p-2.5 shadow-xs flex flex-col justify-between" data-category="{{ 'posters' if 'poster' in p.id else 'notebooks' if 'notebook' in p.id or 'minibook' in p.id else 'gifts' if p.id in ['mug', 'puzzle', 'polaroid'] else 'prints' }}">
+      <div>
+        <!-- Product Image -->
+        <div class="aspect-4/3 rounded-xl overflow-hidden bg-slate-100 mb-2 border border-slate-100 relative">
+          <img src="{{ p.image_url or '/product-images/' ~ p.id ~ '.png' }}" alt="{{ p.name }}" class="w-full h-full object-cover">
+          {% if p.min_order %}
+          <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-slate-900/80 text-white text-[9px] font-bold backdrop-blur-xs">
+            Min {{ p.min_order }}
+          </span>
+          {% endif %}
+        </div>
+        <h4 class="font-bold text-slate-900 text-xs leading-snug line-clamp-1">{{ p.name }}</h4>
+        <p class="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{{ p.description }}</p>
+      </div>
+
+      <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+        <div>
+          <span class="text-xs font-extrabold text-slate-900">
+            {% if p.price %}{{ p.price }} <span class="text-[10px] font-normal text-slate-500">ETB</span>{% else %}Custom{% endif %}
+          </span>
+        </div>
+
+        <!-- Quantity Controls -->
+        <div class="flex items-center space-x-1" id="controls-{{ p.id }}">
+          <button onclick="changeQty('{{ p.id }}', -1, {{ p.min_order or 1 }}, {{ p.price or 0 }}, '{{ p.name }}')" class="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs hover:bg-slate-200 active:scale-95 transition">
+            -
+          </button>
+          <span id="qty-{{ p.id }}" class="w-6 text-center text-xs font-bold text-slate-800">0</span>
+          <button onclick="changeQty('{{ p.id }}', 1, {{ p.min_order or 1 }}, {{ p.price or 0 }}, '{{ p.name }}')" class="w-7 h-7 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold text-xs hover:bg-brand-600 active:scale-95 transition shadow-xs shadow-brand-500/20">
+            +
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </main>
+
+  <!-- Floating Checkout Bar -->
+  <div id="cart-bar" class="fixed bottom-0 inset-x-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 z-40 hidden shadow-xl transition-all">
+    <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+      <div>
+        <div class="flex items-baseline space-x-1.5">
+          <span class="text-[11px] text-slate-500">50% Deposit:</span>
+          <span id="cart-deposit" class="text-base font-extrabold text-brand-600">0 ETB</span>
+        </div>
+        <p id="cart-total-info" class="text-[10px] text-slate-400">Total: 0 ETB (0 items)</p>
+      </div>
+
+      <button onclick="openCheckoutModal()" class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-98 text-white font-bold text-xs flex items-center space-x-2 shadow-md shadow-brand-500/25 transition">
+        <span>Proceed</span>
+        <i class="fa-solid fa-arrow-right text-xs"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Checkout Slide-over Modal -->
+  <div id="checkout-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex flex-col justify-end transition-opacity">
+    <div class="bg-white rounded-t-3xl max-w-lg w-full mx-auto max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div>
+          <h3 class="font-extrabold text-base text-slate-900">Confirm Order</h3>
+          <p class="text-xs text-slate-500">50% Advance Pre-payment Required</p>
+        </div>
+        <button onclick="closeCheckoutModal()" class="w-8 h-8 rounded-full bg-slate-200/60 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 overflow-y-auto space-y-4 text-xs">
+        
+        <!-- Cart Summary Card -->
+        <div class="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/60 space-y-2">
+          <div class="flex items-center justify-between font-bold text-amber-900">
+            <span>Selected Items</span>
+            <span id="modal-items-count">0 items</span>
+          </div>
+          <div id="modal-items-list" class="space-y-1 text-slate-700 font-medium pt-1 border-t border-amber-200/40"></div>
+          
+          <div class="pt-2 border-t border-amber-200/60 flex items-center justify-between font-bold">
+            <span class="text-slate-600">Total Estimated Price:</span>
+            <span id="modal-total-price" class="text-slate-900">0 ETB</span>
+          </div>
+          <div class="flex items-center justify-between font-extrabold text-brand-700 text-sm">
+            <span>50% Pre-Payment Deposit:</span>
+            <span id="modal-deposit-price">0 ETB</span>
+          </div>
+        </div>
+
+        <!-- Delivery Method Selector -->
+        <div>
+          <label class="block font-bold text-slate-800 mb-1.5">Delivery Method</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="setDeliveryMethod('pickup')" id="btn-del-pickup" class="p-3 rounded-xl border-2 border-brand-500 bg-brand-50 text-left transition">
+              <div class="font-bold text-slate-900">🏪 Store Pickup</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">Ledeta (Free)</div>
+            </button>
+            <button type="button" onclick="setDeliveryMethod('yango')" id="btn-del-yango" class="p-3 rounded-xl border border-slate-200 bg-white text-left transition">
+              <div class="font-bold text-slate-900">🚚 Yango Delivery</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">You cover fee</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Delivery Address & Phone (if Yango) -->
+        <div id="delivery-details-field" class="hidden space-y-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Delivery Address & Phone</label>
+            <input type="text" id="cust-location" placeholder="e.g. Bole Medhanialem, Phone: 0911XXXXXX" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-slate-50 focus:bg-white text-xs">
+          </div>
+        </div>
+
+        <!-- Need By Date -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">When do you need it by? 🗓</label>
+          <input type="text" id="cust-deadline" placeholder="e.g. Tomorrow, this Friday, urgent today" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-slate-50 focus:bg-white text-xs">
+        </div>
+
+        <!-- Special Notes / Artwork Description -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Custom Notes / Design Details (Optional)</label>
+          <input type="text" id="cust-notes" placeholder="e.g. Photo sent for mug, custom text, etc." class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-slate-50 focus:bg-white text-xs">
+        </div>
+
+        <!-- Bank Details for 50% Transfer -->
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 text-[11px]">
+          <p class="font-bold text-slate-800 flex items-center space-x-1">
+            <i class="fa-solid fa-building-columns text-brand-600"></i>
+            <span>Transfer 50% Deposit To:</span>
+          </p>
+          <div class="flex justify-between text-slate-600">
+            <span>CBE Account ({{ cbe_name }}):</span>
+            <span class="font-mono font-bold text-slate-900 select-all">{{ cbe_account }}</span>
+          </div>
+          <div class="flex justify-between text-slate-600">
+            <span>Telebirr ({{ telebirr_name }}):</span>
+            <span class="font-mono font-bold text-slate-900 select-all">{{ telebirr }}</span>
+          </div>
+          <p class="text-[10px] text-amber-800 bg-amber-50 p-2 rounded-lg mt-2 border border-amber-200/50">
+            📸 After submitting, please send the screenshot of your receipt in Telegram to begin production!
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-slate-100 bg-white">
+        <button onclick="submitOrder()" id="btn-submit-order" class="w-full py-3 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-98 text-white font-extrabold text-sm transition shadow-lg shadow-brand-500/25 flex items-center justify-center space-x-2">
+          <span>Place Order (Code Generated)</span>
+          <i class="fa-solid fa-check text-xs"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div id="success-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
+      <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto">
+        ✓
+      </div>
+      <div>
+        <h3 class="font-extrabold text-lg text-slate-900">Order Placed!</h3>
+        <p class="text-xs text-slate-500 mt-1">Your order code has been created:</p>
+        <span id="success-code" class="inline-block mt-2 font-mono font-extrabold text-lg bg-brand-100 text-brand-900 px-3 py-1 rounded-xl"></span>
+      </div>
+      <p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl text-left border border-slate-100">
+        💛 <strong>Next Step:</strong> Please make your 50% deposit and send the receipt screenshot right here in the chat to start production!
+      </p>
+      <button onclick="closeApp()" class="w-full py-3 rounded-xl bg-slate-900 text-white text-xs font-bold transition">
+        Return to Chat
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Telegram WebApp
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      if (tg.setHeaderColor) tg.setHeaderColor('#ffffff');
+    }
+
+    const cart = {};
+    let deliveryMethod = 'pickup';
+
+    function filterCategory(cat) {
+      const cards = document.querySelectorAll('.product-card');
+      const buttons = ['all', 'prints', 'posters', 'notebooks', 'gifts'];
+
+      buttons.forEach(b => {
+        const btn = document.getElementById(`btn-cat-${b}`);
+        if (b === cat) {
+          btn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white whitespace-nowrap transition shadow-xs';
+        } else {
+          btn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 whitespace-nowrap transition shadow-xs';
+        }
+      });
+
+      cards.forEach(card => {
+        if (cat === 'all' || card.dataset.category === cat) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    }
+
+    function changeQty(productId, delta, minOrder, price, name) {
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+
+      const current = cart[productId]?.qty || 0;
+      let next = current + delta;
+
+      if (delta > 0 && current === 0 && minOrder > 1) {
+        next = minOrder; // enforce minimum order jumping
+      } else if (delta < 0 && next < minOrder && current === minOrder) {
+        next = 0; // jump to zero if below min
+      } else if (next < 0) {
+        next = 0;
+      }
+
+      if (next === 0) {
+        delete cart[productId];
+      } else {
+        cart[productId] = { qty: next, price: price, name: name };
+      }
+
+      document.getElementById(`qty-${productId}`).innerText = next;
+      updateCartBar();
+    }
+
+    function updateCartBar() {
+      let totalItems = 0;
+      let totalPrice = 0;
+
+      for (const id in cart) {
+        totalItems += cart[id].qty;
+        totalPrice += (cart[id].qty * cart[id].price);
+      }
+
+      const deposit = Math.round(totalPrice * 0.5);
+
+      if (totalItems > 0) {
+        document.getElementById('cart-bar').classList.remove('hidden');
+        document.getElementById('cart-deposit').innerText = deposit + ' ETB';
+        document.getElementById('cart-total-info').innerText = `Total: ${totalPrice} ETB (${totalItems} items)`;
+      } else {
+        document.getElementById('cart-bar').classList.add('hidden');
+      }
+    }
+
+    function openCheckoutModal() {
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+      let listHtml = '';
+      let total = 0;
+      let totalCount = 0;
+
+      for (const id in cart) {
+        const item = cart[id];
+        const sub = item.qty * item.price;
+        total += sub;
+        totalCount += item.qty;
+        listHtml += `
+          <div class="flex items-center justify-between">
+            <span>• ${item.name} × ${item.qty}</span>
+            <span class="font-bold">${sub} ETB</span>
+          </div>
+        `;
+      }
+
+      document.getElementById('modal-items-list').innerHTML = listHtml;
+      document.getElementById('modal-items-count').innerText = `${totalCount} items`;
+      document.getElementById('modal-total-price').innerText = `${total} ETB`;
+      document.getElementById('modal-deposit-price').innerText = `${Math.round(total * 0.5)} ETB`;
+
+      document.getElementById('checkout-modal').classList.remove('hidden');
+    }
+
+    function closeCheckoutModal() {
+      document.getElementById('checkout-modal').classList.add('hidden');
+    }
+
+    function setDeliveryMethod(method) {
+      deliveryMethod = method;
+      const btnPickup = document.getElementById('btn-del-pickup');
+      const btnYango = document.getElementById('btn-del-yango');
+      const detailsField = document.getElementById('delivery-details-field');
+
+      if (method === 'pickup') {
+        btnPickup.className = 'p-3 rounded-xl border-2 border-brand-500 bg-brand-50 text-left transition';
+        btnYango.className = 'p-3 rounded-xl border border-slate-200 bg-white text-left transition';
+        detailsField.classList.add('hidden');
+      } else {
+        btnPickup.className = 'p-3 rounded-xl border border-slate-200 bg-white text-left transition';
+        btnYango.className = 'p-3 rounded-xl border-2 border-brand-500 bg-brand-50 text-left transition';
+        detailsField.classList.remove('hidden');
+      }
+    }
+
+    async function submitOrder() {
+      const itemsList = [];
+      for (const id in cart) {
+        itemsList.push(`${cart[id].qty}x ${cart[id].name}`);
+      }
+
+      const deadline = document.getElementById('cust-deadline').value.trim() || 'Not specified';
+      let location = 'Ledeta Store Pickup';
+      if (deliveryMethod === 'yango') {
+        location = document.getElementById('cust-location').value.trim();
+        if (!location) {
+          alert('Please enter your delivery address and contact phone number for Yango.');
+          return;
+        }
+      }
+      const notes = document.getElementById('cust-notes').value.trim() || 'Placed via WebApp';
+
+      const user = tg?.initDataUnsafe?.user || { id: 0, first_name: 'Customer', username: '' };
+
+      const btn = document.getElementById('btn-submit-order');
+      btn.innerText = 'Submitting...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/webapp/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.id || 0,
+            full_name: `${user.first_name || 'Customer'} ${user.last_name || ''}`.trim(),
+            username: user.username || '',
+            items: itemsList.join(', '),
+            deadline: deadline,
+            delivery_type: deliveryMethod === 'pickup' ? 'Store Pickup (Ledeta - Free)' : 'Yango Delivery',
+            delivery_location: location,
+            notes: notes
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+          closeCheckoutModal();
+          document.getElementById('success-code').innerText = data.order_code;
+          document.getElementById('success-modal').classList.remove('hidden');
+        } else {
+          alert('Submission failed: ' + (data.error || 'Please try again'));
+          btn.innerText = 'Place Order (Code Generated)';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
+        btn.innerText = 'Place Order (Code Generated)';
+        btn.disabled = false;
+      }
+    }
+
+    function closeApp() {
+      if (tg) {
+        tg.close();
+      } else {
+        location.reload();
+      }
+    }
+  </script>
+</body>
+</html>
+

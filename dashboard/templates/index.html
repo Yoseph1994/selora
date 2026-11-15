@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selora Prints — Business Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Printable Slip Modal -->
+  <div id="slip-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 font-sans" id="printable-slip">
+      <div class="border-b border-dashed border-slate-300 pb-3 mb-3 text-center">
+        <h2 class="font-bold text-lg text-slate-900 uppercase tracking-wide">Selora Prints</h2>
+        <p class="text-xs text-slate-500">Order Production & Packing Slip</p>
+        <span id="slip-code" class="inline-block mt-1 font-mono font-bold text-sm bg-slate-100 px-2 py-0.5 rounded text-slate-800"></span>
+      </div>
+      <div class="space-y-2 text-xs text-slate-700 mb-4">
+        <div><strong>Customer:</strong> <span id="slip-customer"></span></div>
+        <div><strong>Items:</strong> <p id="slip-items" class="mt-0.5 font-medium text-slate-900 bg-slate-50 p-2 rounded border border-slate-100"></p></div>
+        <div><strong>Need By:</strong> <span id="slip-deadline"></span></div>
+        <div><strong>Delivery:</strong> <span id="slip-delivery"></span> (<span id="slip-location"></span>)</div>
+        <div><strong>Special Notes:</strong> <span id="slip-notes" class="italic text-slate-500"></span></div>
+        <div class="pt-2 border-t border-dashed border-slate-200 text-slate-600">
+          <strong>Deposit Status:</strong> 50% Pre-payment Verified ✅
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100 print:hidden">
+        <button onclick="closeSlipModal()" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Close</button>
+        <button onclick="window.print()" class="px-4 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-semibold hover:bg-brand-600 flex items-center space-x-1.5">
+          <i class="fa-solid fa-print"></i>
+          <span>Print Slip</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function filterOrders() {
+      const query = document.getElementById('order-search').value.toLowerCase();
+      const rows = document.querySelectorAll('tbody tr');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+      });
+    }
+
+    function printSlip(code, customer, items, deadline, delivery, location, notes) {
+      document.getElementById('slip-code').innerText = code;
+      document.getElementById('slip-customer').innerText = customer;
+      document.getElementById('slip-items').innerText = items;
+      document.getElementById('slip-deadline').innerText = deadline;
+      document.getElementById('slip-delivery').innerText = delivery;
+      document.getElementById('slip-location').innerText = location;
+      document.getElementById('slip-notes').innerText = notes || 'None';
+      document.getElementById('slip-modal').classList.remove('hidden');
+    }
+
+    function closeSlipModal() {
+      document.getElementById('slip-modal').classList.add('hidden');
+    }
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fffbeb',
+              100: '#fef3c7',
+              200: '#fde68a',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              900: '#78350f'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+
+  <!-- Top Navigation -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center font-bold text-xl shadow-sm">
+          S
+        </div>
+        <div>
+          <h1 class="font-bold text-lg text-slate-900 leading-tight">Selora Prints</h1>
+          <p class="text-xs text-slate-500">Live Management Dashboard & Orders</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button onclick="location.reload()" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-medium flex items-center space-x-2 transition">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>Refresh</span>
+        </button>
+        <a href="/api/export-csv" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium flex items-center space-x-2 transition shadow-sm">
+          <i class="fa-solid fa-file-csv"></i>
+          <span>Export CSV</span>
+        </a>
+        <a href="/logout" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-sm font-medium flex items-center space-x-1.5 transition" title="Sign Out">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span class="hidden sm:inline">Logout</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- KPI Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Orders</p>
+          <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-box-archive"></i>
+          </span>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 mt-2">{{ stats.total_orders }}</h3>
+        <p class="text-xs text-slate-500 mt-1">All time received</p>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-amber-200 bg-gradient-to-br from-white to-amber-50/40 shadow-sm">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-wider text-amber-700">Awaiting 50% Review</p>
+          <span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-receipt"></i>
+          </span>
+        </div>
+        <h3 class="text-2xl font-bold text-amber-900 mt-2">{{ stats.pending_approvals }}</h3>
+        <p class="text-xs text-amber-700/80 mt-1">Receipts waiting for verification</p>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">In Production</p>
+          <span class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </span>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 mt-2">{{ stats.approved_orders }}</h3>
+        <p class="text-xs text-slate-500 mt-1">Payment verified & printing</p>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Completed Orders</p>
+          <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-circle-check"></i>
+          </span>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 mt-2">{{ stats.completed_orders }}</h3>
+        <p class="text-xs text-slate-500 mt-1">Successfully fulfilled</p>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="flex items-center space-x-2 border-b border-slate-200 mb-6">
+      <button id="tab-orders-btn" onclick="switchTab('orders')" class="pb-3 px-4 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 flex items-center space-x-2">
+        <i class="fa-solid fa-list-check"></i>
+        <span>Orders ({{ orders|length }})</span>
+      </button>
+      <button id="tab-products-btn" onclick="switchTab('products')" class="pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2">
+        <i class="fa-solid fa-tags"></i>
+        <span>Dynamic Catalog & Prices</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: ORDERS TABLE -->
+    <div id="tab-orders" class="space-y-4">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
+          <div class="flex items-center space-x-3 w-full sm:w-auto">
+            <h2 class="font-bold text-slate-800 text-sm whitespace-nowrap">Active Orders List</h2>
+            <span class="text-xs text-slate-400 hidden sm:inline">•</span>
+            <span class="text-xs text-slate-500 hidden sm:inline">50% deposit receipts can be inspected & approved below</span>
+          </div>
+          <div class="w-full sm:w-64">
+            <div class="relative">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input type="text" id="order-search" oninput="filterOrders()" placeholder="Search code, name, items..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+            </div>
+          </div>
+        </div>
+
+        {% if orders %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
+              <tr>
+                <th class="py-3 px-4">Code</th>
+                <th class="py-3 px-4">Customer</th>
+                <th class="py-3 px-4">Items</th>
+                <th class="py-3 px-4">Delivery & Location</th>
+                <th class="py-3 px-4">Need By</th>
+                <th class="py-3 px-4">Payment Receipt</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for o in orders %}
+              <tr class="hover:bg-slate-50/70 transition" id="row-{{ o.order_code }}">
+                <td class="py-4 px-4 font-bold text-slate-900 whitespace-nowrap">
+                  <span class="px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-700 text-xs font-mono">
+                    {{ o.order_code }}
+                  </span>
+                </td>
+                <td class="py-4 px-4">
+                  <div class="font-medium text-slate-900">{{ o.full_name }}</div>
+                  {% if o.username %}
+                  <a href="https://t.me/{{ o.username }}" target="_blank" class="text-xs text-brand-600 hover:underline">@{{ o.username }}</a>
+                  {% else %}
+                  <span class="text-xs text-slate-400">ID: {{ o.user_id }}</span>
+                  {% endif %}
+                </td>
+                <td class="py-4 px-4 max-w-xs">
+                  <p class="font-medium text-slate-800 line-clamp-2">{{ o.items }}</p>
+                  {% if o.notes and o.notes != 'None' %}
+                  <p class="text-xs text-slate-400 truncate mt-0.5"><i class="fa-regular fa-note-sticky mr-1"></i>{{ o.notes }}</p>
+                  {% endif %}
+                </td>
+                <td class="py-4 px-4 whitespace-nowrap">
+                  <div class="text-xs font-medium text-slate-800">{{ o.delivery_type }}</div>
+                  <div class="text-xs text-slate-500 truncate max-w-xs">{{ o.delivery_location }}</div>
+                </td>
+                <td class="py-4 px-4 whitespace-nowrap text-slate-600 text-xs">
+                  {{ o.deadline }}
+                </td>
+                <td class="py-4 px-4 whitespace-nowrap">
+                  {% if o.payment_screenshot_filename %}
+                  <button onclick="viewReceipt('/receipts/{{ o.payment_screenshot_filename }}', '{{ o.order_code }}')" class="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-medium transition shadow-sm">
+                    <i class="fa-solid fa-image text-amber-600"></i>
+                    <span>View Receipt</span>
+                  </button>
+                  {% else %}
+                  <span class="text-xs text-slate-400 italic">No receipt attached</span>
+                  {% endif %}
+                </td>
+                <td class="py-4 px-4 whitespace-nowrap">
+                  {% if o.payment_status == 'pending_review' %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                      ⏳ Review Pending
+                    </span>
+                  {% elif o.payment_status == 'approved' %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                      🎨 In Production
+                    </span>
+                  {% elif o.status == 'completed' %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      ✅ Completed
+                    </span>
+                  {% elif o.status == 'cancelled' or o.payment_status == 'rejected' %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                      ❌ {{ o.status }}
+                    </span>
+                  {% else %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                      {{ o.status }}
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="py-4 px-4 text-right whitespace-nowrap space-x-1">
+                  <a href="/orders/{{ o.order_code }}/receipt" target="_blank" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs transition shadow-sm inline-block" title="Customer Invoice / Receipt">
+                    <i class="fa-solid fa-receipt"></i>
+                  </a>
+                  <button onclick="printSlip('{{ o.order_code }}', '{{ o.full_name }}', '{{ o.items }}', '{{ o.deadline }}', '{{ o.delivery_type }}', '{{ o.delivery_location }}', '{{ o.notes }}')" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs transition shadow-sm" title="Print Production Slip">
+                    <i class="fa-solid fa-print"></i>
+                  </button>
+                  {% if o.payment_status == 'pending_review' %}
+                  <button onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition shadow-sm" title="Approve 50% Deposit">
+                    <i class="fa-solid fa-check mr-1"></i>Approve
+                  </button>
+                  {% endif %}
+                  {% if o.status != 'completed' %}
+                  <button onclick="updateOrderStatus('{{ o.order_code }}', 'complete')" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition shadow-sm" title="Mark Finished">
+                    <i class="fa-solid fa-box mr-1"></i>Done
+                  </button>
+                  {% endif %}
+                  <button onclick="updateOrderStatus('{{ o.order_code }}', 'cancel')" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs transition" title="Cancel">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+          <i class="fa-solid fa-inbox text-4xl text-slate-300 mb-3"></i>
+          <h3 class="font-bold text-slate-700">No Orders Yet</h3>
+          <p class="text-xs text-slate-400 mt-1">Orders placed via Telegram will appear here in real time.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- TAB 2: DYNAMIC PRODUCTS & PRICES -->
+    <div id="tab-products" class="hidden space-y-4">
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Dynamic Product Catalog</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Edit prices directly. Changes immediately sync to the Telegram Bot and Gemini AI!</p>
+          </div>
+          <span class="px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs font-semibold">
+            {{ products|length }} Items Listed
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {% for p in products %}
+          <div class="p-4 rounded-2xl border border-slate-200 bg-white hover:border-brand-400 transition shadow-sm flex flex-col justify-between group">
+            <div>
+              <!-- Product Design Preview Image -->
+              <div class="relative mb-3 rounded-xl overflow-hidden bg-slate-100 aspect-video flex items-center justify-center border border-slate-200/80 shadow-inner">
+                <img id="img-{{ p.id }}" src="{{ p.image_url or '/product-images/' ~ p.id ~ '.png' }}" alt="{{ p.name }}" class="w-full h-full object-cover">
+                <!-- Hover Upload Overlay -->
+                <label for="upload-{{ p.id }}" class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white backdrop-blur-[2px]">
+                  <i class="fa-solid fa-cloud-arrow-up text-2xl mb-1 text-brand-400"></i>
+                  <span class="text-xs font-semibold">Upload New Design</span>
+                  <span class="text-[10px] text-slate-300">JPG, PNG, WEBP</span>
+                  <input type="file" id="upload-{{ p.id }}" accept="image/*" class="hidden" onchange="uploadProductImage('{{ p.id }}', this)">
+                </label>
+              </div>
+
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="font-bold text-slate-900 text-sm">{{ p.name }}</h3>
+                <span class="text-xs text-slate-500 font-medium px-2 py-0.5 rounded bg-slate-100">{{ p.unit }}</span>
+              </div>
+              <p class="text-xs text-slate-500 mb-4 line-clamp-2">{{ p.description }}</p>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between space-x-2">
+              <div class="flex items-center space-x-1.5 flex-1">
+                <span class="text-xs font-bold text-slate-400">ETB</span>
+                <input type="number" id="price-input-{{ p.id }}" value="{{ p.price or 0 }}" step="5" class="w-24 px-2 py-1 text-sm font-semibold rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <label for="btn-upload-{{ p.id }}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium cursor-pointer transition flex items-center space-x-1" title="Upload new design image">
+                  <i class="fa-solid fa-camera text-brand-600"></i>
+                  <span>Upload</span>
+                  <input type="file" id="btn-upload-{{ p.id }}" accept="image/*" class="hidden" onchange="uploadProductImage('{{ p.id }}', this)">
+                </label>
+                <button onclick="savePrice('{{ p.id }}')" class="px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition flex items-center space-x-1 shadow-sm">
+                  <i class="fa-solid fa-floppy-disk"></i>
+                  <span>Save</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal for viewing receipt screenshot -->
+  <div id="receipt-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <h3 id="receipt-title" class="font-bold text-slate-900 text-sm">Payment Receipt</h3>
+        <button onclick="closeReceiptModal()" class="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="p-4 flex items-center justify-center bg-slate-900 min-h-[300px]">
+        <img id="receipt-img" src="" alt="Payment Receipt" class="max-h-[500px] object-contain rounded-lg">
+      </div>
+      <div class="p-3 border-t border-slate-100 flex justify-end bg-slate-50">
+        <a id="receipt-download-link" href="" target="_blank" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700 transition">
+          Open Full Image
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Printable Slip Modal -->
+  <div id="slip-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 font-sans" id="printable-slip">
+      <div class="border-b border-dashed border-slate-300 pb-3 mb-3 text-center">
+        <h2 class="font-bold text-lg text-slate-900 uppercase tracking-wide">Selora Prints</h2>
+        <p class="text-xs text-slate-500">Order Production & Packing Slip</p>
+        <span id="slip-code" class="inline-block mt-1 font-mono font-bold text-sm bg-slate-100 px-2 py-0.5 rounded text-slate-800"></span>
+      </div>
+      <div class="space-y-2 text-xs text-slate-700 mb-4">
+        <div><strong>Customer:</strong> <span id="slip-customer"></span></div>
+        <div><strong>Items:</strong> <p id="slip-items" class="mt-0.5 font-medium text-slate-900 bg-slate-50 p-2 rounded border border-slate-100"></p></div>
+        <div><strong>Need By:</strong> <span id="slip-deadline"></span></div>
+        <div><strong>Delivery:</strong> <span id="slip-delivery"></span> (<span id="slip-location"></span>)</div>
+        <div><strong>Special Notes:</strong> <span id="slip-notes" class="italic text-slate-500"></span></div>
+        <div class="pt-2 border-t border-dashed border-slate-200 text-slate-600">
+          <strong>Deposit Status:</strong> 50% Pre-payment Verified ✅
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100 print:hidden">
+        <button onclick="closeSlipModal()" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Close</button>
+        <button onclick="window.print()" class="px-4 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-semibold hover:bg-brand-600 flex items-center space-x-1.5">
+          <i class="fa-solid fa-print"></i>
+          <span>Print Slip</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function filterOrders() {
+      const query = document.getElementById('order-search').value.toLowerCase();
+      const rows = document.querySelectorAll('tbody tr');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+      });
+    }
+
+    function printSlip(code, customer, items, deadline, delivery, location, notes) {
+      document.getElementById('slip-code').innerText = code;
+      document.getElementById('slip-customer').innerText = customer;
+      document.getElementById('slip-items').innerText = items;
+      document.getElementById('slip-deadline').innerText = deadline;
+      document.getElementById('slip-delivery').innerText = delivery;
+      document.getElementById('slip-location').innerText = location;
+      document.getElementById('slip-notes').innerText = notes || 'None';
+      document.getElementById('slip-modal').classList.remove('hidden');
+    }
+
+    function closeSlipModal() {
+      document.getElementById('slip-modal').classList.add('hidden');
+    }
+    function switchTab(tab) {
+      if (tab === 'orders') {
+        document.getElementById('tab-orders').classList.remove('hidden');
+        document.getElementById('tab-products').classList.add('hidden');
+        document.getElementById('tab-orders-btn').className = 'pb-3 px-4 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 flex items-center space-x-2';
+        document.getElementById('tab-products-btn').className = 'pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2';
+      } else {
+        document.getElementById('tab-orders').classList.add('hidden');
+        document.getElementById('tab-products').classList.remove('hidden');
+        document.getElementById('tab-orders-btn').className = 'pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2';
+        document.getElementById('tab-products-btn').className = 'pb-3 px-4 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 flex items-center space-x-2';
+      }
+    }
+
+    function viewReceipt(imgUrl, orderCode) {
+      document.getElementById('receipt-title').innerText = 'Payment Receipt — ' + orderCode;
+      document.getElementById('receipt-img').src = imgUrl;
+      document.getElementById('receipt-download-link').href = imgUrl;
+      document.getElementById('receipt-modal').classList.remove('hidden');
+    }
+
+    function closeReceiptModal() {
+      document.getElementById('receipt-modal').classList.add('hidden');
+    }
+
+    async function updateOrderStatus(orderCode, action) {
+      if (!confirm(`Are you sure you want to ${action} order ${orderCode}?`)) return;
+      try {
+        const res = await fetch(`/api/orders/${orderCode}/${action}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert('Error: ' + (data.error || 'Failed'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
+      }
+    }
+
+    async function savePrice(productId) {
+      const input = document.getElementById(`price-input-${productId}`);
+      const newPrice = parseFloat(input.value);
+      if (isNaN(newPrice) || newPrice < 0) {
+        alert('Please enter a valid price.');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/products/${productId}/price`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ price: newPrice })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Price updated successfully!');
+        } else {
+          alert('Failed to update price');
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
+      }
+    }
+
+    async function uploadProductImage(productId, input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch(`/api/products/${productId}/image`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Update the preview image with cache buster
+          const img = document.getElementById(`img-${productId}`);
+          if (img) {
+            img.src = data.image_url + '?t=' + new Date().getTime();
+          }
+          alert('✅ Design image uploaded successfully!');
+        } else {
+          alert('Upload failed: ' + (data.detail || 'Error'));
+        }
+      } catch (err) {
+        alert('Network error while uploading image: ' + err);
+      }
+    }
+  </script>
+</body>
+</html>
+
