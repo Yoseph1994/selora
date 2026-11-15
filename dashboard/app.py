@@ -326,17 +326,40 @@ def enrich_order_data(o: dict) -> dict:
     import json
     raw_notes = o.get("notes") or ""
 
-    # 1. Custom Notes / Special Customer Instructions
-    custom_m = re.search(r"Custom Note:\s*([^|]+)", raw_notes, re.IGNORECASE)
-    o["custom_instructions"] = custom_m.group(1).strip() if custom_m else ""
+    # Strip any historical rejection strings from customer customization notes
+    cleaned_notes = re.sub(r"(?:\s*\|\s*)?REJECTED\s*REASON:.*$", "", raw_notes, flags=re.IGNORECASE).strip()
+    cleaned_notes = re.sub(r"(?:\s*\|\s*)?Rejection\s*Reason:.*$", "", cleaned_notes, flags=re.IGNORECASE).strip()
 
-    # 2. Design template name
-    design_m = re.search(r"Ready Design:\s*([^|]+)", raw_notes, re.IGNORECASE)
+    # 1. Custom Notes / Special Customer Instructions (What the customer requested)
+    custom_m = re.search(r"Custom Note:\s*([^|]+)", cleaned_notes, re.IGNORECASE)
+    if custom_m:
+        ci = custom_m.group(1).strip()
+        o["custom_instructions"] = "" if ci.lower() in ("none", "null", "n/a", "") else ci
+    else:
+        # Check if freeform text was provided that isn't a system tag
+        parts = [p.strip() for p in cleaned_notes.split("|") if p.strip()]
+        cust_parts = []
+        for p in parts:
+            if not re.match(r"^(Deposit|Total|GPS|Ready Design|Design Note):\s*", p, re.IGNORECASE):
+                if p.lower() not in ("none", "null", "n/a", "placed via webapp"):
+                    cust_parts.append(p)
+        o["custom_instructions"] = " | ".join(cust_parts) if cust_parts else ""
+
+    # 2. Rejection reason (Kept strictly separate from customer instructions)
+    rej_reason = (o.get("rejection_reason") or "").strip()
+    if not rej_reason:
+        rej_m = re.search(r"REJECTED\s*REASON:\s*(.+)$", raw_notes, re.IGNORECASE)
+        if rej_m:
+            rej_reason = rej_m.group(1).strip()
+    o["rejection_reason"] = rej_reason
+
+    # 3. Design template name
+    design_m = re.search(r"Ready Design:\s*([^|]+)", cleaned_notes, re.IGNORECASE)
     o["design_name"] = design_m.group(1).strip() if design_m else ""
 
-    # 3. Financial breakdown (Total, Deposit, Balance)
-    tot_m = re.search(r"Total:\s*([\d,]+(?:\.\d+)?)\s*ETB", raw_notes, re.IGNORECASE)
-    dep_m = re.search(r"Deposit:\s*([\d,]+(?:\.\d+)?)\s*ETB", raw_notes, re.IGNORECASE)
+    # 4. Financial breakdown (Total, Deposit, Balance)
+    tot_m = re.search(r"Total:\s*([\d,]+(?:\.\d+)?)\s*ETB", cleaned_notes, re.IGNORECASE)
+    dep_m = re.search(r"Deposit:\s*([\d,]+(?:\.\d+)?)\s*ETB", cleaned_notes, re.IGNORECASE)
     o["total_etb"] = float(tot_m.group(1).replace(",", "")) if tot_m else None
     o["deposit_etb"] = float(dep_m.group(1).replace(",", "")) if dep_m else None
     if o["total_etb"] is not None and o["deposit_etb"] is not None:
@@ -344,7 +367,7 @@ def enrich_order_data(o: dict) -> dict:
     else:
         o["balance_etb"] = None
 
-    # 4. Customer uploaded artwork files list
+    # 5. Customer uploaded artwork files list
     cust_files_raw = o.get("customer_files") or "[]"
     try:
         f_list = json.loads(cust_files_raw)
@@ -352,8 +375,8 @@ def enrich_order_data(o: dict) -> dict:
     except Exception:
         o["artwork_files"] = []
 
-    # 5. GPS Pin URL
-    gps_m = re.search(r"GPS:\s*(https?://[^\s|]+)", raw_notes)
+    # 6. GPS Pin URL
+    gps_m = re.search(r"GPS:\s*(https?://[^\s|]+)", cleaned_notes)
     o["gps_url"] = gps_m.group(1).strip() if gps_m else ""
 
     return o

@@ -178,6 +178,25 @@ def init_db():
                 pass
 
         conn.commit()
+
+    # Sanitize existing orders if notes had REJECTED REASON appended historically
+    try:
+        cursor.execute(q("SELECT order_code, notes, rejection_reason FROM orders WHERE notes LIKE '%REJECTED REASON:%'", is_pg))
+        polluted_rows = cursor.fetchall()
+        for prow in polluted_rows:
+            ocode = prow[0] if not is_pg else prow["order_code"]
+            onotes = prow[1] if not is_pg else prow["notes"]
+            oreason = prow[2] if not is_pg else prow["rejection_reason"]
+            import re
+            m = re.search(r"REJECTED\s*REASON:\s*(.+)$", onotes or "", re.IGNORECASE)
+            ext_reason = m.group(1).strip() if m else ""
+            cleaned = re.sub(r"(?:\s*\|\s*)?REJECTED\s*REASON:.*$", "", onotes or "", flags=re.IGNORECASE).strip()
+            final_reason = oreason or ext_reason
+            cursor.execute(q("UPDATE orders SET notes = ?, rejection_reason = ? WHERE order_code = ?", is_pg), (cleaned, final_reason, ocode))
+        conn.commit()
+    except Exception as e:
+        logger.warning(f"Notice during notes sanitization: {e}")
+
     conn.close()
 
 def get_setting(key: str, default: str = "") -> str:
@@ -309,17 +328,31 @@ def update_order_payment(order_code: str, payment_status: str, order_status: Opt
     updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if order_status:
-        cursor.execute(q("""
-            UPDATE orders
-            SET payment_status = ?, status = ?, updated_at = ?
-            WHERE order_code = ?
-        """, is_pg), (payment_status, order_status, updated_at, order_code))
+        if payment_status == "approved":
+            cursor.execute(q("""
+                UPDATE orders
+                SET payment_status = ?, status = ?, rejection_reason = NULL, updated_at = ?
+                WHERE order_code = ?
+            """, is_pg), (payment_status, order_status, updated_at, order_code))
+        else:
+            cursor.execute(q("""
+                UPDATE orders
+                SET payment_status = ?, status = ?, updated_at = ?
+                WHERE order_code = ?
+            """, is_pg), (payment_status, order_status, updated_at, order_code))
     else:
-        cursor.execute(q("""
-            UPDATE orders
-            SET payment_status = ?, updated_at = ?
-            WHERE order_code = ?
-        """, is_pg), (payment_status, updated_at, order_code))
+        if payment_status == "approved":
+            cursor.execute(q("""
+                UPDATE orders
+                SET payment_status = ?, rejection_reason = NULL, updated_at = ?
+                WHERE order_code = ?
+            """, is_pg), (payment_status, updated_at, order_code))
+        else:
+            cursor.execute(q("""
+                UPDATE orders
+                SET payment_status = ?, updated_at = ?
+                WHERE order_code = ?
+            """, is_pg), (payment_status, updated_at, order_code))
 
     success = cursor.rowcount > 0
     conn.commit()
@@ -995,19 +1028,17 @@ def get_business_connection() -> Optional[Dict[str, Any]]:
 # ─── ORDER REJECTION WITH REASON ──────────────────────────────
 
 def update_order_rejection(order_code: str, reason: str) -> bool:
-    """Mark order rejected and record reason in notes and rejection_reason column."""
+    """Mark order rejected and record reason in rejection_reason column without corrupting customer notes."""
     conn, is_pg = get_connection()
     cursor = conn.cursor()
     updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    rejection_text = f"REJECTED REASON: {reason}"
     cursor.execute(q("""
         UPDATE orders
         SET status = 'rejected', payment_status = 'rejected',
             rejection_reason = ?,
-            notes = CASE WHEN notes IS NULL OR notes = '' THEN ? ELSE notes || ' | ' || ? END,
             updated_at = ?
         WHERE order_code = ?
-    """, is_pg), (reason, rejection_text, rejection_text, updated_at, order_code))
+    """, is_pg), (reason, updated_at, order_code))
     success = cursor.rowcount > 0
     conn.commit()
     conn.close()
