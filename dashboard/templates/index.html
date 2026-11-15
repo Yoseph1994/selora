@@ -243,32 +243,44 @@
           <table class="w-full text-left text-xs border-collapse">
             <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 select-none">
               <tr>
-                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(0, 'str')">
+                <th class="py-3 px-3 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(0, 'str')">
                   <span>Order Code</span>
                   <i id="sort-icon-0" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
                 </th>
-                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(1, 'str')">
+                <th class="py-3 px-3 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(1, 'str')">
                   <span>Customer</span>
                   <i id="sort-icon-1" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
                 </th>
-                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition" onclick="sortTable(2, 'str')">
-                  <span>Items</span>
+                <th class="py-3 px-3 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(2, 'str')">
+                  <span>Items Ordered</span>
                   <i id="sort-icon-2" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
                 </th>
-                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(3, 'str')">
-                  <span>Delivery Method</span>
+                <th class="py-3 px-3 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(3, 'str')">
+                  <span>Artwork / Design</span>
                   <i id="sort-icon-3" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
                 </th>
-                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(4, 'date')">
-                  <span>Deadline</span>
+                <th class="py-3 px-3 cursor-pointer hover:text-slate-900 transition min-w-[130px]" onclick="sortTable(4, 'str')">
+                  <span>Customer Notes</span>
                   <i id="sort-icon-4" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
                 </th>
-                <th class="py-3 px-3.5 whitespace-nowrap">Payment Receipt</th>
-                <th class="py-3 px-3.5 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(6, 'str')">
-                  <span>Status</span>
+                <th class="py-3 px-3 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(5, 'num')">
+                  <span>Price & Deposit</span>
+                  <i id="sort-icon-5" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
+                </th>
+                <th class="py-3 px-3 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(6, 'str')">
+                  <span>Delivery & Contact</span>
                   <i id="sort-icon-6" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
                 </th>
-                <th class="py-3 px-3.5 text-right whitespace-nowrap">Actions</th>
+                <th class="py-3 px-3 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(7, 'date')">
+                  <span>Need By</span>
+                  <i id="sort-icon-7" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
+                </th>
+                <th class="py-3 px-3 whitespace-nowrap">Payment Proof</th>
+                <th class="py-3 px-3 cursor-pointer hover:text-slate-900 transition whitespace-nowrap" onclick="sortTable(9, 'str')">
+                  <span>Status</span>
+                  <i id="sort-icon-9" class="sort-icon fa-solid fa-sort text-slate-300 ml-1 text-[10px]"></i>
+                </th>
+                <th class="py-3 px-3 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100" id="orders-tbody">
@@ -306,39 +318,84 @@
                 </td>
 
                 <!-- Customer -->
-                <td class="py-3.5 px-3.5">
-                  <div class="font-semibold text-slate-900 leading-tight">{{ o.full_name }}</div>
+                <td class="py-3.5 px-3">
+                  <div class="font-semibold text-slate-900 leading-tight whitespace-nowrap">{{ o.full_name }}</div>
                   {% if o.username %}
-                  <a href="https://t.me/{{ o.username }}" target="_blank" class="text-[11px] text-brand-600 hover:underline inline-flex items-center space-x-1 mt-0.5">
+                  <a href="https://t.me/{{ o.username }}" target="_blank" class="text-[11px] text-brand-600 hover:underline inline-flex items-center space-x-1 mt-0.5 whitespace-nowrap">
                     <i class="fa-brands fa-telegram text-[11px]"></i>
                     <span>@{{ o.username }}</span>
                   </a>
                   {% else %}
-                  <span class="text-[11px] text-slate-400 font-mono">UID: {{ o.user_id }}</span>
+                  <span class="text-[11px] text-slate-400 font-mono whitespace-nowrap">UID: {{ o.user_id }}</span>
                   {% endif %}
                 </td>
 
-                <!-- Items -->
-                <td class="py-3.5 px-3.5 max-w-xs">
-                  <p class="font-medium text-slate-900 leading-snug">{{ o['items'] }}</p>
-                  {% if o.notes and o.notes != 'None' %}
-                  <p class="text-[11px] text-slate-500 mt-0.5 truncate" title="{{ o.notes }}">
-                    <i class="fa-regular fa-note-sticky mr-1 text-slate-400"></i>{{ o.notes }}
-                  </p>
-                  {% endif %}
+                <!-- Items Ordered -->
+                <td class="py-3.5 px-3 max-w-[200px]">
+                  <p class="font-medium text-slate-900 leading-snug break-words">{{ o['items'] }}</p>
+                </td>
 
-                  {% if o.customer_files and o.customer_files != '[]' %}
-                  <div class="mt-1.5">
-                    <button onclick='viewCustomerArtwork({{ o.customer_files|tojson }}, "{{ o.order_code }}")' class="px-2 py-0.5 rounded border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-medium transition flex items-center space-x-1">
-                      <i class="fa-solid fa-images text-[10px]"></i>
-                      <span>View Artwork</span>
-                    </button>
+                <!-- Artwork / Design -->
+                <td class="py-3.5 px-3 whitespace-nowrap">
+                  {% if o.design_name %}
+                  <div>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <i class="fa-solid fa-palette mr-1 text-[10px]"></i> {{ o.design_name }}
+                    </span>
                   </div>
                   {% endif %}
+
+                  {% if o.artwork_files and o.artwork_files|length > 0 %}
+                  <div class="{% if o.design_name %}mt-1{% endif %}">
+                    <button onclick='viewCustomerArtwork({{ o.artwork_files|tojson }}, "{{ o.order_code }}")' class="px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-medium transition inline-flex items-center space-x-1">
+                      <i class="fa-solid fa-images text-[11px]"></i>
+                      <span>Files ({{ o.artwork_files|length }})</span>
+                    </button>
+                  </div>
+                  {% elif not o.design_name %}
+                  <span class="text-[11px] text-slate-400 italic">None</span>
+                  {% endif %}
                 </td>
 
-                <!-- Delivery -->
-                <td class="py-3.5 px-3.5 whitespace-nowrap">
+                <!-- Customer Notes -->
+                <td class="py-3.5 px-3 max-w-[220px]">
+                  {% if o.custom_instructions %}
+                  <div class="p-2 rounded-lg bg-amber-50/70 border border-amber-200/80 text-amber-900 text-xs leading-relaxed">
+                    <div class="flex items-start space-x-1.5">
+                      <i class="fa-regular fa-note-sticky text-amber-600 mt-0.5 text-[11px] shrink-0"></i>
+                      <span class="break-words font-medium">{{ o.custom_instructions }}</span>
+                    </div>
+                  </div>
+                  {% elif o.notes and o.notes != 'None' and 'Custom Note:' not in o.notes and 'Ready Design:' not in o.notes %}
+                  <div class="text-xs text-slate-600 break-words leading-relaxed">
+                    {{ o.notes }}
+                  </div>
+                  {% else %}
+                  <span class="text-[11px] text-slate-400 italic">None</span>
+                  {% endif %}
+                </td>
+
+                <!-- Price & Deposit -->
+                <td class="py-3.5 px-3 whitespace-nowrap">
+                  {% if o.total_etb is not none %}
+                  <div class="font-bold text-slate-900 font-mono text-xs">
+                    {{ "{:,.0f}".format(o.total_etb) }} ETB
+                  </div>
+                  <div class="text-[11px] text-emerald-700 font-mono mt-0.5">
+                    Deposit: {{ "{:,.0f}".format(o.deposit_etb or 0) }} ETB
+                  </div>
+                  {% if o.balance_etb and o.balance_etb > 0 %}
+                  <div class="text-[10px] text-slate-500 font-mono">
+                    Due: {{ "{:,.0f}".format(o.balance_etb) }} ETB
+                  </div>
+                  {% endif %}
+                  {% else %}
+                  <span class="text-xs text-slate-500 font-mono">See slip</span>
+                  {% endif %}
+                </td>
+
+                <!-- Delivery & Contact -->
+                <td class="py-3.5 px-3 whitespace-nowrap">
                   {% if 'Store Pickup' in (o.delivery_type or '') %}
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
                       <i class="fa-solid fa-store mr-1 text-[10px]"></i> Pickup (Ledeta)
@@ -347,7 +404,17 @@
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-sky-50 text-sky-700 border border-sky-200">
                       <i class="fa-solid fa-taxi mr-1 text-[10px]"></i> Taxi Delivery
                     </span>
-                    <div class="text-[11px] text-slate-600 truncate max-w-xs mt-0.5">{{ o.delivery_location }}</div>
+                    {% if o.delivery_location %}
+                    <div class="text-[11px] text-slate-600 truncate max-w-[180px] mt-0.5" title="{{ o.delivery_location }}">{{ o.delivery_location }}</div>
+                    {% endif %}
+                    {% if o.gps_url %}
+                    <div class="mt-0.5">
+                      <a href="{{ o.gps_url }}" target="_blank" class="inline-flex items-center space-x-1 text-[10px] text-brand-600 hover:underline">
+                        <i class="fa-solid fa-location-dot text-[9px]"></i>
+                        <span>View Map Pin</span>
+                      </a>
+                    </div>
+                    {% endif %}
                   {% else %}
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700">
                       <i class="fa-solid fa-clock mr-1 text-[10px]"></i> Awaiting Choice
@@ -364,7 +431,7 @@
                 </td>
 
                 <!-- Deadline -->
-                <td class="py-3.5 px-3.5 whitespace-nowrap text-slate-700 font-medium">
+                <td class="py-3.5 px-3 whitespace-nowrap text-slate-700 font-medium">
                   {{ o.deadline }}
                 </td>
 

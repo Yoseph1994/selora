@@ -164,10 +164,13 @@ async def admin_dashboard_menu(message: types.Message):
         f"✅ *Completed:* `{stats['completed_orders']}`\n"
         f"👥 *Total Customers:* `{stats['total_customers']}`\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "Choose an action below or open the Web Dashboard at `http://localhost:8000`:"
+        f"Choose an action below or open the Web Dashboard:\n`{config.DASHBOARD_PUBLIC_URL}`"
     )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🌐 Open Web Dashboard", url=config.DASHBOARD_PUBLIC_URL)
+        ],
         [
             InlineKeyboardButton(text="📦 Recent Orders", callback_data="admin_view_orders"),
             InlineKeyboardButton(text="📊 Full Stats", callback_data="admin_view_stats")
@@ -221,7 +224,7 @@ async def cb_admin_stats(callback: types.CallbackQuery):
         f"✅ *Completed Orders:* `{stats['completed_orders']}`\n"
         f"👥 *Total Registered Customers:* `{stats['total_customers']}`\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "Manage dynamically at `http://localhost:8000`!"
+        f"Manage dynamically on the Web Dashboard:\n`{config.DASHBOARD_PUBLIC_URL}`"
     )
     await callback.message.answer(text, parse_mode="Markdown")
     await callback.answer()
@@ -311,7 +314,7 @@ async def admin_stats(message: types.Message):
         f"✅ *Completed Orders:* `{stats['completed_orders']}`\n"
         f"👥 *Total Registered Customers:* `{stats['total_customers']}`\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "💡 *Tip:* Open the Web Dashboard at `http://localhost:8000` to manage orders and prices dynamically!"
+        f"💡 *Tip:* Open the Web Dashboard at `{config.DASHBOARD_PUBLIC_URL}` to manage orders and prices dynamically!"
     )
     await message.answer(text, parse_mode="Markdown")
 

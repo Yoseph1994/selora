@@ -320,6 +320,44 @@ async def view_order_receipt(order_code: str, request: Request):
         context={"order": order, "store_name": config.STORE_NAME}
     )
 
+def enrich_order_data(o: dict) -> dict:
+    """Enrich raw database order record with explicitly parsed columns for the production staff."""
+    import re
+    import json
+    raw_notes = o.get("notes") or ""
+
+    # 1. Custom Notes / Special Customer Instructions
+    custom_m = re.search(r"Custom Note:\s*([^|]+)", raw_notes, re.IGNORECASE)
+    o["custom_instructions"] = custom_m.group(1).strip() if custom_m else ""
+
+    # 2. Design template name
+    design_m = re.search(r"Ready Design:\s*([^|]+)", raw_notes, re.IGNORECASE)
+    o["design_name"] = design_m.group(1).strip() if design_m else ""
+
+    # 3. Financial breakdown (Total, Deposit, Balance)
+    tot_m = re.search(r"Total:\s*([\d,]+(?:\.\d+)?)\s*ETB", raw_notes, re.IGNORECASE)
+    dep_m = re.search(r"Deposit:\s*([\d,]+(?:\.\d+)?)\s*ETB", raw_notes, re.IGNORECASE)
+    o["total_etb"] = float(tot_m.group(1).replace(",", "")) if tot_m else None
+    o["deposit_etb"] = float(dep_m.group(1).replace(",", "")) if dep_m else None
+    if o["total_etb"] is not None and o["deposit_etb"] is not None:
+        o["balance_etb"] = max(0.0, o["total_etb"] - o["deposit_etb"])
+    else:
+        o["balance_etb"] = None
+
+    # 4. Customer uploaded artwork files list
+    cust_files_raw = o.get("customer_files") or "[]"
+    try:
+        f_list = json.loads(cust_files_raw)
+        o["artwork_files"] = f_list if isinstance(f_list, list) else []
+    except Exception:
+        o["artwork_files"] = []
+
+    # 5. GPS Pin URL
+    gps_m = re.search(r"GPS:\s*(https?://[^\s|]+)", raw_notes)
+    o["gps_url"] = gps_m.group(1).strip() if gps_m else ""
+
+    return o
+
 # Main Dashboard View
 @app.get("/", response_class=HTMLResponse)
 async def dashboard_index(request: Request):
@@ -327,7 +365,8 @@ async def dashboard_index(request: Request):
         return RedirectResponse(url="/login", status_code=303)
 
     stats = database.get_stats()
-    orders = database.get_all_orders()
+    raw_orders = database.get_all_orders()
+    orders = [enrich_order_data(o) for o in raw_orders]
     products_data = database.get_products_data()
     products = products_data.get("products", [])
     designs = database.get_designs()
@@ -357,8 +396,9 @@ async def dashboard_index(request: Request):
 @app.get("/api/orders", dependencies=[Depends(require_api_auth)])
 async def get_orders_api():
     """Returns latest orders and stats for live dashboard polling."""
+    raw_orders = database.get_all_orders()
     return {
-        "orders": database.get_all_orders(),
+        "orders": [enrich_order_data(o) for o in raw_orders],
         "stats": database.get_stats()
     }
 

@@ -1432,7 +1432,8 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
                     InlineKeyboardButton(text="❌ Reject", callback_data=f"pay_reject:{order_code}")
                 ],
                 [
-                    InlineKeyboardButton(text="💬 DM Customer", url=f"tg://user?id={user.id}")
+                    InlineKeyboardButton(text="💬 DM Customer", url=f"tg://user?id={user.id}"),
+                    InlineKeyboardButton(text="🌐 View on Dashboard", url=config.DASHBOARD_PUBLIC_URL)
                 ]
             ])
 
