@@ -1,0 +1,15 @@
+.git
+.github
+node_modules
+miniapp/node_modules
+miniapp/.next
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.venv
+.env.local
+.DS_Store
