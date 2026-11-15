@@ -1,8 +1,9 @@
 import os
 import json
 import logging
+import calendar
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Optional, List, Dict, Any
 
 from aiogram import Router, F, types
@@ -50,43 +51,53 @@ class OrderFSM(StatesGroup):
     waiting_for_location = State()
     waiting_for_payment_receipt = State()
 
-# -------------------------------------------------------------
-# KEYBOARDS FOR DETERMINISTIC APP-LIKE INTERACTION
-# -------------------------------------------------------------
+# ─── Helpers ──────────────────────────────────────────────────
+STEP_TOTAL = 5
+
+def _step_header(step: int, title: str, icon: str = "📝") -> str:
+    dots = "● " * step + "○ " * (STEP_TOTAL - step)
+    return (
+        f"╭─── {icon} New Order ───╮\n"
+        f"│  Step {step} of {STEP_TOTAL} · {title}\n"
+        f"╰─────────────────────╯\n"
+        f"`{dots.strip()}`"
+    )
+
+# ─── KEYBOARDS ────────────────────────────────────────────────
 
 def get_product_picker_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🏷 Stickers (Min 15)", callback_data="sel_prod:stickers"),
-            InlineKeyboardButton(text="🔖 Bookmarks (Min 2)", callback_data="sel_prod:bookmarks")
+            InlineKeyboardButton(text="🏷 Stickers  (min 15)", callback_data="sel_prod:stickers"),
+            InlineKeyboardButton(text="🔖 Bookmarks  (min 2)", callback_data="sel_prod:bookmarks")
         ],
         [
-            InlineKeyboardButton(text="💼 Business Cards (Min 50)", callback_data="sel_prod:business_cards"),
-            InlineKeyboardButton(text="📸 Polaroids (Min 10)", callback_data="sel_prod:polaroid")
+            InlineKeyboardButton(text="💼 Business Cards  (min 50)", callback_data="sel_prod:business_cards"),
+            InlineKeyboardButton(text="📸 Polaroids  (min 10)", callback_data="sel_prod:polaroid")
         ],
         [
             InlineKeyboardButton(text="📖 Photo Books & Minibooks ▾", callback_data="sel_cat:books")
         ],
         [
-            InlineKeyboardButton(text="📓 Mini Notebook (200 ETB)", callback_data="sel_prod:mini_notebook"),
-            InlineKeyboardButton(text="📔 Notebook (500 ETB)", callback_data="sel_prod:notebook")
+            InlineKeyboardButton(text="📓 Mini Notebook — 200 ETB", callback_data="sel_prod:mini_notebook"),
+            InlineKeyboardButton(text="📔 Notebook — 500 ETB", callback_data="sel_prod:notebook")
         ],
         [
-            InlineKeyboardButton(text="☕ Custom Mug (1,500 ETB)", callback_data="sel_prod:mug"),
-            InlineKeyboardButton(text="🧩 Photo Puzzle (1,500 ETB)", callback_data="sel_prod:puzzle")
+            InlineKeyboardButton(text="☕ Custom Mug — 1,500 ETB", callback_data="sel_prod:mug"),
+            InlineKeyboardButton(text="🧩 Photo Puzzle — 1,500 ETB", callback_data="sel_prod:puzzle")
         ],
         [
-            InlineKeyboardButton(text="🟢 Poster A5 (Min 10)", callback_data="sel_prod:sticker_poster_a5"),
-            InlineKeyboardButton(text="🟢 Poster A4 (Min 10)", callback_data="sel_prod:sticker_poster_a4")
+            InlineKeyboardButton(text="▪ Poster A5  (min 10)", callback_data="sel_prod:sticker_poster_a5"),
+            InlineKeyboardButton(text="▪ Poster A4  (min 10)", callback_data="sel_prod:sticker_poster_a4")
         ],
         [
             InlineKeyboardButton(
-                text="🤝 Bulk Order (>100 pcs) — Talk to Owner",
+                text="🤝 Bulk Order (>100 pcs)",
                 url=f"https://t.me/{config.ADMIN_USERNAME}?text=Hi%2C%20I%20am%20interested%20in%20a%20bulk%20order%20from%20Selora%20Prints"
             )
         ],
         [
-            InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")
+            InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")
         ]
     ])
 
@@ -106,103 +117,147 @@ def get_stepper_keyboard(prod_id: str, qty: int, min_order: int) -> InlineKeyboa
 
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=f"-{step_large}", callback_data=f"qstep:{prod_id}:-{step_large}"),
-            InlineKeyboardButton(text=f"-{step_small}", callback_data=f"qstep:{prod_id}:-{step_small}"),
-            InlineKeyboardButton(text=f"🔢 {qty}", callback_data="noop"),
+            InlineKeyboardButton(text=f"−{step_large}", callback_data=f"qstep:{prod_id}:-{step_large}"),
+            InlineKeyboardButton(text=f"−{step_small}", callback_data=f"qstep:{prod_id}:-{step_small}"),
+            InlineKeyboardButton(text=f"[ {qty} ]", callback_data="noop"),
             InlineKeyboardButton(text=f"+{step_small}", callback_data=f"qstep:{prod_id}:+{step_small}"),
             InlineKeyboardButton(text=f"+{step_large}", callback_data=f"qstep:{prod_id}:+{step_large}")
         ],
         [
-            InlineKeyboardButton(text=f"✅ Confirm: {qty} pieces", callback_data=f"qconfirm:{prod_id}:{qty}")
+            InlineKeyboardButton(text=f"✓ Confirm {qty} pcs", callback_data=f"qconfirm:{prod_id}:{qty}")
         ],
         [
             InlineKeyboardButton(
-                text="🤝 Need Bulk (>100 pcs)? Negotiate Price",
+                text="🤝 Bulk (>100 pcs)?",
                 url=f"https://t.me/{config.ADMIN_USERNAME}?text=Hi%2C%20I%20am%20interested%20in%20a%20bulk%20order%20for%20{prod_id}%20with%20custom%20pricing"
             )
         ],
         [
             InlineKeyboardButton(text="◀ Change Item", callback_data="sel_cat:all"),
-            InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_order")
+            InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")
         ]
     ])
 
 def get_card_design_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📁 I have ready design file (Free)", callback_data="card_design:ready")],
-        [InlineKeyboardButton(text="🎨 Selora Custom Design Service (+100 ETB)", callback_data="card_design:selora")],
-        [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
+        [InlineKeyboardButton(text="📁 I have a ready design  (Free)", callback_data="card_design:ready")],
+        [InlineKeyboardButton(text="🎨 Selora Custom Design  (+100 ETB)", callback_data="card_design:selora")],
+        [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
     ])
 
 def get_design_mode_keyboard(qty: int, prod_name: str) -> InlineKeyboardMarkup:
     buttons = []
     if qty > 1:
-        buttons.append([InlineKeyboardButton(text=f"🖼️ 1 Design for all {qty} copies", callback_data="dmode:single")])
-        buttons.append([InlineKeyboardButton(text=f"📸 Different photo for each item ({qty} photos)", callback_data="dmode:multi")])
+        buttons.append([InlineKeyboardButton(text=f"🖼 1 design for all {qty} copies", callback_data="dmode:single")])
+        buttons.append([InlineKeyboardButton(text=f"📸 Different photo per item ({qty} photos)", callback_data="dmode:multi")])
     else:
         buttons.append([InlineKeyboardButton(text="📸 Upload My Photo / Artwork", callback_data="dmode:single")])
 
-    buttons.append([InlineKeyboardButton(text="🎨 Choose from Selora Ready Designs", callback_data="dmode:templates")])
-    buttons.append([InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")])
+    buttons.append([InlineKeyboardButton(text="🎨 Browse Selora Ready Designs", callback_data="dmode:templates")])
+    buttons.append([InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_template_gallery_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✨ Minimalist Aesthetic", callback_data="tmpl:Minimalist Aesthetic"),
-            InlineKeyboardButton(text="🎞 Retro Vintage Film", callback_data="tmpl:Retro Vintage Film")
+            InlineKeyboardButton(text="✨ Minimalist", callback_data="tmpl:Minimalist Aesthetic"),
+            InlineKeyboardButton(text="🎞 Retro Film", callback_data="tmpl:Retro Vintage Film")
         ],
         [
-            InlineKeyboardButton(text="🌿 Floral & Nature", callback_data="tmpl:Floral & Nature"),
-            InlineKeyboardButton(text="💬 Typographic Quotes", callback_data="tmpl:Typographic Quotes")
+            InlineKeyboardButton(text="🌿 Floral", callback_data="tmpl:Floral & Nature"),
+            InlineKeyboardButton(text="💬 Quotes", callback_data="tmpl:Typographic Quotes")
         ],
         [
-            InlineKeyboardButton(text="🔤 Custom Monogram", callback_data="tmpl:Custom Monogram")
+            InlineKeyboardButton(text="🔤 Monogram", callback_data="tmpl:Custom Monogram")
         ],
         [
             InlineKeyboardButton(text="◀ Back to Photo Upload", callback_data="dmode:back")
         ]
     ])
 
-def get_date_picker_keyboard() -> InlineKeyboardMarkup:
-    now = datetime.now()
-    d2 = now + timedelta(days=2)
-    d3 = now + timedelta(days=3)
-    d4 = now + timedelta(days=4)
-    d5 = now + timedelta(days=5)
-    d7 = now + timedelta(days=7)
+# ─── INLINE CALENDAR DATE PICKER ─────────────────────────────
 
-    d2_label = f"⚡ {d2.strftime('%a, %b %d')} (Urgent: +200 ETB)"
-    d3_label = f"🗓 {d3.strftime('%a, %b %d')} (Standard)"
-    d4_label = f"🗓 {d4.strftime('%a, %b %d')} (Standard)"
-    d5_label = f"🗓 {d5.strftime('%a, %b %d')} (Standard)"
-    d7_label = f"📅 Next Week ({d7.strftime('%b %d')}+)"
+def build_calendar_keyboard(year: int, month: int) -> InlineKeyboardMarkup:
+    """Build a month-view inline calendar grid."""
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+    rush_day = today + timedelta(days=2)
+    max_date = today + timedelta(days=60)  # ~2 months
 
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=d2_label, callback_data=f"pick_date:{d2.strftime('%a, %b %d')}:200")],
-        [
-            InlineKeyboardButton(text=d3_label, callback_data=f"pick_date:{d3.strftime('%a, %b %d')}:0"),
-            InlineKeyboardButton(text=d4_label, callback_data=f"pick_date:{d4.strftime('%a, %b %d')}:0")
-        ],
-        [
-            InlineKeyboardButton(text=d5_label, callback_data=f"pick_date:{d5.strftime('%a, %b %d')}:0"),
-            InlineKeyboardButton(text=d7_label, callback_data=f"pick_date:{d7_label}:0")
-        ],
-        [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
-    ])
+    month_name = calendar.month_name[month]
+    rows: list[list[InlineKeyboardButton]] = []
+
+    # ── Header row: ◀ Month Year ▶
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+
+    # Only allow navigation within valid range
+    can_prev = date(prev_year, prev_month, 1) >= date(today.year, today.month, 1)
+    can_next = date(next_year, next_month, 1) <= date(max_date.year, max_date.month, 1)
+
+    nav_prev = InlineKeyboardButton(
+        text="◀" if can_prev else " ",
+        callback_data=f"cal_nav:{prev_year}-{prev_month:02d}" if can_prev else "noop"
+    )
+    nav_next = InlineKeyboardButton(
+        text="▶" if can_next else " ",
+        callback_data=f"cal_nav:{next_year}-{next_month:02d}" if can_next else "noop"
+    )
+    rows.append([nav_prev, InlineKeyboardButton(text=f"{month_name} {year}", callback_data="noop"), nav_next])
+
+    # ── Day-of-week headers
+    rows.append([InlineKeyboardButton(text=d, callback_data="noop") for d in ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]])
+
+    # ── Day grid
+    cal = calendar.monthcalendar(year, month)
+    for week in cal:
+        row = []
+        for day_num in week:
+            if day_num == 0:
+                row.append(InlineKeyboardButton(text=" ", callback_data="noop"))
+                continue
+
+            d = date(year, month, day_num)
+
+            if d <= today:
+                # Past or today — show dot
+                row.append(InlineKeyboardButton(text="·", callback_data="noop"))
+            elif d == tomorrow:
+                # Tomorrow blocked
+                row.append(InlineKeyboardButton(text="✖", callback_data="noop"))
+            elif d > max_date:
+                # Beyond 2 months
+                row.append(InlineKeyboardButton(text="·", callback_data="noop"))
+            elif d == rush_day:
+                # Rush day (+200 ETB)
+                iso = d.isoformat()
+                row.append(InlineKeyboardButton(text=f"⚡{day_num}", callback_data=f"cal_day:{iso}:200"))
+            else:
+                # Normal selectable day
+                iso = d.isoformat()
+                row.append(InlineKeyboardButton(text=str(day_num), callback_data=f"cal_day:{iso}:0"))
+        rows.append(row)
+
+    # ── Cancel row
+    rows.append([InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")])
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
 
 def get_recipient_name_keyboard(tg_name: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"✅ Use My Name: {tg_name}", callback_data="recip_name:tg")],
-        [InlineKeyboardButton(text="✏️ Different Recipient Name", callback_data="recip_name:custom")],
-        [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
+        [InlineKeyboardButton(text=f"✓ Use My Name: {tg_name}", callback_data="recip_name:tg")],
+        [InlineKeyboardButton(text="✏ Different Recipient", callback_data="recip_name:custom")],
+        [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
     ])
 
 def get_phone_request_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📱 Share Phone Number (1-Tap)", request_contact=True)],
-            [KeyboardButton(text="❌ Cancel Order")]
+            [KeyboardButton(text="❌ Cancel")]
         ],
         resize_keyboard=True,
         one_time_keyboard=True
@@ -214,7 +269,7 @@ def get_location_dispatch_keyboard() -> ReplyKeyboardMarkup:
             [KeyboardButton(text="📍 Send Exact GPS Pin (Best for Ride/Yango)", request_location=True)],
             [KeyboardButton(text="🏙️ Choose Addis Ababa Sub-City / Area")],
             [KeyboardButton(text="✏️ Type Landmark / Street Name")],
-            [KeyboardButton(text="❌ Cancel Order")]
+            [KeyboardButton(text="❌ Cancel")]
         ],
         resize_keyboard=True,
         one_time_keyboard=True
@@ -223,53 +278,52 @@ def get_location_dispatch_keyboard() -> ReplyKeyboardMarkup:
 def get_subcities_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="📍 Bole / Medhanialem", callback_data="subcity:Bole / Medhanialem"),
-            InlineKeyboardButton(text="📍 Kazanchis / Bambis", callback_data="subcity:Kazanchis / Bambis")
+            InlineKeyboardButton(text="Bole / Medhanialem", callback_data="subcity:Bole / Medhanialem"),
+            InlineKeyboardButton(text="Kazanchis / Bambis", callback_data="subcity:Kazanchis / Bambis")
         ],
         [
-            InlineKeyboardButton(text="📍 CMC / Ayat / Summit", callback_data="subcity:CMC / Ayat / Summit"),
-            InlineKeyboardButton(text="📍 Piassa / Arat Kilo", callback_data="subcity:Piassa / Arat Kilo")
+            InlineKeyboardButton(text="CMC / Ayat / Summit", callback_data="subcity:CMC / Ayat / Summit"),
+            InlineKeyboardButton(text="Piassa / Arat Kilo", callback_data="subcity:Piassa / Arat Kilo")
         ],
         [
-            InlineKeyboardButton(text="📍 Sarbet / Bisrate Gabriel", callback_data="subcity:Sarbet / Bisrate Gabriel"),
-            InlineKeyboardButton(text="📍 Megenagna / 22", callback_data="subcity:Megenagna / 22")
+            InlineKeyboardButton(text="Sarbet / Bisrate Gabriel", callback_data="subcity:Sarbet / Bisrate Gabriel"),
+            InlineKeyboardButton(text="Megenagna / 22", callback_data="subcity:Megenagna / 22")
         ],
         [
-            InlineKeyboardButton(text="📍 Gerji / Imperial", callback_data="subcity:Gerji / Imperial"),
-            InlineKeyboardButton(text="📍 Lebu / Jemo", callback_data="subcity:Lebu / Jemo")
+            InlineKeyboardButton(text="Gerji / Imperial", callback_data="subcity:Gerji / Imperial"),
+            InlineKeyboardButton(text="Lebu / Jemo", callback_data="subcity:Lebu / Jemo")
         ],
         [
-            InlineKeyboardButton(text="📍 Mexico / Ledeta", callback_data="subcity:Mexico / Ledeta"),
-            InlineKeyboardButton(text="📍 4 Kilo / 6 Kilo", callback_data="subcity:4 Kilo / 6 Kilo")
+            InlineKeyboardButton(text="Mexico / Ledeta", callback_data="subcity:Mexico / Ledeta"),
+            InlineKeyboardButton(text="4 Kilo / 6 Kilo", callback_data="subcity:4 Kilo / 6 Kilo")
         ],
         [
-            InlineKeyboardButton(text="📍 Gotera / Saris", callback_data="subcity:Gotera / Saris"),
-            InlineKeyboardButton(text="📍 Kera / Bulgaria", callback_data="subcity:Kera / Bulgaria")
+            InlineKeyboardButton(text="Gotera / Saris", callback_data="subcity:Gotera / Saris"),
+            InlineKeyboardButton(text="Kera / Bulgaria", callback_data="subcity:Kera / Bulgaria")
         ],
         [
             InlineKeyboardButton(text="◀ Back to Location Options", callback_data="subcity:back")
         ]
     ])
 
-# -------------------------------------------------------------
-# START ORDER & PRODUCT PICKER
-# -------------------------------------------------------------
+# ─── START ORDER & PRODUCT PICKER ────────────────────────────
 
 @router.message(Command("cancel"))
 @router.message(F.text.in_(["❌ Cancel", "❌ Cancel Order"]))
 async def cancel_order(message: types.Message, state: FSMContext):
     await state.clear()
     await message.answer(
-        "❌ Order process cancelled. You can start anytime with the menu below!",
+        "✕ Order cancelled. You can start anytime from the menu.",
         reply_markup=get_main_menu_keyboard()
     )
 
 @router.callback_query(F.data == "cancel_order")
 async def callback_cancel_order(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.edit_text("❌ Order cancelled.")
+    await callback.message.edit_text("✕ Order cancelled.")
     await callback.message.answer(
-        "Feel free to browse or ask questions anytime! 💛",
+        "_Feel free to browse or ask questions anytime._",
+        parse_mode="Markdown",
         reply_markup=get_main_menu_keyboard()
     )
     await callback.answer()
@@ -280,10 +334,9 @@ async def start_order(message: types.Message, state: FSMContext):
     await state.clear()
     await state.set_state(OrderFSM.waiting_for_product)
     await message.answer(
-        "📱 *SELORA ORDER ASSISTANT*\n"
-        "`[ 🟡 ⚪ ⚪ ⚪ ] Step 1 of 4: Select Your Product`\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "Tap the item you'd like to order below:",
+        _step_header(1, "Product", "📝") + "\n"
+        "─────────────────────\n"
+        "Select the item you'd like to order:",
         parse_mode="Markdown",
         reply_markup=get_product_picker_keyboard()
     )
@@ -293,10 +346,9 @@ async def callback_start_order(callback: types.CallbackQuery, state: FSMContext)
     await state.clear()
     await state.set_state(OrderFSM.waiting_for_product)
     await callback.message.answer(
-        "📱 *SELORA ORDER ASSISTANT*\n"
-        "`[ 🟡 ⚪ ⚪ ⚪ ] Step 1 of 4: Select Your Product`\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "Tap the item you'd like to order below:",
+        _step_header(1, "Product", "📝") + "\n"
+        "─────────────────────\n"
+        "Select the item you'd like to order:",
         parse_mode="Markdown",
         reply_markup=get_product_picker_keyboard()
     )
@@ -305,9 +357,10 @@ async def callback_start_order(callback: types.CallbackQuery, state: FSMContext)
 @router.callback_query(F.data == "sel_cat:books")
 async def callback_show_books_menu(callback: types.CallbackQuery):
     await callback.message.edit_text(
-        "📖 *SELECT PHOTO BOOK / MINIBOOK SIZE:*\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "Choose your preferred cover and size:",
+        "╭─── 📖 Photo Books ───╮\n"
+        "│  Choose your preferred\n"
+        "│  cover and size:\n"
+        "╰─────────────────────╯",
         parse_mode="Markdown",
         reply_markup=get_books_picker_keyboard()
     )
@@ -316,18 +369,15 @@ async def callback_show_books_menu(callback: types.CallbackQuery):
 @router.callback_query(F.data == "sel_cat:all")
 async def callback_show_all_prods(callback: types.CallbackQuery):
     await callback.message.edit_text(
-        "📱 *SELORA ORDER ASSISTANT*\n"
-        "`[ 🟡 ⚪ ⚪ ⚪ ] Step 1 of 4: Select Your Product`\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "Tap the item you'd like to order below:",
+        _step_header(1, "Product", "📝") + "\n"
+        "─────────────────────\n"
+        "Select the item you'd like to order:",
         parse_mode="Markdown",
         reply_markup=get_product_picker_keyboard()
     )
     await callback.answer()
 
-# -------------------------------------------------------------
-# QUANTITY STEPPER (DETERMINISTIC INTERACTION)
-# -------------------------------------------------------------
+# ─── QUANTITY STEPPER ─────────────────────────────────────────
 
 async def show_quantity_stepper(message: types.Message, prod_id: str, state: FSMContext, initial_qty: Optional[int] = None):
     products = database.get_products_data().get("products", [])
@@ -350,17 +400,18 @@ async def show_quantity_stepper(message: types.Message, prod_id: str, state: FSM
     )
     await state.set_state(OrderFSM.waiting_for_quantity)
 
-    min_note = f"\n⚠️ *Minimum Order:* `{min_ord} pieces`" if min_ord > 1 else ""
-    price_info = f"`{price} ETB` each" if price else "Custom Quote"
-    sub_line = f"\n💰 *Subtotal:* `{subtotal} ETB`" if price else ""
+    price_info = f"{price} ETB each" if price else "Custom Quote"
+    min_note = f"\n▸ *Min Order:* {min_ord} pcs" if min_ord > 1 else ""
+    sub_line = f"\n▸ *Subtotal:* {subtotal} ETB" if price else ""
 
     text = (
-        f"💛 *Select Quantity for {prod['name']}*\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        f"🏷 *Unit Price:* {price_info}{min_note}\n"
-        f"🔢 *Current Quantity:* `{qty} pieces`{sub_line}\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "Use buttons below to adjust quantity:"
+        _step_header(2, "Quantity", "🔢") + "\n"
+        "─────────────────────\n"
+        f"*{prod['name']}*\n\n"
+        f"▸ *Unit Price:* {price_info}{min_note}\n"
+        f"▸ *Quantity:* {qty} pcs{sub_line}\n"
+        "─────────────────────\n"
+        "Use the buttons to adjust:"
     )
 
     keyboard = get_stepper_keyboard(prod_id, qty, min_ord)
@@ -385,23 +436,24 @@ async def callback_quantity_step(callback: types.CallbackQuery, state: FSMContex
 
     new_qty = current_qty + delta
     if new_qty < min_ord:
-        await callback.answer(f"⚠️ Minimum order is {min_ord} pieces!", show_alert=True)
+        await callback.answer(f"⚠ Minimum order is {min_ord} pieces!", show_alert=True)
         return
 
     await state.update_data(quantity=new_qty)
     subtotal = price * new_qty if price else 0
 
-    min_note = f"\n⚠️ *Minimum Order:* `{min_ord} pieces`" if min_ord > 1 else ""
-    price_info = f"`{price} ETB` each" if price else "Custom Quote"
-    sub_line = f"\n💰 *Subtotal:* `{subtotal} ETB`" if price else ""
+    price_info = f"{price} ETB each" if price else "Custom Quote"
+    min_note = f"\n▸ *Min Order:* {min_ord} pcs" if min_ord > 1 else ""
+    sub_line = f"\n▸ *Subtotal:* {subtotal} ETB" if price else ""
 
     text = (
-        f"💛 *Select Quantity for {data.get('product_name', prod_id)}*\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        f"🏷 *Unit Price:* {price_info}{min_note}\n"
-        f"🔢 *Current Quantity:* `{new_qty} pieces`{sub_line}\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "Use buttons below to adjust quantity:"
+        _step_header(2, "Quantity", "🔢") + "\n"
+        "─────────────────────\n"
+        f"*{data.get('product_name', prod_id)}*\n\n"
+        f"▸ *Unit Price:* {price_info}{min_note}\n"
+        f"▸ *Quantity:* {new_qty} pcs{sub_line}\n"
+        "─────────────────────\n"
+        "Use the buttons to adjust:"
     )
 
     keyboard = get_stepper_keyboard(prod_id, new_qty, min_ord)
@@ -411,9 +463,7 @@ async def callback_quantity_step(callback: types.CallbackQuery, state: FSMContex
         pass
     await callback.answer()
 
-# -------------------------------------------------------------
-# CONFIRM QUANTITY -> BUSINESS CARD DESIGN OPTION OR DESIGN MODE
-# -------------------------------------------------------------
+# ─── CONFIRM QUANTITY -> CARD DESIGN / DESIGN MODE ────────────
 
 @router.callback_query(OrderFSM.waiting_for_quantity, F.data.startswith("qconfirm:"))
 async def callback_quantity_confirm(callback: types.CallbackQuery, state: FSMContext):
@@ -436,12 +486,14 @@ async def callback_quantity_confirm(callback: types.CallbackQuery, state: FSMCon
     if prod_id == "business_cards":
         await state.set_state(OrderFSM.waiting_for_card_design)
         await callback.message.edit_text(
-            f"💼 *BUSINESS CARD DESIGN OPTION*\n"
-            f"━━━━━━━━━━━━━━━━━━━━\n"
-            f"Ordering: *{qty} Business Cards*\n\n"
-            "Do you have a print-ready design file, or would you like Selora to create a custom design for you?\n\n"
-            "• 📁 *My Own Ready Design:* Free (upload below)\n"
-            "• 🎨 *Selora Custom Design Service:* +100 ETB",
+            "╭─── 💼 Business Card Design ───╮\n"
+            "│\n"
+            f"│  Ordering: *{qty} Business Cards*\n"
+            "│\n"
+            "│  ▸ My own ready design — Free\n"
+            "│  ▸ Selora custom design — +100 ETB\n"
+            "│\n"
+            "╰──────────────────────────────╯",
             parse_mode="Markdown",
             reply_markup=get_card_design_keyboard()
         )
@@ -452,9 +504,7 @@ async def callback_quantity_confirm(callback: types.CallbackQuery, state: FSMCon
     await advance_to_design_mode(callback.message, state)
     await callback.answer()
 
-# -------------------------------------------------------------
-# BUSINESS CARD DESIGN HANDLER
-# -------------------------------------------------------------
+# ─── BUSINESS CARD DESIGN HANDLER ────────────────────────────
 
 @router.callback_query(OrderFSM.waiting_for_card_design, F.data.startswith("card_design:"))
 async def callback_card_design(callback: types.CallbackQuery, state: FSMContext):
@@ -462,19 +512,17 @@ async def callback_card_design(callback: types.CallbackQuery, state: FSMContext)
     if choice == "selora":
         design_fee = 100
         design_note = "Selora Custom Design Service (+100 ETB)"
-        await callback.message.answer("🎨 Selected: *Selora Custom Design Service (+100 ETB)*", parse_mode="Markdown")
+        await callback.message.answer("✓ *Selora Custom Design Service (+100 ETB)*", parse_mode="Markdown")
     else:
         design_fee = 0
         design_note = "Customer Ready Design File"
-        await callback.message.answer("📁 Selected: *Customer Ready Design File (Free)*", parse_mode="Markdown")
+        await callback.message.answer("✓ *Customer Ready Design File (Free)*", parse_mode="Markdown")
 
     await state.update_data(design_fee=design_fee, design_note=design_note)
     await advance_to_design_mode(callback.message, state)
     await callback.answer()
 
-# -------------------------------------------------------------
-# DESIGN & ARTWORK SELECTION MODE
-# -------------------------------------------------------------
+# ─── DESIGN & ARTWORK SELECTION MODE ─────────────────────────
 
 def get_order_design_card(index: int, product_id: str, qty: int):
     designs = database.get_designs(product_id=product_id)
@@ -487,15 +535,14 @@ def get_order_design_card(index: int, product_id: str, qty: int):
     d = designs[idx]
 
     caption = (
-        f"🎨 *READY DESIGN {idx + 1} OF {len(designs)}*\n"
-        f"`[ 🟢 🟡 ⚪ ⚪ ] Step 2 of 4: Select Ready Design`\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"✨ *{d['title']}*\n"
-        f"📦 *Product:* {d['product_name']}\n"
-        f"🏷 *Sub-Product / Style:* `{d['subproduct']}`\n"
-        f"📝 {d.get('description', '')}\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"👉 *Tap '✅ Use This Design' to apply to your {qty} copies, or tap below to upload your own design image if not satisfied.*"
+        f"*{d['title']}*\n"
+        "─────────────────────\n"
+        f"▸ *Product:* {d['product_name']}\n"
+        f"▸ *Style:* {d['subproduct']}\n"
+        f"▸ {d.get('description', '')}\n"
+        "─────────────────────\n"
+        f"_Design {idx + 1} of {len(designs)}_\n\n"
+        f"Tap *'✓ Use This Design'* to apply to your {qty} copies."
     )
 
     prev_idx = (idx - 1) % len(designs)
@@ -504,18 +551,18 @@ def get_order_design_card(index: int, product_id: str, qty: int):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="◀ Prev", callback_data=f"odes_nav:{idx}:{prev_idx}"),
-            InlineKeyboardButton(text=f"• {idx + 1}/{len(designs)} •", callback_data="noop"),
+            InlineKeyboardButton(text=f"· {idx + 1}/{len(designs)} ·", callback_data="noop"),
             InlineKeyboardButton(text="Next ▶", callback_data=f"odes_nav:{idx}:{next_idx}")
         ],
         [
-            InlineKeyboardButton(text="✅ Use This Design for My Order", callback_data=f"odes_pick:{d['id']}")
+            InlineKeyboardButton(text="✓ Use This Design", callback_data=f"odes_pick:{d['id']}")
         ],
         [
-            InlineKeyboardButton(text="📸 Not Satisfied: Upload My Own Design", callback_data="odes_custom")
+            InlineKeyboardButton(text="📸 Upload My Own Instead", callback_data="odes_custom")
         ],
         [
             InlineKeyboardButton(text="◀ Back", callback_data="dmode:back"),
-            InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")
+            InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")
         ]
     ])
 
@@ -544,21 +591,20 @@ async def advance_to_design_mode(message: types.Message, state: FSMContext):
     # If user already selected a ready design prior to stepper
     if data.get("selected_design_id") and data.get("design_note"):
         if isinstance(message, types.CallbackQuery):
-            await message.message.answer(f"✅ Using Design: *{data.get('design_note')}*", parse_mode="Markdown")
+            await message.message.answer(f"✓ Using Design: *{data.get('design_note')}*", parse_mode="Markdown")
         else:
-            await message.answer(f"✅ Using Design: *{data.get('design_note')}*", parse_mode="Markdown")
+            await message.answer(f"✓ Using Design: *{data.get('design_note')}*", parse_mode="Markdown")
         await advance_to_deadline_picker(message, state)
         return
 
     await state.set_state(OrderFSM.waiting_for_design_mode)
     text = (
-        f"🎨 *ARTWORK & DESIGN SELECTION*\n"
-        f"`[ 🟢 🟡 ⚪ ⚪ ] Step 2 of 4: Design Source`\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
+        _step_header(3, "Design", "🎨") + "\n"
+        "─────────────────────\n"
         f"Item: *{qty}x {prod_name}*\n\n"
-        "How would you like to provide the designs/photos for this order?\n\n"
-        "• 📸 *Upload My Photo:* Send your own custom pictures or artwork files\n"
-        "• 🎨 *Ready Designs:* Browse our curated ready-made templates and styles"
+        "How would you like to provide the design?\n\n"
+        "▸ *Upload Photo:* Send your own custom artwork\n"
+        "▸ *Ready Designs:* Browse curated templates"
     )
     if isinstance(message, types.CallbackQuery):
         await message.message.edit_text(text, parse_mode="Markdown", reply_markup=get_design_mode_keyboard(qty, prod_name))
@@ -588,8 +634,8 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
             )
         else:
             await callback.message.edit_text(
-                "⚠️ *No pre-made designs found for this specific item.*\n\n"
-                "Please upload your own custom photo or artwork below:",
+                "⚠ *No pre-made designs found for this item.*\n\n"
+                "Please upload your own photo or artwork below:",
                 parse_mode="Markdown"
             )
             await state.update_data(design_mode="single", photos=[])
@@ -605,15 +651,21 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
     if mode == "single":
         await state.update_data(design_mode="single", photos=[], customer_files=[])
         await state.set_state(OrderFSM.waiting_for_photos)
+
+        inline_cancel = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
+        ])
+
         await callback.message.edit_text(
-            f"📸 *UPLOAD DESIGN / ARTWORK (HIGH QUALITY)*\n"
-            f"━━━━━━━━━━━━━━━━━━━━\n"
-            f"This design will be printed on all *{qty} copies* of {prod_name}.\n\n"
-            "✨ *For 100% Uncompressed Print Quality:* Tap 📎 (paperclip) and select **'File / Document'** so Telegram does not compress your image!\n"
-            "📷 Regular high-resolution photos are also fully accepted.\n\n"
-            "👉 *Please send your photo or artwork file now:*",
+            _step_header(3, "Upload Artwork", "📸") + "\n"
+            "─────────────────────\n"
+            f"This design will print on all *{qty}* copies of {prod_name}.\n\n"
+            "▸ For best quality: tap 📎 and send as *File/Document*\n"
+            "▸ Regular high-res photos are also accepted\n"
+            "─────────────────────\n"
+            "Send your photo or artwork now:",
             parse_mode="Markdown",
-            reply_markup=get_cancel_keyboard()
+            reply_markup=inline_cancel
         )
         await callback.answer()
         return
@@ -623,17 +675,19 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
         await state.set_state(OrderFSM.waiting_for_photos)
 
         done_btn = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="✅ Done Uploading", callback_data="done_photos")],
-            [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
+            [InlineKeyboardButton(text="✓ Done Uploading", callback_data="done_photos")],
+            [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
         ])
 
         await callback.message.edit_text(
-            f"📸 *UPLOAD {qty} PHOTOS (FULL RESOLUTION)*\n"
-            f"━━━━━━━━━━━━━━━━━━━━\n"
-            f"Send your photos one by one or as an album.\n\n"
-            "✨ *Pro-Tip for Best Print Quality:* You can send as uncompressed **'Files / Documents'** (📎) or regular photos.\n\n"
-            f"• *Progress:* `0 / {qty} photos received`\n\n"
-            "Send your photos now (or tap *Done Uploading* when finished):",
+            _step_header(3, "Upload Photos", "📸") + "\n"
+            "─────────────────────\n"
+            f"Send {qty} photos, one by one or as an album.\n\n"
+            "▸ For best quality: send as *Files/Documents* (📎)\n"
+            "▸ Regular photos also accepted\n\n"
+            f"Progress: `0 / {qty}` photos received\n"
+            "─────────────────────\n"
+            "Send your photos now:",
             parse_mode="Markdown",
             reply_markup=done_btn
         )
@@ -671,7 +725,7 @@ async def callback_order_design_pick(callback: types.CallbackQuery, state: FSMCo
         selected_design_id=design_id,
         file_id=None
     )
-    await callback.message.answer(f"✅ Selected Design: *{title}* (`{subproduct}`)", parse_mode="Markdown")
+    await callback.message.answer(f"✓ Selected Design: *{title}* ({subproduct})", parse_mode="Markdown")
     await advance_to_deadline_picker(callback.message, state)
     await callback.answer()
 
@@ -686,18 +740,32 @@ async def callback_order_design_custom(callback: types.CallbackQuery, state: FSM
         await callback.message.delete()
     except Exception:
         pass
+
+    inline_cancel = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
+    ])
+
     await callback.message.answer(
-        f"📸 *CUSTOM ARTWORK UPLOAD*\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"No problem! Please send your custom artwork or photo below for your *{qty} copies* of {prod_name}:",
+        _step_header(3, "Custom Artwork", "📸") + "\n"
+        "─────────────────────\n"
+        f"Send your custom artwork or photo for *{qty}* copies of {prod_name}:",
         parse_mode="Markdown",
-        reply_markup=get_cancel_keyboard()
+        reply_markup=inline_cancel
     )
     await callback.answer()
 
-# -------------------------------------------------------------
-# PHOTO UPLOADER (SINGLE OR MULTI MATCHING MINIMUM ORDERS)
-# -------------------------------------------------------------
+# ─── PHOTO UPLOADER ───────────────────────────────────────────
+
+@router.message(OrderFSM.waiting_for_photos, F.text)
+async def handle_text_during_photo_upload(message: types.Message, state: FSMContext):
+    if message.text in ["❌ Cancel", "❌ Cancel Order"]:
+        await cancel_order(message, state)
+        return
+    await message.answer(
+        "📸 _Please send a photo or document file — not text._\n"
+        "_Tap 📎 to attach your artwork, or type /cancel to quit._",
+        parse_mode="Markdown"
+    )
 
 @router.message(OrderFSM.waiting_for_photos, F.photo | F.document)
 async def process_photo_upload(message: types.Message, state: FSMContext):
@@ -743,7 +811,7 @@ async def process_photo_upload(message: types.Message, state: FSMContext):
             file_type="document" if message.document else "photo",
             customer_files=customer_files
         )
-        await message.answer(f"✅ *Artwork received in full quality!* ({file_type}) 🎨", parse_mode="Markdown")
+        await message.answer(f"✓ *Artwork received!* ({file_type})", parse_mode="Markdown")
         await advance_to_deadline_picker(message, state)
         return
 
@@ -754,16 +822,16 @@ async def process_photo_upload(message: types.Message, state: FSMContext):
 
     count = len(photos)
     if count >= qty:
-        await message.answer(f"🎉 *All {count}/{qty} photos received in full quality!* 💛", parse_mode="Markdown")
+        await message.answer(f"✓ *All {count}/{qty} photos received!*", parse_mode="Markdown")
         await advance_to_deadline_picker(message, state)
     else:
         done_btn = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=f"✅ Done Uploading ({count}/{qty})", callback_data="done_photos")],
-            [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
+            [InlineKeyboardButton(text=f"✓ Done Uploading ({count}/{qty})", callback_data="done_photos")],
+            [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
         ])
         await message.answer(
-            f"📸 *Received photo {count} of {qty}!* (`{orig_name}`)\n\n"
-            f"Send more photos or tap *Done Uploading* when you're finished:",
+            f"📸 *Photo {count} of {qty} received*\n\n"
+            f"Send more photos or tap *Done Uploading*:",
             parse_mode="Markdown",
             reply_markup=done_btn
         )
@@ -776,58 +844,85 @@ async def callback_done_photos(callback: types.CallbackQuery, state: FSMContext)
         await callback.answer("Please send at least 1 photo first!", show_alert=True)
         return
 
-    await callback.message.answer(f"✅ Finished photo upload with *{len(photos)} photos*! 💛", parse_mode="Markdown")
+    await callback.message.answer(f"✓ *{len(photos)} photos uploaded*", parse_mode="Markdown")
     await advance_to_deadline_picker(callback.message, state)
     await callback.answer()
 
-# -------------------------------------------------------------
-# INTERACTIVE DATE PICKER (DETERMINISTIC DEADLINES)
-# -------------------------------------------------------------
+# ─── INTERACTIVE CALENDAR DATE PICKER ─────────────────────────
 
 async def advance_to_deadline_picker(message: types.Message, state: FSMContext):
     await state.set_state(OrderFSM.waiting_for_deadline)
+    today = date.today()
+    cal_kb = build_calendar_keyboard(today.year, today.month)
+
     text = (
-        "🗓 *TIMING & DELIVERY DEADLINE*\n"
-        "`[ 🟢 🟢 🟡 ⚪ ] Step 3 of 4: Select Completion Date`\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "⏱ *Turnaround Policy:*\n"
-        "• 🟢 *Standard:* 3+ days (normal pricing)\n"
-        "• ⚡ *Urgent Rush (in 2 days):* +200 ETB rush fee\n"
-        "• ⛔ *Next-day (tomorrow):* Cannot be accepted due to drying & binding time.\n\n"
-        "👉 *Tap your desired completion date below:*"
+        _step_header(4, "Completion Date", "🗓") + "\n"
+        "─────────────────────\n"
+        "▸ Standard: 3+ days (normal pricing)\n"
+        "▸ ⚡ Urgent Rush (2 days): +200 ETB\n"
+        "▸ ✖ Tomorrow: unavailable (drying time)\n"
+        "─────────────────────\n"
+        "Tap a date on the calendar below:"
     )
     if isinstance(message, types.CallbackQuery):
-        await message.message.edit_text(text, parse_mode="Markdown", reply_markup=get_date_picker_keyboard())
+        await message.message.edit_text(text, parse_mode="Markdown", reply_markup=cal_kb)
     else:
-        await message.answer(text, parse_mode="Markdown", reply_markup=get_date_picker_keyboard())
+        await message.answer(text, parse_mode="Markdown", reply_markup=cal_kb)
 
-@router.callback_query(OrderFSM.waiting_for_deadline, F.data.startswith("pick_date:"))
-async def callback_date_picked(callback: types.CallbackQuery, state: FSMContext):
+@router.callback_query(OrderFSM.waiting_for_deadline, F.data.startswith("cal_nav:"))
+async def callback_cal_nav(callback: types.CallbackQuery, state: FSMContext):
+    """Navigate to a different month in the calendar."""
+    ym = callback.data.split(":")[1]  # YYYY-MM
+    year, month = int(ym.split("-")[0]), int(ym.split("-")[1])
+    cal_kb = build_calendar_keyboard(year, month)
+
+    text = (
+        _step_header(4, "Completion Date", "🗓") + "\n"
+        "─────────────────────\n"
+        "▸ Standard: 3+ days (normal pricing)\n"
+        "▸ ⚡ Urgent Rush (2 days): +200 ETB\n"
+        "▸ ✖ Tomorrow: unavailable (drying time)\n"
+        "─────────────────────\n"
+        "Tap a date on the calendar below:"
+    )
+    try:
+        await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=cal_kb)
+    except Exception:
+        pass
+    await callback.answer()
+
+@router.callback_query(OrderFSM.waiting_for_deadline, F.data.startswith("cal_day:"))
+async def callback_cal_day(callback: types.CallbackQuery, state: FSMContext):
+    """User selected a day from the calendar."""
     parts = callback.data.split(":")
-    date_label = parts[1]
+    iso_date = parts[1]   # YYYY-MM-DD
     rush_fee = int(parts[2])
+
+    selected = datetime.strptime(iso_date, "%Y-%m-%d")
+    date_label = selected.strftime("%a, %b %d")
 
     await state.update_data(deadline=date_label, rush_fee=rush_fee)
     await state.set_state(OrderFSM.waiting_for_delivery_type)
 
-    rush_note = " _(+200 ETB urgent rush fee)_" if rush_fee > 0 else ""
-    await callback.message.edit_text(f"✅ Completion Date: *{date_label}*{rush_note}", parse_mode="Markdown")
+    if rush_fee > 0:
+        confirm_text = f"✓ Completion Date: *{date_label}* _(⚡ Urgent Rush +200 ETB)_"
+    else:
+        confirm_text = f"✓ Completion Date: *{date_label}* _(Standard)_"
+
+    await callback.message.edit_text(confirm_text, parse_mode="Markdown")
 
     await callback.message.answer(
-        "📱 *SELORA ORDER ASSISTANT*\n"
-        "`[ 🟢 🟢 🟢 ⚪ ] Step 4 of 4: Delivery Method`\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
+        _step_header(5, "Delivery & Payment", "📦") + "\n"
+        "─────────────────────\n"
         "How would you like to receive your prints?\n\n"
-        "• 🏪 *Store Pickup:* Free directly at our Ledeta store\n"
-        "• 🚚 *Yango Delivery:* Delivered across Addis Ababa (fee paid upon receipt)",
+        "▸ *Store Pickup:* Free at our Ledeta store\n"
+        "▸ *Yango Delivery:* Across Addis Ababa",
         parse_mode="Markdown",
         reply_markup=get_delivery_choice_keyboard()
     )
     await callback.answer()
 
-# -------------------------------------------------------------
-# DELIVERY SELECTION & DETERMINISTIC DISPATCH INTAKE
-# -------------------------------------------------------------
+# ─── DELIVERY SELECTION & DISPATCH INTAKE ─────────────────────
 
 @router.callback_query(OrderFSM.waiting_for_delivery_type, F.data.startswith("delivery_choice:"))
 async def process_delivery_choice(callback: types.CallbackQuery, state: FSMContext):
@@ -840,18 +935,17 @@ async def process_delivery_choice(callback: types.CallbackQuery, state: FSMConte
             recipient_name=user.full_name,
             phone="Store Pickup / In Person"
         )
-        await callback.message.edit_text("✅ Selected: *Store Pickup (Ledeta - Free)*", parse_mode="Markdown")
+        await callback.message.edit_text("✓ *Store Pickup (Ledeta — Free)*", parse_mode="Markdown")
         await show_payment_summary(callback.message, state)
     else:
         await state.update_data(delivery_type="Yango / Feres / RIDE Delivery")
         await state.set_state(OrderFSM.waiting_for_recipient_name)
-        await callback.message.edit_text("✅ Selected: *Yango / Feres / RIDE Delivery*", parse_mode="Markdown")
+        await callback.message.edit_text("✓ *Yango / Feres / RIDE Delivery*", parse_mode="Markdown")
         await callback.message.answer(
-            "👤 *STEP 1 OF 3: RECIPIENT NAME FOR DRIVER DISPATCH*\n"
-            "`[ 🟢 🟢 🟢 🟡 ] Driver Dispatch Information`\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "Who will be meeting the driver to receive the package?\n\n"
-            "👉 *Tap below to confirm recipient:*",
+            "╭─── 👤 Recipient Info ───╮\n"
+            "│  1 of 3 · Recipient Name\n"
+            "╰─────────────────────────╯\n\n"
+            "Who will meet the driver to receive the package?",
             parse_mode="Markdown",
             reply_markup=get_recipient_name_keyboard(user.full_name)
         )
@@ -863,19 +957,20 @@ async def callback_recipient_name(callback: types.CallbackQuery, state: FSMConte
     user = callback.from_user
     if mode == "tg":
         await state.update_data(recipient_name=user.full_name)
-        await callback.message.edit_text(f"✅ Recipient: *{user.full_name}*", parse_mode="Markdown")
+        await callback.message.edit_text(f"✓ Recipient: *{user.full_name}*", parse_mode="Markdown")
         await state.set_state(OrderFSM.waiting_for_phone)
         await callback.message.answer(
-            "📱 *STEP 2 OF 3: CONTACT PHONE NUMBER*\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "The driver (Feres / Yango / RIDE) will call this number when arriving.\n\n"
-            "👉 *Tap '📱 Share Phone Number (1-Tap)'* below, or type your 10-digit number (e.g. `0911223344`):",
+            "╭─── 📱 Contact Phone ───╮\n"
+            "│  2 of 3 · Driver Contact\n"
+            "╰─────────────────────────╯\n\n"
+            "The driver will call this number on arrival.\n\n"
+            "Tap *'📱 Share Phone Number'* or type your 10-digit number:",
             parse_mode="Markdown",
             reply_markup=get_phone_request_keyboard()
         )
     else:
         await callback.message.edit_text(
-            "✏️ *Please type the full name of the recipient:*\n\n_(e.g., Kebron Girma)_",
+            "✏ *Type the full name of the recipient:*\n\n_e.g., Kebron Girma_",
             parse_mode="Markdown"
         )
     await callback.answer()
@@ -887,13 +982,14 @@ async def process_custom_recipient_name(message: types.Message, state: FSMContex
         return
     name = message.text.strip()
     await state.update_data(recipient_name=name)
-    await message.answer(f"✅ Recipient: *{name}*", parse_mode="Markdown")
+    await message.answer(f"✓ Recipient: *{name}*", parse_mode="Markdown")
     await state.set_state(OrderFSM.waiting_for_phone)
     await message.answer(
-        "📱 *STEP 2 OF 3: CONTACT PHONE NUMBER*\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "The driver (Feres / Yango / RIDE) will call this number when arriving.\n\n"
-        "👉 *Tap '📱 Share Phone Number (1-Tap)'* below, or type your 10-digit number (e.g. `0911223344`):",
+        "╭─── 📱 Contact Phone ───╮\n"
+        "│  2 of 3 · Driver Contact\n"
+        "╰─────────────────────────╯\n\n"
+        "The driver will call this number on arrival.\n\n"
+        "Tap *'📱 Share Phone Number'* or type your 10-digit number:",
         parse_mode="Markdown",
         reply_markup=get_phone_request_keyboard()
     )
@@ -904,15 +1000,15 @@ async def process_phone_contact(message: types.Message, state: FSMContext):
     if not phone.startswith("+") and len(phone) == 10 and phone.startswith("0"):
         phone = f"+251{phone[1:]}"
     await state.update_data(phone=phone)
-    await message.answer(f"✅ Contact Phone: *{phone}*", parse_mode="Markdown")
+    await message.answer(f"✓ Contact Phone: *{phone}*", parse_mode="Markdown")
     await state.set_state(OrderFSM.waiting_for_location)
     await message.answer(
-        "📍 *STEP 3 OF 3: EXACT LOCATION FOR DRIVER DISPATCH*\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "To ensure the driver (Feres / Yango / RIDE) navigates directly to your door without getting lost:\n\n"
-        "1️⃣ 🎯 *Recommended:* Tap **'📍 Send Exact GPS Pin'** below.\n"
-        "2️⃣ 🏙️ Or tap **'Choose Addis Ababa Sub-City / Area'** for 1-tap area selection.\n"
-        "3️⃣ ✏️ Or type your specific building / street name.",
+        "╭─── 📍 Delivery Location ───╮\n"
+        "│  3 of 3 · Drop-off Point\n"
+        "╰──────────────────────────╯\n\n"
+        "▸ 🎯 *Recommended:* Tap *'📍 Send Exact GPS Pin'*\n"
+        "▸ 🏙 Or select your sub-city / area\n"
+        "▸ ✏ Or type your building / street name",
         parse_mode="Markdown",
         reply_markup=get_location_dispatch_keyboard()
     )
@@ -924,15 +1020,15 @@ async def process_phone_text(message: types.Message, state: FSMContext):
         return
     phone = message.text.strip()
     await state.update_data(phone=phone)
-    await message.answer(f"✅ Contact Phone: *{phone}*", parse_mode="Markdown")
+    await message.answer(f"✓ Contact Phone: *{phone}*", parse_mode="Markdown")
     await state.set_state(OrderFSM.waiting_for_location)
     await message.answer(
-        "📍 *STEP 3 OF 3: EXACT LOCATION FOR DRIVER DISPATCH*\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "To ensure the driver (Feres / Yango / RIDE) navigates directly to your door without getting lost:\n\n"
-        "1️⃣ 🎯 *Recommended:* Tap **'📍 Send Exact GPS Pin'** below.\n"
-        "2️⃣ 🏙️ Or tap **'Choose Addis Ababa Sub-City / Area'** for 1-tap area selection.\n"
-        "3️⃣ ✏️ Or type your specific building / street name.",
+        "╭─── 📍 Delivery Location ───╮\n"
+        "│  3 of 3 · Drop-off Point\n"
+        "╰──────────────────────────╯\n\n"
+        "▸ 🎯 *Recommended:* Tap *'📍 Send Exact GPS Pin'*\n"
+        "▸ 🏙 Or select your sub-city / area\n"
+        "▸ ✏ Or type your building / street name",
         parse_mode="Markdown",
         reply_markup=get_location_dispatch_keyboard()
     )
@@ -945,7 +1041,7 @@ async def process_location_gps(message: types.Message, state: FSMContext):
     loc_text = f"GPS Pin ({lat:.4f}, {lon:.4f})"
     await state.update_data(delivery_location=loc_text, delivery_maps_url=maps_url)
     await message.answer(
-        f"🎯 *GPS Pin Received!*\n[🗺️ Open in Google Maps]({maps_url})",
+        f"🎯 *GPS Pin Received!*\n[Open in Google Maps]({maps_url})",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
@@ -954,7 +1050,7 @@ async def process_location_gps(message: types.Message, state: FSMContext):
 @router.message(OrderFSM.waiting_for_location, F.text == "🏙️ Choose Addis Ababa Sub-City / Area")
 async def process_location_subcity_prompt(message: types.Message, state: FSMContext):
     await message.answer(
-        "🏙️ *Select your Addis Ababa sub-city / area:*",
+        "🏙 *Select your sub-city / area:*",
         parse_mode="Markdown",
         reply_markup=get_subcities_keyboard()
     )
@@ -963,21 +1059,21 @@ async def process_location_subcity_prompt(message: types.Message, state: FSMCont
 async def process_subcity_choice(callback: types.CallbackQuery, state: FSMContext):
     subcity = callback.data.split(":", 1)[1]
     if subcity == "back":
-        await callback.message.edit_text("📍 Please tap an option below to set your delivery location:")
+        await callback.message.edit_text("📍 Tap an option below to set your delivery location:")
         await callback.answer()
         return
 
     loc_text = f"{subcity}, Addis Ababa"
     await state.update_data(delivery_location=loc_text)
-    await callback.message.edit_text(f"✅ Location: *{loc_text}*", parse_mode="Markdown")
-    await callback.message.answer("Proceeding to payment summary...", reply_markup=ReplyKeyboardRemove())
+    await callback.message.edit_text(f"✓ Location: *{loc_text}*", parse_mode="Markdown")
+    await callback.message.answer("_Preparing payment summary..._", parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
     await show_payment_summary(callback.message, state)
     await callback.answer()
 
 @router.message(OrderFSM.waiting_for_location, F.text == "✏️ Type Landmark / Street Name")
 async def process_location_type_prompt(message: types.Message, state: FSMContext):
     await message.answer(
-        "✏️ *Please type your street, building, or landmark:*\n\n_(e.g., Bole Medhanialem next to Edna Mall, Morning Star Bldg 3rd Fl)_",
+        "✏ *Type your street, building, or landmark:*\n\n_e.g., Bole Medhanialem near Edna Mall, Floor 3_",
         parse_mode="Markdown"
     )
 
@@ -991,12 +1087,10 @@ async def process_location_text(message: types.Message, state: FSMContext):
 
     loc_text = message.text.strip()
     await state.update_data(delivery_location=loc_text)
-    await message.answer(f"✅ Location: *{loc_text}*", parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
+    await message.answer(f"✓ Location: *{loc_text}*", parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
     await show_payment_summary(message, state)
 
-# -------------------------------------------------------------
-# STEP 4: 50% PRE-PAYMENT SUMMARY & VERIFICATION
-# -------------------------------------------------------------
+# ─── PAYMENT SUMMARY & VERIFICATION ──────────────────────────
 
 async def show_payment_summary(message: types.Message, state: FSMContext):
     data = await state.get_data()
@@ -1013,49 +1107,47 @@ async def show_payment_summary(message: types.Message, state: FSMContext):
 
     fee_lines = ""
     if design_fee > 0:
-        fee_lines += f"• Selora Custom Design: `+{design_fee} ETB`\n"
+        fee_lines += f"│  ▸ Custom Design: +{design_fee} ETB\n"
     if rush_fee > 0:
-        fee_lines += f"• ⚡ Urgent Rush Fee (2-day): `+{rush_fee} ETB`\n"
+        fee_lines += f"│  ▸ ⚡ Rush Fee: +{rush_fee} ETB\n"
 
     recip_str = data.get('recipient_name', 'Customer')
     phone_str = data.get('phone', 'N/A')
     loc_display = data.get('delivery_location', 'Ledeta Store')
     if data.get('delivery_maps_url'):
-        loc_display += f" — [🗺️ GPS Link]({data.get('delivery_maps_url')})"
+        loc_display += f" — [GPS]({data.get('delivery_maps_url')})"
 
     payment_prompt = (
-        "📱 *SELORA ORDER SUMMARY & 50% DEPOSIT*\n"
-        "`[ 🟢 🟢 🟢 🟡 ] Final Step: Advance Pre-Payment`\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        f"🏷 *Order:* {data.get('items')}\n"
-        f"🎨 *Design:* {data.get('design_note', 'Custom artwork attached')}\n"
-        f"🗓 *Needed By:* {data.get('deadline')}\n"
-        f"👤 *Recipient:* {recip_str}\n"
-        f"📞 *Contact Phone:* `{phone_str}`\n"
-        f"🚚 *Delivery:* {data.get('delivery_type')} ({loc_display})\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "💰 *Cost Breakdown:*\n"
-        f"• Items Subtotal: `{subtotal} ETB`\n"
+        "╭─── 💳 Order Summary ───╮\n"
+        "│\n"
+        f"│  *{data.get('items')}*\n"
+        f"│  Design: {data.get('design_note', 'Custom artwork')}\n"
+        f"│  Needed by: {data.get('deadline')}\n"
+        "│\n"
+        f"│  Recipient: {recip_str}\n"
+        f"│  Phone: {phone_str}\n"
+        f"│  Delivery: {data.get('delivery_type')}\n"
+        f"│  Location: {loc_display}\n"
+        "│\n"
+        "╰─────────────────────────╯\n\n"
+        "─── Cost Breakdown ───\n\n"
+        f"▸ Items Subtotal: {subtotal} ETB\n"
         f"{fee_lines}"
-        f"• *Total Order Price:* `{total} ETB`\n\n"
-        f"✨ *Required 50% Advance Deposit:* 👉 *`{deposit} ETB`*\n"
-        f"_(Remaining `{remaining} ETB` paid upon completion/pickup)_\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "💳 *Transfer 50% Deposit to either account:*\n\n"
-        f"🏦 *CBE (Commercial Bank of Ethiopia):*\n"
-        f"`{config.PAYMENT_CBE_ACCOUNT}`\n"
-        f"Account Name: *{config.PAYMENT_CBE_NAME}*\n\n"
-        f"📱 *Telebirr:*\n"
-        f"`{config.PAYMENT_TELEBIRR}`\n"
-        f"Account Name: *{config.PAYMENT_TELEBIRR_NAME}*\n\n"
-        "📸 *Please transfer the deposit and upload your screenshot or transaction receipt photo below:*"
+        f"▸ *Total:* {total} ETB\n\n"
+        f"✦ *50% Deposit Due:* *{deposit} ETB*\n"
+        f"_Remaining {remaining} ETB paid upon pickup/delivery_\n\n"
+        "─── Payment Details ───\n\n"
+        f"🏦 *CBE:* `{config.PAYMENT_CBE_ACCOUNT}`\n"
+        f"Name: *{config.PAYMENT_CBE_NAME}*\n\n"
+        f"📱 *Telebirr:* `{config.PAYMENT_TELEBIRR}`\n"
+        f"Name: *{config.PAYMENT_TELEBIRR_NAME}*\n\n"
+        "─────────────────────\n"
+        "Transfer the deposit, then upload your receipt screenshot below:"
     )
 
     await message.answer(payment_prompt, parse_mode="Markdown", reply_markup=get_cancel_keyboard())
 
-# -------------------------------------------------------------
-# PAYMENT RECEIPT HANDLER & OWNER NOTIFICATION
-# -------------------------------------------------------------
+# ─── PAYMENT RECEIPT HANDLER & OWNER NOTIFICATION ─────────────
 
 @router.message(OrderFSM.waiting_for_payment_receipt)
 async def process_payment_receipt(message: types.Message, state: FSMContext):
@@ -1070,8 +1162,9 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         screenshot_file_id = message.document.file_id
     elif message.text:
         await message.answer(
-            "⚠️ Please upload a photo or screenshot of your payment receipt (from Telebirr or CBE Mobile Banking).\n\n"
-            "If you need help or wish to cancel, tap *❌ Cancel*.",
+            "📸 _Please upload a photo or screenshot of your payment receipt._\n"
+            "_Tap /cancel if you need to stop._",
+            parse_mode="Markdown",
             reply_markup=get_cancel_keyboard()
         )
         return
@@ -1089,7 +1182,7 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
     except Exception as e:
         logger.warning(f"Could not download receipt locally: {e}")
 
-    # Save to cloud PostgreSQL or SQLite database
+    # Save to database
     notes_combined = f"{data.get('design_note', '')} | Deposit: {data.get('deposit_amount', 0)} ETB (Total: {data.get('total_price', 0)} ETB)"
     if data.get('delivery_maps_url'):
         notes_combined += f" | GPS: {data.get('delivery_maps_url')}"
@@ -1113,30 +1206,32 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         customer_files=json.dumps(data.get('customer_files', []))
     )
 
-    # 1. Customer confirmation
+    # 1. Customer confirmation — celebration message
     loc_disp = data.get('delivery_location', '')
     if data.get('delivery_maps_url'):
-        loc_disp += f" — [🗺️ GPS Pin]({data.get('delivery_maps_url')})"
+        loc_disp += f" — [GPS Pin]({data.get('delivery_maps_url')})"
 
     phone_disp = data.get('phone', 'N/A')
     recip_disp = data.get('recipient_name', user.full_name)
 
     customer_msg = (
-        "🎉 *Thank you! Your order & deposit receipt have been received!* 💛\n\n"
+        "─────────────────────\n"
+        "       ✦  Order Confirmed  ✦\n"
+        "─────────────────────\n\n"
         f"🔖 *Order Code:* `{order_code}`\n\n"
-        "📋 *Summary:*\n"
-        f"• *Items:* {data.get('items')}\n"
-        f"• *Total Price:* `{data.get('total_price', 0)} ETB`\n"
-        f"• *50% Deposit Submitted:* `{data.get('deposit_amount', 0)} ETB`\n"
-        f"• *Deadline:* {data.get('deadline')}\n"
-        f"• *Recipient:* {recip_disp}\n"
-        f"• *Contact Phone:* `{phone_disp}`\n"
-        f"• *Delivery:* {data.get('delivery_type')} ({loc_disp})\n\n"
-        "🔍 *Status:* `Pending Review` (Verifying deposit receipt).\n"
-        "Once approved by the owner, we will notify you immediately and begin production! ✨"
+        f"▸ *Items:* {data.get('items')}\n"
+        f"▸ *Total:* {data.get('total_price', 0)} ETB\n"
+        f"▸ *Deposit:* {data.get('deposit_amount', 0)} ETB\n"
+        f"▸ *Deadline:* {data.get('deadline')}\n"
+        f"▸ *Recipient:* {recip_disp}\n"
+        f"▸ *Phone:* {phone_disp}\n"
+        f"▸ *Delivery:* {data.get('delivery_type')} ({loc_disp})\n\n"
+        "─────────────────────\n"
+        "Status: *Pending Review*\n"
+        "_We're verifying your deposit — you'll be notified once approved and production begins._"
     )
     if config.ADMIN_USERNAME:
-        customer_msg += f"\n\nQuestions? Chat with owner: @{config.ADMIN_USERNAME}"
+        customer_msg += f"\n\nQuestions? @{config.ADMIN_USERNAME}"
 
     await message.answer(customer_msg, parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
 

@@ -7,7 +7,7 @@ from aiogram.types import (
 import config
 
 def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
-    """Bottom persistent reply keyboard for quick access."""
+    """Persistent bottom reply keyboard."""
     keyboard = [
         [
             KeyboardButton(text="🏷 Products & Prices"),
@@ -19,7 +19,7 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
         ],
         [
             KeyboardButton(text="📍 Delivery & Pickup"),
-            KeyboardButton(text="💬 Ask Question / AI")
+            KeyboardButton(text="💬 Ask a Question")
         ],
         [
             KeyboardButton(text="📞 Contact Owner")
@@ -32,7 +32,7 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
     )
 
 def get_catalog_inline_keyboard() -> InlineKeyboardMarkup:
-    """Inline keyboard attached to the catalog message."""
+    """Inline keyboard attached to catalog messages."""
     buttons = [
         [
             InlineKeyboardButton(text="📝 Place an Order", callback_data="start_order"),
@@ -50,35 +50,32 @@ def get_catalog_inline_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_delivery_choice_keyboard() -> InlineKeyboardMarkup:
-    """Inline keyboard for choosing delivery method during ordering."""
-    buttons = [
+    """Delivery method selection keyboard."""
+    return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🏪 Store Pickup (Ledeta - Free)", callback_data="delivery_choice:pickup")
+            InlineKeyboardButton(text="🏪 Store Pickup — Ledeta (Free)", callback_data="delivery_choice:pickup")
         ],
         [
-            InlineKeyboardButton(text="🚚 Yango Delivery (You cover fee)", callback_data="delivery_choice:yango")
+            InlineKeyboardButton(text="🚚 Yango / Feres / RIDE Delivery", callback_data="delivery_choice:yango")
         ],
         [
-            InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")
+            InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")
         ]
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    ])
 
 def get_order_confirmation_keyboard() -> InlineKeyboardMarkup:
-    """Inline keyboard for confirming an order before submitting."""
-    buttons = [
+    """Order confirm/cancel keyboard."""
+    return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✅ Submit Order", callback_data="confirm_order"),
-            InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_order")
+            InlineKeyboardButton(text="✓ Submit Order", callback_data="confirm_order"),
+            InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")
         ]
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    ])
 
 def get_cancel_keyboard() -> ReplyKeyboardMarkup:
-    """Single button reply keyboard to easily abort a form."""
+    """Single-button cancel keyboard for form steps."""
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="❌ Cancel")]],
         resize_keyboard=True,
         one_time_keyboard=True
     )
-

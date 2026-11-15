@@ -6,14 +6,18 @@ import config
 router = Router(name="delivery_router")
 
 DELIVERY_TEXT = (
-    "📍 *Delivery & Pickup Information*\n\n"
-    "🏪 *Store Pickup (Ledeta)*\n"
-    "• Free pickup directly from our store in Ledeta!\n"
-    "• Once your order is ready, we will share the exact pickup point and timing.\n\n"
-    "🚚 *Yango Delivery*\n"
-    "• Fast delivery right to your doorstep anywhere in Addis Ababa via Yango.\n"
-    "• *Note:* The delivery fee is paid by the customer directly to the driver upon receipt.\n\n"
-    "💡 *Ready to order?* You can choose your preferred delivery method when placing an order."
+    "╭─── 📍 Delivery & Pickup ───╮\n"
+    "│\n"
+    "│  *Store Pickup — Free*\n"
+    "│  Ledeta, Addis Ababa\n"
+    "│  Pickup details shared once ready\n"
+    "│\n"
+    "│  *Yango Delivery — Addis Ababa*\n"
+    "│  Door-to-door, fast & reliable\n"
+    "│  Delivery fee paid to driver on arrival\n"
+    "│\n"
+    "╰─────────────────────────╯\n\n"
+    "_Ready to order? Choose your delivery method during checkout._"
 )
 
 def get_delivery_action_keyboard() -> InlineKeyboardMarkup:
@@ -25,7 +29,7 @@ def get_delivery_action_keyboard() -> InlineKeyboardMarkup:
     ]
     if config.ADMIN_USERNAME:
         buttons.append([
-            InlineKeyboardButton(text="💬 Message Us", url=f"https://t.me/{config.ADMIN_USERNAME}")
+            InlineKeyboardButton(text="✉ Message Us", url=f"https://t.me/{config.ADMIN_USERNAME}")
         ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -46,4 +50,3 @@ async def callback_show_delivery(callback: types.CallbackQuery):
         reply_markup=get_delivery_action_keyboard()
     )
     await callback.answer()
-

@@ -10,35 +10,34 @@ router = Router(name="start_router")
 BANNER_PATH = Path(__file__).resolve().parent.parent / "data" / "products_images" / "stickers.png"
 
 WELCOME_CAPTION = (
-    "💛 *SELORA PRINTS* ✨\n"
+    "✦ *SELORA PRINTS* ✦\n"
     "_Boutique Custom Prints & Thoughtful Gifts_\n"
-    "📍 *Ledeta, Addis Ababa*\n"
-    "━━━━━━━━━━━━━━━━━━━━\n"
-    "Welcome! We create custom stickers, aesthetic bookmarks, notebooks, wall posters, mugs, and photo puzzles.\n\n"
-    "• 💳 *50% Advance Pre-payment*\n"
-    "• 🏪 *Free Store Pickup:* Ledeta\n"
-    "• 🚚 *Doorstep Delivery:* Fast via Yango\n"
-    "━━━━━━━━━━━━━━━━━━━━\n"
-    "Choose an option below or type any question:"
+    "📍 Ledeta, Addis Ababa\n\n"
+    "─────────────────────\n\n"
+    "▸ Custom stickers, bookmarks & posters\n"
+    "▸ Photo books, mugs & puzzles\n"
+    "▸ 50% advance deposit · Fast delivery\n\n"
+    "─────────────────────\n"
+    "_What would you like to do today?_"
 )
 
 def get_welcome_inline_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [
-            InlineKeyboardButton(text="🏷️ Browse Visual Catalog", callback_data="show_catalog_cards"),
+            InlineKeyboardButton(text="🛍 Browse Catalog", callback_data="show_catalog_cards"),
             InlineKeyboardButton(text="📝 Place an Order", callback_data="start_order")
         ],
         [
             InlineKeyboardButton(text="🔍 Track My Order", callback_data="track_orders_menu"),
-            InlineKeyboardButton(text="📍 Delivery & Pickup", callback_data="show_delivery")
+            InlineKeyboardButton(text="📍 Delivery Info", callback_data="show_delivery")
         ],
         [
-            InlineKeyboardButton(text="💬 Ask AI Assistant", callback_data="ask_question_prompt")
+            InlineKeyboardButton(text="💬 Ask a Question", callback_data="ask_question_prompt")
         ]
     ]
     if config.ADMIN_USERNAME:
         buttons.append([
-            InlineKeyboardButton(text="📞 Chat with Owner Directly", url=f"https://t.me/{config.ADMIN_USERNAME}")
+            InlineKeyboardButton(text="📞 Chat with Owner", url=f"https://t.me/{config.ADMIN_USERNAME}")
         ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -58,9 +57,9 @@ async def handle_start(message: types.Message):
             reply_markup=get_welcome_inline_keyboard()
         )
 
-    # Also display persistent bottom menu
+    # Persistent bottom menu
     await message.answer(
-        "💡 _Tip: You can use the buttons below anytime to navigate or ask questions in English or Amharic (አማርኛ)!_",
+        "_Use the menu below to navigate anytime — English & Amharic supported_ 💛",
         parse_mode="Markdown",
         reply_markup=get_main_menu_keyboard()
     )
@@ -87,16 +86,17 @@ async def cb_track_orders(callback: types.CallbackQuery):
 @router.message(Command("help"))
 async def handle_help(message: types.Message):
     help_text = (
-        "💡 *Selora Prints Bot Guide*\n\n"
-        "Here are the available features:\n"
-        "• /start — Welcome screen and quick actions\n"
-        "• /catalog — Visual interactive design catalog with photos\n"
-        "• /order — Guided 4-step order form with 50% deposit\n"
-        "• /track — Check the live progress of your order\n"
-        "• /delivery — Free Ledeta pickup and Yango delivery details\n"
-        "• /contact — Speak with the owner\n"
-        "• /cancel — Cancel an ongoing form\n\n"
-        "You can also chat in free-form! Our AI concierge understands English and Amharic (አማርኛ) 💛"
+        "─────────────────────\n"
+        "       *Selora Prints — Help*\n"
+        "─────────────────────\n\n"
+        "▸ /start — Welcome screen\n"
+        "▸ /catalog — Browse visual product catalog\n"
+        "▸ /order — Start a new order (5-step guide)\n"
+        "▸ /track — Check your order status\n"
+        "▸ /designs — Browse ready-made designs\n"
+        "▸ /delivery — Pickup & delivery info\n"
+        "▸ /cancel — Cancel an ongoing form\n\n"
+        "_You can also chat freely — our AI concierge understands English and Amharic (አማርኛ)._"
     )
     await message.answer(
         text=help_text,

@@ -24,30 +24,35 @@ PRODUCT_IMAGES_DIR = Path(__file__).resolve().parent.parent / "data" / "products
 DESIGNS_IMAGES_DIR = Path(__file__).resolve().parent.parent / "data" / "designs_images"
 
 CATALOG_TEXT = (
-    "💛 *Welcome to Selora Prints!*\n"
-    "Thanks for messaging us! Here's our complete price list:\n\n"
-    "🏷 *Stickers:* 20 birr _(Min order: 15 pieces)_\n"
-    "🔖 *Bookmarks:* 50 birr _(Min order: 2 pieces)_\n"
-    "💼 *Business cards:* 10 birr _(Min order: 50 pieces)_\n"
-    "📸 *Polaroid prints:* Available upon request _(Min order: 10 pieces)_\n"
-    "📓 *Mini notebook:* 200 birr\n"
-    "📔 *Notebook:* 500 birr\n\n"
-    "📖 *PHOTO BOOKS & MINIBOOKS:*\n"
-    "• Mini White = 600 birr\n"
-    "• Mini Black = 700 birr\n"
-    "• Medium = 800 birr\n"
-    "• A5 = 1,000 birr\n"
-    "• A4 = 1,500 birr\n\n"
-    "☕ *Mug:* 1,500 birr\n"
-    "🧩 *Puzzle:* 1,500 birr\n\n"
-    "🟢 *STICKER POSTER* _(Peel & stick: wall, glass, smooth surface)_\n"
-    "• *A5* = 40 birr _(Min order: 10 pieces)_\n"
-    "• *A4* = 70 birr _(Min order: 10 pieces)_\n\n"
-    "⏱ *ORDER TURNAROUND & RUSH POLICY:*\n"
-    "• 🟢 *Standard:* 3+ days (normal pricing)\n"
-    "• ⚡ *Urgent Rush (in 2 days):* +200 birr rush fee\n"
-    "• ⛔ *Next-day (tomorrow):* Cannot be accepted due to drying & binding time.\n\n"
-    "✨ *Tap below to browse visual design cards or place an order!*"
+    "╭─── 🏷 Selora Price List ───╮\n"
+    "│\n"
+    "│  *Stickers* — 20 ETB  _(min 15)_\n"
+    "│  *Bookmarks* — 50 ETB  _(min 2)_\n"
+    "│  *Business Cards* — 10 ETB  _(min 50)_\n"
+    "│  *Polaroids* — Quote  _(min 10)_\n"
+    "│  *Mini Notebook* — 200 ETB\n"
+    "│  *Notebook* — 500 ETB\n"
+    "│\n"
+    "│  *Photo Books & Minibooks*\n"
+    "│  ▸ Mini White — 600 ETB\n"
+    "│  ▸ Mini Black — 700 ETB\n"
+    "│  ▸ Medium — 800 ETB\n"
+    "│  ▸ A5 — 1,000 ETB\n"
+    "│  ▸ A4 Luxury — 1,500 ETB\n"
+    "│\n"
+    "│  *Custom Mug* — 1,500 ETB\n"
+    "│  *Photo Puzzle* — 1,500 ETB\n"
+    "│\n"
+    "│  *Sticker Posters*\n"
+    "│  ▸ A5 — 40 ETB  _(min 10)_\n"
+    "│  ▸ A4 — 70 ETB  _(min 10)_\n"
+    "│\n"
+    "╰─────────────────────────╯\n\n"
+    "⏱ *Turnaround*\n"
+    "▸ Standard: 3+ days\n"
+    "▸ Urgent Rush (2 days): +200 ETB\n"
+    "▸ Next-day: unavailable (drying time)\n\n"
+    "_Tap below to browse designs or start an order._"
 )
 
 def get_product_card(index: int):
@@ -58,16 +63,16 @@ def get_product_card(index: int):
     idx = index % len(products)
     p = products[idx]
 
-    min_text = f"\n⚠️ *Minimum Order:* `{p['min_order']} pieces`" if "min_order" in p else ""
-    price_val = f"`{p['price']} ETB` {p.get('unit', '')}" if p.get("price") is not None else "`Custom / Quote`"
+    min_text = f"\n▸ *Min Order:* {p['min_order']} pcs" if "min_order" in p else ""
+    price_val = f"{p['price']} ETB {p.get('unit', '')}" if p.get("price") is not None else "Custom Quote"
 
     caption = (
-        f"{p['name']}\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        f"💰 *Price:* {price_val}{min_text}\n"
-        f"📝 *Details:* {p.get('description', '')}\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        f"🗂 *Item {idx + 1} of {len(products)}*"
+        f"*{p['name']}*\n"
+        "─────────────────────\n"
+        f"▸ *Price:* {price_val}{min_text}\n"
+        f"▸ {p.get('description', '')}\n"
+        "─────────────────────\n"
+        f"_{idx + 1} of {len(products)}_"
     )
 
     prev_idx = (idx - 1) % len(products)
@@ -78,11 +83,11 @@ def get_product_card(index: int):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="◀ Prev", callback_data=f"cat_nav:{prev_idx}"),
-            InlineKeyboardButton(text=f"• {idx + 1}/{len(products)} •", callback_data="noop"),
+            InlineKeyboardButton(text=f"· {idx + 1}/{len(products)} ·", callback_data="noop"),
             InlineKeyboardButton(text="Next ▶", callback_data=f"cat_nav:{next_idx}")
         ],
         [
-            InlineKeyboardButton(text=f"🛍️ Order {clean_short_name}", callback_data=f"order_this:{p['id']}")
+            InlineKeyboardButton(text=f"🛒 Order {clean_short_name}", callback_data=f"order_this:{p['id']}")
         ],
         [
             InlineKeyboardButton(text="📋 Full Price List", callback_data="show_catalog"),
@@ -172,7 +177,7 @@ async def callback_order_specific_item(callback: types.CallbackQuery, state: FSM
     from handlers.order import show_quantity_stepper
     prod_id = callback.data.split(":")[1]
     await state.clear()
-    sent = await callback.message.answer("💛 *Preparing your order...*", parse_mode="Markdown")
+    sent = await callback.message.answer("_Preparing your order..._", parse_mode="Markdown")
     await show_quantity_stepper(sent, prod_id, state)
     await callback.answer()
 
@@ -210,8 +215,8 @@ def get_design_categories_keyboard() -> InlineKeyboardMarkup:
     if row:
         buttons.append(row)
 
-    buttons.append([InlineKeyboardButton(text="🌟 Browse All Designs", callback_data="des_cat:all")])
-    buttons.append([InlineKeyboardButton(text="◀ Back to Main Catalog", callback_data="show_catalog")])
+    buttons.append([InlineKeyboardButton(text="✦ Browse All Designs", callback_data="des_cat:all")])
+    buttons.append([InlineKeyboardButton(text="◀ Back to Catalog", callback_data="show_catalog")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_design_card(index: int, product_id: Optional[str] = None):
@@ -225,13 +230,13 @@ def get_design_card(index: int, product_id: Optional[str] = None):
     d = designs[idx]
 
     caption = (
-        f"🎨 *{d['title']}*\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"📦 *Product:* {d['product_name']}\n"
-        f"✨ *Style / Sub-Product:* `{d['subproduct']}`\n"
-        f"📝 {d.get('description', '')}\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🖼 *Design {idx + 1} of {len(designs)}*"
+        f"*{d['title']}*\n"
+        "─────────────────────\n"
+        f"▸ *Product:* {d['product_name']}\n"
+        f"▸ *Style:* {d['subproduct']}\n"
+        f"▸ {d.get('description', '')}\n"
+        "─────────────────────\n"
+        f"_{idx + 1} of {len(designs)}_"
     )
 
     prev_idx = (idx - 1) % len(designs)
@@ -241,11 +246,11 @@ def get_design_card(index: int, product_id: Optional[str] = None):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="◀ Prev", callback_data=f"des_nav:{pid_param}:{prev_idx}"),
-            InlineKeyboardButton(text=f"• {idx + 1}/{len(designs)} •", callback_data="noop"),
+            InlineKeyboardButton(text=f"· {idx + 1}/{len(designs)} ·", callback_data="noop"),
             InlineKeyboardButton(text="Next ▶", callback_data=f"des_nav:{pid_param}:{next_idx}")
         ],
         [
-            InlineKeyboardButton(text="🛍️ Order This Design", callback_data=f"order_design:{d['id']}")
+            InlineKeyboardButton(text="🛒 Order This Design", callback_data=f"order_design:{d['id']}")
         ],
         [
             InlineKeyboardButton(text="📁 Other Collections", callback_data="view_design_cats"),
@@ -275,11 +280,14 @@ def get_design_card(index: int, product_id: Optional[str] = None):
 @router.callback_query(F.data == "view_samples")
 async def show_designs_entry(event: types.Message | types.CallbackQuery):
     text = (
-        "🎨 *SELORA READY DESIGNS & SUB-PRODUCTS*\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "Explore our curated artwork, styles, and templates.\n"
-        "You can pick any of these ready designs for your order, or upload your own photo!\n\n"
-        "👉 *Choose a collection to browse:*"
+        "╭─── 🎨 Ready Designs ───╮\n"
+        "│\n"
+        "│  Browse our curated artwork,\n"
+        "│  styles, and templates — or\n"
+        "│  upload your own photos.\n"
+        "│\n"
+        "╰─────────────────────────╯\n\n"
+        "Choose a collection to browse:"
     )
     markup = get_design_categories_keyboard()
     if isinstance(event, types.CallbackQuery):
@@ -299,9 +307,12 @@ async def callback_view_design_cats(callback: types.CallbackQuery):
     except Exception:
         pass
     await callback.message.answer(
-        "🎨 *SELORA READY DESIGNS & SUB-PRODUCTS*\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "Choose a collection below to preview styles & artwork:",
+        "╭─── 🎨 Ready Designs ───╮\n"
+        "│\n"
+        "│  Choose a collection below\n"
+        "│  to preview styles & artwork.\n"
+        "│\n"
+        "╰─────────────────────────╯",
         parse_mode="Markdown",
         reply_markup=get_design_categories_keyboard()
     )
@@ -362,8 +373,8 @@ async def callback_order_specific_design(callback: types.CallbackQuery, state: F
         selected_design_id=d["id"]
     )
     sent = await callback.message.answer(
-        f"🎨 *Selected Design:* {d['title']} ({d['subproduct']})\n"
-        f"💛 *Preparing your order for {d['product_name']}...*",
+        f"✓ *Selected:* {d['title']} ({d['subproduct']})\n"
+        f"_Preparing your order for {d['product_name']}..._",
         parse_mode="Markdown"
     )
     await show_quantity_stepper(sent, d["product_id"], state)
