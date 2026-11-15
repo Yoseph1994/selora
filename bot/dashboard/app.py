@@ -1,4 +1,7 @@
 import os
+import re
+import time
+import json
 import hmac
 import hashlib
 import logging
@@ -232,6 +235,188 @@ async def webapp_submit_order(payload: WebappOrderRequest):
         await send_telegram_notification(int(config.ADMIN_CHAT_ID), admin_text)
 
     return {"success": True, "order_code": order_code}
+
+@app.get("/api/webapp/config")
+async def webapp_get_config():
+    """Retrieve active store config, payment accounts, products, and designs for Mini App."""
+    products_data = database.get_products_data()
+    designs_data = database.get_designs_data()
+    return {
+        "ok": True,
+        "store": {
+            "store_name": config.STORE_NAME,
+            "cbe_account": config.PAYMENT_CBE_ACCOUNT,
+            "cbe_name": config.PAYMENT_CBE_NAME,
+            "telebirr": config.PAYMENT_TELEBIRR,
+            "telebirr_name": config.PAYMENT_TELEBIRR_NAME,
+            "location": "Ledeta, Addis Ababa",
+            "support_username": "Yosef_selora"
+        },
+        "products": products_data.get("products", []),
+        "designs": designs_data.get("designs", [])
+    }
+
+@app.get("/api/webapp/track/{order_code}")
+async def webapp_track_order(order_code: str):
+    """Retrieve real order tracking status for Mini App."""
+    clean_code = order_code.strip().upper()
+    order = database.get_order_by_code(clean_code)
+    if not order:
+        return {"ok": False, "error": f"No order found matching '{clean_code}'"}
+    return {
+        "ok": True,
+        "order": {
+            "order_code": order["order_code"],
+            "status": order["status"],
+            "payment_status": order.get("payment_status", "pending_review"),
+            "items": order["items"],
+            "deadline": order["deadline"],
+            "delivery_type": order["delivery_type"],
+            "delivery_location": order["delivery_location"],
+            "recipient_name": order.get("recipient_name") or order.get("full_name"),
+            "phone": order.get("phone") or "",
+            "notes": order.get("notes") or "",
+            "created_at": order["created_at"],
+            "rejection_reason": order.get("rejection_reason")
+        }
+    }
+
+@app.post("/api/webapp/order-full")
+async def webapp_submit_order_full(
+    user_id: int = Form(...),
+    full_name: str = Form(...),
+    username: Optional[str] = Form(""),
+    items: str = Form(...),
+    deadline: str = Form(...),
+    delivery_type: str = Form(...),
+    delivery_location: str = Form(...),
+    notes: Optional[str] = Form(""),
+    phone: Optional[str] = Form(""),
+    recipient_name: Optional[str] = Form(""),
+    total_price: Optional[float] = Form(0.0),
+    deposit_amount: Optional[float] = Form(0.0),
+    payment_method: Optional[str] = Form("CBE"),
+    transaction_ref: Optional[str] = Form(""),
+    artwork_file: Optional[UploadFile] = File(None),
+    receipt_file: Optional[UploadFile] = File(None)
+):
+    """Handle full order submission with in-app artwork and receipt proof uploads."""
+    customer_files_list = []
+    has_attachment = False
+
+    # 1. Process customer artwork
+    if artwork_file and artwork_file.filename:
+        try:
+            ext = Path(artwork_file.filename).suffix or ".jpg"
+            clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', Path(artwork_file.filename).stem)[:30]
+            art_name = f"art_{int(time.time())}_{clean_base}{ext}"
+            art_path = CUSTOMER_UPLOADS_DIR / art_name
+            content = await artwork_file.read()
+            with open(art_path, "wb") as f:
+                f.write(content)
+            customer_files_list.append({
+                "filename": art_name,
+                "file_id": None,
+                "type": "customer_artwork",
+                "original_name": artwork_file.filename
+            })
+            has_attachment = True
+        except Exception as e:
+            logger.error(f"Failed to save customer artwork file: {e}")
+
+    # 2. Process payment receipt
+    receipt_filename = None
+    if receipt_file and receipt_file.filename:
+        try:
+            ext = Path(receipt_file.filename).suffix or ".jpg"
+            clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', Path(receipt_file.filename).stem)[:30]
+            rec_name = f"rec_{int(time.time())}_{clean_base}{ext}"
+            rec_path = RECEIPTS_DIR / rec_name
+            content = await receipt_file.read()
+            with open(rec_path, "wb") as f:
+                f.write(content)
+            receipt_filename = rec_name
+        except Exception as e:
+            logger.error(f"Failed to save payment receipt file: {e}")
+
+    # 3. Construct rich notes
+    note_parts = []
+    if notes:
+        note_parts.append(notes.strip())
+    if transaction_ref:
+        note_parts.append(f"Ref: {transaction_ref.strip()}")
+    if payment_method:
+        note_parts.append(f"Paid via {payment_method}")
+    if total_price:
+        note_parts.append(f"Total: {total_price:.0f} ETB (Deposit: {deposit_amount:.0f} ETB)")
+    full_notes = " | ".join(note_parts)
+
+    # 4. Save to database
+    order_code = database.save_order(
+        user_id=user_id,
+        full_name=full_name,
+        username=username or "",
+        items=items,
+        deadline=deadline,
+        delivery_type=delivery_type,
+        delivery_location=delivery_location,
+        notes=full_notes,
+        has_attachment=has_attachment,
+        payment_screenshot_file_id=None,
+        payment_screenshot_filename=receipt_filename,
+        payment_status="pending_review",
+        status="pending",
+        phone=phone or "",
+        recipient_name=recipient_name or full_name,
+        customer_files=json.dumps(customer_files_list)
+    )
+
+    # 5. Customer Notification
+    if user_id:
+        phone_txt = f"\n📞 *Phone:* `{phone}`" if phone else ""
+        recip_txt = f"\n👤 *Recipient:* {recipient_name}" if recipient_name else ""
+        receipt_txt = f"\n🧾 *Payment Receipt:* Attached ({payment_method})" if receipt_filename else f"\n💳 *Payment Method:* {payment_method}"
+        
+        customer_msg = (
+            f"🎉 *Order Successfully Placed!* 💛\n\n"
+            f"🔖 *Order Code:* `{order_code}`\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            f"🏷 *Items:* {items}\n"
+            f"💰 *Total:* {total_price:.0f} ETB (50% Deposit: {deposit_amount:.0f} ETB)\n"
+            f"🗓 *Need by:* {deadline}{recip_txt}{phone_txt}\n"
+            f"🚚 *Delivery:* {delivery_type} ({delivery_location}){receipt_txt}\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "✅ *Your 50% deposit has been received for verification!*\n"
+            "Our studio team will review your order details and immediately start production.\n\n"
+            f"🔍 *Track your order live anytime in the Mini App using code:* `{order_code}`"
+        )
+        await send_telegram_notification(user_id, customer_msg)
+
+    # 6. Admin Notification
+    if config.ADMIN_CHAT_ID:
+        phone_line = f"\n📞 *Phone:* [{phone}](tel:{phone})" if phone else ""
+        recip_line = f"\n📦 *Recipient:* *{recipient_name}*" if recipient_name else ""
+        art_line = f"\n📎 *Artwork:* Attached ({len(customer_files_list)} file)" if customer_files_list else "\n📎 *Artwork:* Ready Design / Text"
+        rec_line = f"\n🧾 *Payment Proof:* Attached ({receipt_filename})" if receipt_filename else "\n🧾 *Payment Proof:* Pending in chat"
+
+        admin_text = (
+            f"🚨 *NEW MINI APP ORDER! — {order_code}*\n"
+            f"👤 *Customer:* {full_name} (@{username or 'none'})\n"
+            f"🆔 *User ID:* `{user_id}`{recip_line}{phone_line}\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            f"🏷 *Items:* {items}\n"
+            f"💰 *Total:* {total_price:.0f} ETB (Deposit: {deposit_amount:.0f} ETB)\n"
+            f"🗓 *Deadline:* {deadline}\n"
+            f"🚚 *Delivery:* {delivery_type}\n"
+            f"📍 *Location:* {delivery_location}\n"
+            f"📝 *Notes:* {full_notes}{art_line}{rec_line}\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "👉 Review and approve this order in the Selora Dashboard."
+        )
+        await send_telegram_notification(int(config.ADMIN_CHAT_ID), admin_text)
+
+    return {"ok": True, "success": True, "order_code": order_code}
+
 
 async def send_telegram_notification(user_id: int, message_text: str, reply_markup: Optional[dict] = None):
     """Send Telegram message to customer via bot DM and additionally via Telegram Business account."""

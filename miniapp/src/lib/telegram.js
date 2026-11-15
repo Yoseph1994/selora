@@ -86,11 +86,13 @@ export async function callServerless(endpoint, payload = {}) {
     return {
       ok: true,
       storeName: 'Selora Prints',
-      cbeAccount: '1000056873639',
-      telebirrAccount: '0906287728',
+      cbeAccount: '1000492813589',
+      cbeName: 'KEBROM HAILU',
+      telebirrAccount: '0947702896',
+      telebirrName: 'KEBROM HAILU',
       supportUsername: 'Yosef_selora',
       depositRate: 0.50,
-      storeLocation: 'Ledeta, Addis Ababa (Behind Balcha Hospital)'
+      storeLocation: 'Ledeta, Addis Ababa'
     };
   }
 
