@@ -141,6 +141,9 @@
           <button onclick="filterByStatus('reuploaded')" data-status="reuploaded" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 shadow-xs transition whitespace-nowrap">
             🔄 Re-uploaded
           </button>
+          <button onclick="filterByStatus('rejected')" data-status="rejected" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-rose-200 text-rose-700 hover:text-rose-900 hover:bg-rose-50 shadow-xs transition whitespace-nowrap">
+            ❌ Rejected
+          </button>
           <button onclick="filterByStatus('in_production')" data-status="in_production" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs transition whitespace-nowrap">
             🎨 In Production
           </button>
@@ -196,7 +199,23 @@
             </thead>
             <tbody class="divide-y divide-slate-100" id="orders-tbody">
               {% for o in orders %}
-              {% set row_status = 'reuploaded' if (o.status == 'reuploaded' or o.payment_status == 'reuploaded') else ('pending_review' if o.payment_status == 'pending_review' else ('ready_for_delivery' if o.status == 'ready_for_delivery' else ('completed' if o.status == 'completed' else 'in_production'))) %}
+              {% if o.status == 'reuploaded' or o.payment_status == 'reuploaded' %}
+                {% set row_status = 'reuploaded' %}
+              {% elif o.status == 'rejected' or o.payment_status == 'rejected' %}
+                {% set row_status = 'rejected' %}
+              {% elif o.payment_status == 'pending_review' %}
+                {% set row_status = 'pending_review' %}
+              {% elif o.status == 'ready_for_delivery' %}
+                {% set row_status = 'ready_for_delivery' %}
+              {% elif o.status == 'completed' %}
+                {% set row_status = 'completed' %}
+              {% elif o.status == 'cancelled' %}
+                {% set row_status = 'cancelled' %}
+              {% elif o.payment_status == 'approved' or o.status == 'in_production' %}
+                {% set row_status = 'in_production' %}
+              {% else %}
+                {% set row_status = 'pending' %}
+              {% endif %}
               <tr class="hover:bg-slate-50/80 transition group" id="row-{{ o.order_code }}" data-status="{{ row_status }}">
                 <td class="py-4 px-4 font-bold text-slate-900 whitespace-nowrap">
                   <span class="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 text-xs font-mono select-all">
@@ -294,9 +313,14 @@
                       <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
                       Completed
                     </span>
-                  {% elif o.status == 'cancelled' or o.payment_status == 'rejected' %}
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
-                      ❌ {{ o.status }}
+                  {% elif o.status == 'rejected' or o.payment_status == 'rejected' %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                      <i class="fa-solid fa-circle-xmark mr-1.5 text-rose-600"></i>
+                      Rejected
+                    </span>
+                  {% elif o.status == 'cancelled' %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+                      Cancelled
                     </span>
                   {% else %}
                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">

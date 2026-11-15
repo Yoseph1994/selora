@@ -330,7 +330,27 @@ def get_all_orders(status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
     """Fetch all orders, optionally filtered by status."""
     conn, is_pg = get_connection()
     cursor = conn.cursor()
-    if status_filter and status_filter != "all":
+    if status_filter == "in_production":
+        cursor.execute(q("""
+            SELECT * FROM orders 
+            WHERE (status = 'in_production' OR payment_status = 'approved')
+              AND status NOT IN ('rejected', 'reuploaded', 'completed', 'cancelled')
+              AND payment_status NOT IN ('rejected', 'reuploaded')
+            ORDER BY id DESC
+        """, is_pg))
+    elif status_filter == "reuploaded":
+        cursor.execute(q("""
+            SELECT * FROM orders 
+            WHERE status = 'reuploaded' OR payment_status = 'reuploaded'
+            ORDER BY id DESC
+        """, is_pg))
+    elif status_filter == "rejected":
+        cursor.execute(q("""
+            SELECT * FROM orders 
+            WHERE status = 'rejected' OR payment_status = 'rejected'
+            ORDER BY id DESC
+        """, is_pg))
+    elif status_filter and status_filter != "all":
         cursor.execute(q("SELECT * FROM orders WHERE status = ? OR payment_status = ? ORDER BY id DESC", is_pg), (status_filter, status_filter))
     else:
         cursor.execute("SELECT * FROM orders ORDER BY id DESC")
@@ -345,10 +365,10 @@ def get_stats() -> Dict[str, Any]:
     cursor.execute("SELECT COUNT(*) FROM orders")
     total_orders = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM orders WHERE payment_status = 'pending_review'")
+    cursor.execute("SELECT COUNT(*) FROM orders WHERE payment_status = 'pending_review' AND status NOT IN ('rejected', 'reuploaded')")
     pending_approvals = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM orders WHERE status = 'approved' OR status = 'in_production'")
+    cursor.execute("SELECT COUNT(*) FROM orders WHERE (status = 'approved' OR status = 'in_production') AND status NOT IN ('rejected', 'reuploaded', 'completed', 'cancelled')")
     approved_orders = cursor.fetchone()[0]
 
     cursor.execute("SELECT COUNT(*) FROM orders WHERE status = 'completed'")

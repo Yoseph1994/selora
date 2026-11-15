@@ -1749,45 +1749,122 @@ async def callback_post_del_change(callback: types.CallbackQuery, state: FSMCont
 @router.callback_query(F.data.startswith("reupload_art:"))
 async def start_reupload_artwork(callback: types.CallbackQuery, state: FSMContext):
     order_code = callback.data.split(":")[1]
+    order = database.get_order_by_code(order_code)
+    if not order:
+        await callback.answer("Order not found.", show_alert=True)
+        return
+
+    import re
+    qty = 1
+    items_str = order.get("items", "")
+    match = re.search(r"^(\d+)x", items_str)
+    if match:
+        qty = int(match.group(1))
+
     await state.clear()
+    await state.update_data(
+        reupload_order_code=order_code,
+        reupload_qty=qty,
+        reupload_items=items_str,
+        reupload_photos=[],
+        reupload_customer_files=[]
+    )
+
+    if qty > 1:
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=f"🖼 1 design for all {qty} copies", callback_data=f"reup_mode:{order_code}:single")],
+            [InlineKeyboardButton(text=f"📸 Different photos ({qty} prints total)", callback_data=f"reup_mode:{order_code}:multi")],
+            [InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")]
+        ])
+        await callback.message.answer(
+            f"╭─── 🔄 Re-upload Artwork for #{order_code} ───╮\n"
+            f"│  Order Quantity: *{qty} copies*\n"
+            "╰────────────────────────────────────────╯\n\n"
+            "How would you like to provide the replacement artwork?",
+            parse_mode="Markdown",
+            reply_markup=kb
+        )
+    else:
+        await state.update_data(reupload_mode="single")
+        await state.set_state(ReuploadFSM.waiting_for_artwork)
+        inline_cancel = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")]
+        ])
+        await callback.message.answer(
+            f"📎 *Re-upload Replacement Artwork for #{order_code}*\n\n"
+            "⚠️ *CRITICAL PRINT QUALITY INSTRUCTION:*\n"
+            "👉 Please send your image as an **uncompressed FILE/DOCUMENT**:\n"
+            "   1. Tap the 📎 (Paperclip) icon\n"
+            "   2. Select *'File' / 'Document'* (NOT Photo/Gallery)\n"
+            "   3. Pick your original high-resolution file\n\n"
+            "Send your replacement file now:",
+            parse_mode="Markdown",
+            reply_markup=inline_cancel
+        )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("reup_mode:"))
+async def callback_reupload_mode(callback: types.CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    order_code = parts[1]
+    mode = parts[2]
+
+    data = await state.get_data()
+    qty = data.get("reupload_qty", 1)
+
+    await state.update_data(reupload_mode=mode)
     await state.set_state(ReuploadFSM.waiting_for_artwork)
-    await state.update_data(reupload_order_code=order_code)
 
     inline_cancel = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")]
     ])
-    await callback.message.answer(
-        f"📎 *Re-upload Artwork for Order #{order_code}*\n\n"
-        "⚠️ *MAXIMUM PRINT RESOLUTION:*\n"
-        "To avoid Telegram compression and ensure sharp, professional printing:\n"
-        "👉 *Please send your image as an uncompressed FILE/DOCUMENT:*\n"
-        "   1. Tap the 📎 (Paperclip) icon\n"
-        "   2. Select *'File' / 'Document'* (NOT Photo/Gallery)\n"
-        "   3. Pick your original high-resolution image file\n\n"
-        "─────────────────────\n"
-        "Send your replacement file now:",
-        parse_mode="Markdown",
-        reply_markup=inline_cancel
-    )
+
+    if mode == "single":
+        text = (
+            f"📎 *Replacement Artwork for All {qty} Copies*\n\n"
+            "⚠️ *CRITICAL FOR PRINT QUALITY:*\n"
+            "👉 Please send your image as an **uncompressed FILE/DOCUMENT**:\n"
+            "   1. Tap the 📎 (Paperclip) icon\n"
+            "   2. Select *'File' / 'Document'* (NOT Photo/Gallery)\n"
+            "   3. Pick your high-resolution original file\n\n"
+            "Send your replacement file now:"
+        )
+    else:
+        text = (
+            f"📸 *Upload Replacement Photos ({qty} Prints Total)*\n\n"
+            f"Send {qty} photos, one by one or as an album.\n\n"
+            "⚠️ *CRITICAL FOR PRINT QUALITY:*\n"
+            "👉 Tap 📎 (Paperclip) → select *'File' / 'Document'* (NOT Photo) to send uncompressed originals.\n\n"
+            f"Progress: `0 / {qty}` photos received\n\n"
+            "Send your replacement files now:"
+        )
+
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=inline_cancel)
     await callback.answer()
 
 @router.message(ReuploadFSM.waiting_for_artwork, F.document | F.photo)
 async def process_reupload_artwork(message: types.Message, state: FSMContext):
     data = await state.get_data()
     order_code = data.get("reupload_order_code")
+    mode = data.get("reupload_mode", "single")
+    qty = data.get("reupload_qty", 1)
     user = message.from_user
+
+    reupload_files = data.get("reupload_customer_files", [])
+    reupload_photos = data.get("reupload_photos", [])
+    file_idx = len(reupload_files) + 1
 
     if message.document:
         file_id = message.document.file_id
-        orig_name = message.document.file_name or "reuploaded_doc.jpg"
+        orig_name = message.document.file_name or f"document_{file_idx}.jpg"
         ext = Path(orig_name).suffix.lower() or ".jpg"
-        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_reup{ext}"
+        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_reup_{file_idx}{ext}"
         file_type = "Document (Uncompressed)"
     else:
         best_photo = message.photo[-1]
         file_id = best_photo.file_id
         orig_name = f"photo_{best_photo.width}x{best_photo.height}.jpg"
-        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_reup.jpg"
+        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_reup_{file_idx}.jpg"
         file_type = f"Photo ({best_photo.width}x{best_photo.height})"
 
     dest_path = CUSTOMER_UPLOADS_DIR / filename
@@ -1796,38 +1873,160 @@ async def process_reupload_artwork(message: types.Message, state: FSMContext):
     except Exception as err:
         logger.warning(f"Could not download re-uploaded artwork: {err}")
 
-    file_entry = [{
+    file_entry = {
         "file_id": file_id,
         "filename": filename,
         "original_name": orig_name,
         "file_type": file_type,
         "url": f"/customer-uploads/{filename}"
-    }]
-    database.update_order_artwork(order_code, json.dumps(file_entry))
+    }
+    reupload_files.append(file_entry)
+    reupload_photos.append(file_id)
+
+    # 1. Single Mode: First photo completes intake
+    if mode == "single":
+        database.update_order_artwork(order_code, json.dumps(reupload_files))
+        await state.clear()
+
+        await message.answer(
+            f"✅ *New Artwork Successfully Received for Order #{order_code}!* 💛\n\n"
+            f"Format: `{file_type}`\n"
+            f"This replacement artwork will print on all *{qty}* copies.\n"
+            "Our production team has been notified and will review your file right away. Thank you!",
+            parse_mode="Markdown",
+            reply_markup=get_main_menu_keyboard()
+        )
+        if config.ADMIN_CHAT_ID:
+            try:
+                await message.bot.send_message(
+                    chat_id=config.ADMIN_CHAT_ID,
+                    text=(
+                        f"🔄 *ARTWORK RE-UPLOADED (Single Design for {qty} copies) — {order_code}*\n"
+                        f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
+                        f"📁 Format: {file_type}\n"
+                        "Order status updated to 🔄 Re-uploaded on the dashboard!"
+                    ),
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+        return
+
+    # 2. Multi Mode: Track photos and allow smart distribution
+    await state.update_data(
+        reupload_customer_files=reupload_files,
+        reupload_photos=reupload_photos
+    )
+    count = len(reupload_photos)
+
+    if count >= qty:
+        database.update_order_artwork(order_code, json.dumps(reupload_files))
+        await state.clear()
+
+        await message.answer(
+            f"✅ *All {count}/{qty} Replacement Photos Received for #{order_code}!* 💛\n\n"
+            f"1 print will be made for each of your {count} unique photos.\n"
+            "Our production team has been notified to inspect them on the dashboard!",
+            parse_mode="Markdown",
+            reply_markup=get_main_menu_keyboard()
+        )
+        if config.ADMIN_CHAT_ID:
+            try:
+                await message.bot.send_message(
+                    chat_id=config.ADMIN_CHAT_ID,
+                    text=(
+                        f"🔄 *ALL {count}/{qty} ARTWORK RE-UPLOADED — {order_code}*\n"
+                        f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
+                        f"📁 Total: {count} unique photos (1 print each)\n"
+                        "Order status updated to 🔄 Re-uploaded on the dashboard!"
+                    ),
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+    else:
+        copies_each = qty // count
+        remainder = qty % count
+        dist_btn_label = f"➗ Done: Distribute Evenly ({copies_each} ea → {qty} total)" if remainder == 0 else f"➗ Done: Distribute Evenly ({qty} total)"
+
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=dist_btn_label, callback_data=f"reup_dist:{order_code}:even")],
+            [InlineKeyboardButton(text=f"📷 Keep Adding Photos ({count}/{qty})", callback_data=f"reup_dist:{order_code}:continue")],
+            [InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")]
+        ])
+
+        pct = max(1, min(10, int((count / qty) * 10)))
+        progress_bar = "█" * pct + "░" * (10 - pct)
+
+        await message.answer(
+            f"📸 *Photo {count} of {qty} received for #{order_code}*\n"
+            f"`[{progress_bar}]` *{count}/{qty}*\n\n"
+            f"• Required Order: *{qty} total prints*\n"
+            f"• Received: *{count} replacement photos*\n\n"
+            f"👉 Send your next photo (tap 📎 → File/Doc), or tap below to distribute {qty} prints evenly across your {count} photos:",
+            parse_mode="Markdown",
+            reply_markup=markup
+        )
+
+@router.callback_query(F.data.startswith("reup_dist:"))
+async def callback_reupload_distribute(callback: types.CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    order_code = parts[1]
+    action = parts[2]
+
+    data = await state.get_data()
+    photos = data.get("reupload_photos", [])
+    files = data.get("reupload_customer_files", [])
+    qty = data.get("reupload_qty", 1)
+    count = len(photos)
+
+    if action == "continue":
+        await callback.answer(f"Please send photo {count + 1} of {qty} (tap 📎 -> File/Doc)", show_alert=False)
+        return
+
+    # action == "even"
+    if not photos or not files:
+        await callback.answer("Please send at least 1 replacement photo first!", show_alert=True)
+        return
+
+    copies_each = qty // count
+    remainder = qty % count
+    if count == 1:
+        dist_note = f"{qty} copies of 1 photo"
+    elif remainder == 0:
+        dist_note = f"{count} photos × {copies_each} copies each"
+    else:
+        dist_note = f"{count} photos distributed evenly ({qty} total)"
+
+    database.update_order_artwork(order_code, json.dumps(files))
     await state.clear()
 
-    await message.answer(
-        f"✅ *New Artwork Successfully Received for Order #{order_code}!* 💛\n\n"
-        f"Format: `{file_type}`\n"
-        "Our production team has been notified and will review your file right away. Thank you!",
-        parse_mode="Markdown",
+    await callback.message.edit_text(
+        f"✅ *Photo Distribution Confirmed for Order #{order_code}!* 💛\n\n"
+        f"Distribution: *{dist_note}*\n"
+        f"Total prints: *{qty} copies*\n\n"
+        "Our production team has been notified and will review your replacement files on the dashboard!",
+        parse_mode="Markdown"
+    )
+    await callback.message.answer(
+        "✓ _Your order has been updated to Re-uploaded status._",
         reply_markup=get_main_menu_keyboard()
     )
 
     if config.ADMIN_CHAT_ID:
         try:
-            await message.bot.send_message(
+            await callback.bot.send_message(
                 chat_id=config.ADMIN_CHAT_ID,
                 text=(
-                    f"🔄 *ARTWORK RE-UPLOADED — {order_code}*\n"
-                    f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
-                    f"📁 Type: {file_type}\n"
-                    "Please review the revised file on the dashboard!"
+                    f"🔄 *ARTWORK RE-UPLOADED ({dist_note}) — {order_code}*\n"
+                    f"📁 Received: {count} photos ({qty} prints total)\n"
+                    "Order status updated to 🔄 Re-uploaded on the dashboard!"
                 ),
                 parse_mode="Markdown"
             )
         except Exception:
             pass
+    await callback.answer()
 
 @router.callback_query(F.data.startswith("reupload_rcpt:"))
 async def start_reupload_receipt(callback: types.CallbackQuery, state: FSMContext):
