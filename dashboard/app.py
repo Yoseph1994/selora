@@ -24,6 +24,8 @@ RECEIPTS_DIR = BASE_DIR.parent / "data" / "receipts"
 RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)
 PRODUCT_IMAGES_DIR = BASE_DIR.parent / "data" / "products_images"
 PRODUCT_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+DESIGNS_IMAGES_DIR = BASE_DIR.parent / "data" / "designs_images"
+DESIGNS_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Selora Prints Dashboard")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -31,6 +33,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 # Mount static directories
 app.mount("/receipts", StaticFiles(directory=str(RECEIPTS_DIR)), name="receipts")
 app.mount("/product-images", StaticFiles(directory=str(PRODUCT_IMAGES_DIR)), name="product_images")
+app.mount("/designs-images", StaticFiles(directory=str(DESIGNS_IMAGES_DIR)), name="designs_images")
 
 AUTH_COOKIE_NAME = "selora_auth_session"
 
@@ -63,6 +66,8 @@ class WebappOrderRequest(BaseModel):
     delivery_type: str
     delivery_location: str
     notes: Optional[str] = "Placed via WebApp"
+    phone: Optional[str] = ""
+    recipient_name: Optional[str] = ""
 
 @app.get("/app", response_class=HTMLResponse)
 async def webapp_store(request: Request):
@@ -95,16 +100,20 @@ async def webapp_submit_order(payload: WebappOrderRequest):
         notes=payload.notes,
         has_attachment=False,
         payment_status="pending_review",
-        status="pending"
+        status="pending",
+        phone=payload.phone or "",
+        recipient_name=payload.recipient_name or payload.full_name
     )
 
     if payload.user_id:
+        phone_txt = f"\n📞 *Phone:* `{payload.phone}`" if payload.phone else ""
+        recip_txt = f"\n👤 *Recipient:* {payload.recipient_name}" if payload.recipient_name else ""
         customer_msg = (
             f"🎉 *Order Placed via Selora Store App!* 💛\n\n"
             f"🔖 *Order Code:* `{order_code}`\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             f"🏷 *Items:* {payload.items}\n"
-            f"🗓 *Need by:* {payload.deadline}\n"
+            f"🗓 *Need by:* {payload.deadline}{recip_txt}{phone_txt}\n"
             f"🚚 *Delivery:* {payload.delivery_type} ({payload.delivery_location})\n"
             "━━━━━━━━━━━━━━━━━━━━\n\n"
             "💳 *Pre-Payment (50% Deposit):*\n"
@@ -115,10 +124,12 @@ async def webapp_submit_order(payload: WebappOrderRequest):
         await send_telegram_notification(payload.user_id, customer_msg)
 
     if config.ADMIN_CHAT_ID:
+        phone_line = f"\n📞 *Driver Contact Phone:* [{payload.phone}](tel:{payload.phone})" if payload.phone else ""
+        recip_line = f"\n📦 *Recipient:* *{payload.recipient_name}*" if payload.recipient_name else ""
         admin_text = (
             f"🚨 *NEW APP ORDER RECEIVED! — {order_code}*\n"
             f"👤 *Customer:* {payload.full_name} (@{payload.username or 'none'})\n"
-            f"🆔 *User ID:* `{payload.user_id}`\n"
+            f"🆔 *User ID:* `{payload.user_id}`{recip_line}{phone_line}\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             f"🏷 *Items:* {payload.items}\n"
             f"🗓 *Need by:* {payload.deadline}\n"
@@ -217,6 +228,8 @@ async def dashboard_index(request: Request):
     orders = database.get_all_orders()
     products_data = database.get_products_data()
     products = products_data.get("products", [])
+    designs = database.get_designs()
+    design_categories = database.get_design_categories()
 
     return templates.TemplateResponse(
         request=request,
@@ -225,6 +238,8 @@ async def dashboard_index(request: Request):
             "stats": stats,
             "orders": orders,
             "products": products,
+            "designs": designs,
+            "design_categories": design_categories,
             "store_name": config.STORE_NAME
         }
     )
@@ -399,3 +414,88 @@ async def export_csv():
         filename="selora_orders.csv",
         media_type="text/csv"
     )
+
+# -------------------------------------------------------------
+# DYNAMIC DESIGNS & SUBPRODUCTS API
+# -------------------------------------------------------------
+
+@app.get("/api/designs")
+async def get_designs_api(product_id: Optional[str] = None, subproduct: Optional[str] = None):
+    """Retrieve all designs, optionally filtered by product_id and/or subproduct."""
+    designs = database.get_designs(product_id=product_id, subproduct=subproduct)
+    categories = database.get_design_categories()
+    return {"designs": designs, "categories": categories}
+
+@app.post("/api/designs/add", dependencies=[Depends(require_api_auth)])
+async def add_design_api(
+    title: str = Form(...),
+    product_id: str = Form(...),
+    subproduct: str = Form(...),
+    description: str = Form(""),
+    image: UploadFile = File(...)
+):
+    """Add a new custom design/subproduct to designs.json and save image."""
+    import time
+    import re
+    if not title.strip():
+        raise HTTPException(status_code=400, detail="Design title is required")
+    if not product_id.strip():
+        raise HTTPException(status_code=400, detail="Product selection is required")
+
+    clean_title = re.sub(r"[^\w\s-]", "", title.lower()).strip()
+    slug = re.sub(r"[-\s]+", "_", clean_title) or "design"
+    design_id = f"des_{product_id}_{slug}_{int(time.time())}"
+
+    ext = Path(image.filename).suffix.lower() if image and image.filename else ".png"
+    if ext not in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
+        ext = ".png"
+
+    filename = f"{design_id}{ext}"
+    dest_path = DESIGNS_IMAGES_DIR / filename
+
+    try:
+        with open(dest_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        # Ensure a PNG copy exists for Telegram fallback
+        png_filename = f"{design_id}.png"
+        png_path = DESIGNS_IMAGES_DIR / png_filename
+        if ext != ".png":
+            try:
+                from PIL import Image
+                with Image.open(dest_path) as im:
+                    im.convert("RGB").save(png_path, "PNG")
+            except Exception as e:
+                logger.warning(f"Could not convert design to PNG: {e}")
+                png_filename = filename
+
+        new_design = database.add_design(
+            title=title.strip(),
+            product_id=product_id.strip(),
+            subproduct=subproduct.strip() or "Standard",
+            description=description.strip(),
+            image_url=f"/designs-images/{png_filename}",
+            design_id=design_id
+        )
+        return {"success": True, "design": new_design}
+    except Exception as e:
+        logger.error(f"Failed to add design: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save design: {str(e)}")
+
+@app.delete("/api/designs/{design_id}", dependencies=[Depends(require_api_auth)])
+async def delete_design_api(design_id: str):
+    """Delete a design by ID."""
+    success = database.delete_design(design_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Design not found")
+
+    # Clean up static files
+    for ext in [".png", ".jpg", ".jpeg", ".webp"]:
+        f = DESIGNS_IMAGES_DIR / f"{design_id}{ext}"
+        if f.exists():
+            try:
+                f.unlink()
+            except Exception:
+                pass
+
+    return {"success": True, "message": f"Design {design_id} deleted successfully"}

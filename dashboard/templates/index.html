@@ -107,14 +107,18 @@
     </div>
 
     <!-- Tab Navigation -->
-    <div class="flex items-center space-x-2 border-b border-slate-200 mb-6">
-      <button id="tab-orders-btn" onclick="switchTab('orders')" class="pb-3 px-4 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 flex items-center space-x-2">
+    <div class="flex items-center space-x-2 border-b border-slate-200 mb-6 overflow-x-auto">
+      <button id="tab-orders-btn" onclick="switchTab('orders')" class="pb-3 px-4 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 flex items-center space-x-2 whitespace-nowrap">
         <i class="fa-solid fa-list-check"></i>
         <span>Orders ({{ orders|length }})</span>
       </button>
-      <button id="tab-products-btn" onclick="switchTab('products')" class="pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2">
+      <button id="tab-products-btn" onclick="switchTab('products')" class="pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2 whitespace-nowrap">
         <i class="fa-solid fa-tags"></i>
-        <span>Dynamic Catalog & Prices</span>
+        <span>Products & Prices</span>
+      </button>
+      <button id="tab-designs-btn" onclick="switchTab('designs')" class="pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2 whitespace-nowrap">
+        <i class="fa-solid fa-palette"></i>
+        <span>Designs & Sub-Products ({{ designs|length }})</span>
       </button>
     </div>
 
@@ -329,6 +333,74 @@
       </div>
     </div>
 
+    <!-- TAB 3: DYNAMIC DESIGNS & SUB-PRODUCTS -->
+    <div id="tab-designs" class="hidden space-y-4">
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 flex-wrap gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Designs & Sub-Products Catalog</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Manage ready artwork and template collections for each product. Customers can browse and select these directly in Telegram!</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs font-semibold" id="design-count-badge">
+              {{ designs|length }} Designs Active
+            </span>
+            <button onclick="openAddDesignModal()" class="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+              <i class="fa-solid fa-plus"></i>
+              <span>Add New Design</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="flex items-center justify-between gap-3 mb-6 flex-wrap">
+          <div class="flex items-center space-x-2 overflow-x-auto pb-1 max-w-full">
+            <button onclick="filterDesigns('all')" id="des-filter-all" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white whitespace-nowrap shadow-xs">
+              All Products
+            </button>
+            {% for prod_id, sub_list in design_categories.items() %}
+            <button onclick="filterDesigns('{{ prod_id }}')" id="des-filter-{{ prod_id }}" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 whitespace-nowrap shadow-xs">
+              {{ prod_id.replace('_', ' ').title() }}
+            </button>
+            {% endfor %}
+          </div>
+          <div class="w-full sm:w-64">
+            <input type="text" id="design-search" oninput="searchDesigns()" placeholder="Search design or style..." class="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+        </div>
+
+        <!-- Designs Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5" id="designs-grid">
+          {% for d in designs %}
+          <div class="design-card rounded-2xl border border-slate-200 bg-white hover:border-brand-400 transition shadow-sm overflow-hidden flex flex-col justify-between group" data-product="{{ d.product_id }}" data-title="{{ d.title.lower() }}" data-sub="{{ d.subproduct.lower() }}" id="des-card-{{ d.id }}">
+            <div>
+              <div class="relative bg-slate-100 aspect-square overflow-hidden border-b border-slate-100">
+                <img src="{{ d.image_url }}" alt="{{ d.title }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                <span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-semibold">
+                  {{ d.product_name }}
+                </span>
+                <span class="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-brand-500/90 backdrop-blur-xs text-white text-[10px] font-semibold">
+                  {{ d.subproduct }}
+                </span>
+              </div>
+              <div class="p-3.5">
+                <h4 class="font-bold text-slate-900 text-xs mb-1 line-clamp-1">{{ d.title }}</h4>
+                <p class="text-[11px] text-slate-500 line-clamp-2 mb-2">{{ d.description or 'Custom curated artwork for Selora Prints.' }}</p>
+                <div class="text-[10px] text-slate-400">Added: {{ d.created_at[:10] }}</div>
+              </div>
+            </div>
+            <div class="p-3 pt-0 flex justify-end">
+              <button onclick="deleteDesign('{{ d.id }}', '{{ d.title }}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition text-xs flex items-center space-x-1" title="Delete Design">
+                <i class="fa-regular fa-trash-can"></i>
+                <span class="text-[11px]">Delete</span>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- Modal for viewing receipt screenshot -->
@@ -440,6 +512,61 @@
     </div>
   </div>
 
+  <!-- Add New Design Modal -->
+  <div id="modal-add-design" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm">Add New Design / Sub-Product</h3>
+          <p class="text-xs text-slate-400">Upload artwork for customer selection in Telegram & Mini App.</p>
+        </div>
+        <button onclick="closeAddDesignModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-add-design" onsubmit="submitAddDesign(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Select Product *</label>
+          <select id="des-prod-id" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs">
+            {% for p in products %}
+            <option value="{{ p.id }}">{{ p.name }} ({{ p.id }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Sub-Product / Style Collection *</label>
+          <input type="text" id="des-subproduct" required placeholder="e.g. Anime & Manga, Dark Academia, Minimalist, Floral..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs">
+          <p class="text-[10px] text-slate-400 mt-1">Group designs into customer-friendly categories.</p>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Design Title *</label>
+          <input type="text" id="des-title" required placeholder="e.g. Studio Ghibli Totoro Aesthetic" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Description (Optional)</label>
+          <textarea id="des-desc" rows="2" placeholder="Brief note about color, paper finish, or theme..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Design Image Artwork (PNG/JPG) *</label>
+          <input type="file" id="des-file" accept="image/*" required class="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-brand-50 file:text-brand-700 file:font-semibold hover:file:bg-brand-100">
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeAddDesignModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Cancel</button>
+          <button type="submit" id="btn-save-design" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Upload & Save Design</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     function filterOrders() {
       const query = document.getElementById('order-search').value.toLowerCase();
@@ -464,18 +591,140 @@
     function closeSlipModal() {
       document.getElementById('slip-modal').classList.add('hidden');
     }
+
     function switchTab(tab) {
+      const tabOrders = document.getElementById('tab-orders');
+      const tabProducts = document.getElementById('tab-products');
+      const tabDesigns = document.getElementById('tab-designs');
+      const btnOrders = document.getElementById('tab-orders-btn');
+      const btnProducts = document.getElementById('tab-products-btn');
+      const btnDesigns = document.getElementById('tab-designs-btn');
+
+      const activeClass = 'pb-3 px-4 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 flex items-center space-x-2 whitespace-nowrap';
+      const inactiveClass = 'pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2 whitespace-nowrap';
+
+      tabOrders.classList.add('hidden');
+      tabProducts.classList.add('hidden');
+      tabDesigns.classList.add('hidden');
+      btnOrders.className = inactiveClass;
+      btnProducts.className = inactiveClass;
+      btnDesigns.className = inactiveClass;
+
       if (tab === 'orders') {
-        document.getElementById('tab-orders').classList.remove('hidden');
-        document.getElementById('tab-products').classList.add('hidden');
-        document.getElementById('tab-orders-btn').className = 'pb-3 px-4 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 flex items-center space-x-2';
-        document.getElementById('tab-products-btn').className = 'pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2';
-      } else {
-        document.getElementById('tab-orders').classList.add('hidden');
-        document.getElementById('tab-products').classList.remove('hidden');
-        document.getElementById('tab-orders-btn').className = 'pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2';
-        document.getElementById('tab-products-btn').className = 'pb-3 px-4 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 flex items-center space-x-2';
+        tabOrders.classList.remove('hidden');
+        btnOrders.className = activeClass;
+      } else if (tab === 'products') {
+        tabProducts.classList.remove('hidden');
+        btnProducts.className = activeClass;
+      } else if (tab === 'designs') {
+        tabDesigns.classList.remove('hidden');
+        btnDesigns.className = activeClass;
       }
+    }
+
+    function openAddDesignModal() {
+      document.getElementById('modal-add-design').classList.remove('hidden');
+    }
+
+    function closeAddDesignModal() {
+      document.getElementById('modal-add-design').classList.add('hidden');
+      document.getElementById('form-add-design').reset();
+    }
+
+    async function submitAddDesign(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-design');
+      btn.innerText = 'Uploading...';
+      btn.disabled = true;
+
+      const prodId = document.getElementById('des-prod-id').value;
+      const subproduct = document.getElementById('des-subproduct').value.trim();
+      const title = document.getElementById('des-title').value.trim();
+      const desc = document.getElementById('des-desc').value.trim();
+      const fileInput = document.getElementById('des-file');
+
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please choose an image file for the design artwork.');
+        btn.innerText = 'Upload & Save Design';
+        btn.disabled = false;
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('product_id', prodId);
+      formData.append('subproduct', subproduct);
+      formData.append('title', title);
+      formData.append('description', desc);
+      formData.append('image', fileInput.files[0]);
+
+      try {
+        const res = await fetch('/api/designs/add', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Design successfully uploaded and added to catalog & Telegram Bot!');
+          location.reload();
+        } else {
+          alert('Failed: ' + (data.detail || 'Could not upload design'));
+          btn.innerText = 'Upload & Save Design';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert('Upload error: ' + err);
+        btn.innerText = 'Upload & Save Design';
+        btn.disabled = false;
+      }
+    }
+
+    async function deleteDesign(designId, title) {
+      if (!confirm(`Are you sure you want to permanently delete design "${title}"?`)) return;
+      try {
+        const res = await fetch(`/api/designs/${designId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          const card = document.getElementById(`des-card-${designId}`);
+          if (card) card.remove();
+        } else {
+          alert('Delete failed: ' + (data.detail || 'Error'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
+      }
+    }
+
+    let currentDesignFilter = 'all';
+
+    function filterDesigns(prodId) {
+      currentDesignFilter = prodId;
+      const buttons = document.querySelectorAll('[id^="des-filter-"]');
+      buttons.forEach(b => {
+        if (b.id === `des-filter-${prodId}`) {
+          b.className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white whitespace-nowrap shadow-xs';
+        } else {
+          b.className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 whitespace-nowrap shadow-xs';
+        }
+      });
+      applyDesignFilters();
+    }
+
+    function searchDesigns() {
+      applyDesignFilters();
+    }
+
+    function applyDesignFilters() {
+      const q = document.getElementById('design-search').value.toLowerCase().trim();
+      const cards = document.querySelectorAll('.design-card');
+      cards.forEach(c => {
+        const prodMatch = (currentDesignFilter === 'all' || c.dataset.product === currentDesignFilter);
+        const textMatch = (!q || c.dataset.title.includes(q) || c.dataset.sub.includes(q));
+        if (prodMatch && textMatch) {
+          c.classList.remove('hidden');
+        } else {
+          c.classList.add('hidden');
+        }
+      });
     }
 
     function viewReceipt(imgUrl, orderCode) {

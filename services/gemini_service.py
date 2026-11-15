@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 # Load products and store knowledge
 DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "products.json"
+DESIGNS_FILE = Path(__file__).resolve().parent.parent / "data" / "designs.json"
 
 try:
     with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -15,6 +16,19 @@ try:
 except Exception as e:
     logger.error(f"Failed to load products.json: {e}")
     STORE_DATA = {}
+
+def get_designs_summary() -> str:
+    if not DESIGNS_FILE.exists():
+        return ""
+    try:
+        with open(DESIGNS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        lines = []
+        for d in data.get("designs", [])[:15]:
+            lines.append(f"- {d.get('title')} ({d.get('product_name')}, Style: {d.get('subproduct')})")
+        return "\n".join(lines)
+    except Exception:
+        return ""
 
 def get_system_prompt() -> str:
     products_text = ""
@@ -47,6 +61,9 @@ STORE INFORMATION:
 
 PRODUCT CATALOG & CURRENT PRICES:
 {products_text}
+
+READY DESIGN COLLECTIONS & STYLES (Customers can pick ready designs or upload custom photos):
+{get_designs_summary()}
 
 IMPORTANT RULES:
 1. Always be polite, warm, and concise. Use emojis like 💛, ✨, 🏷, 🚚.
@@ -127,6 +144,21 @@ class GeminiService:
                 "🏪 *Ledeta Store Pickup:* Free pickup directly from our store in Ledeta!\n"
                 "🚚 *Yango Delivery:* We send orders via Yango across Addis Ababa (delivery fee is paid by you upon receipt).\n\n"
                 "Need help? Tap *📝 Place an Order* or *📞 Contact Owner*."
+            )
+
+        # Designs & Templates
+        if any(w in text for w in ["design", "sample", "template", "style", "ዲዛይን", "ምሳሌ", "ስዕል"]):
+            return (
+                "🎨 *Selora Ready Designs & Templates*\n\n"
+                "We offer curated artwork collections across our products:\n"
+                "• 🏷 *Stickers:* Anime & Manga, Aesthetic Pastel, Motivational Quotes\n"
+                "• 🔖 *Bookmarks:* Dark Academia, Pressed Wildflowers\n"
+                "• 💼 *Business Cards:* Modern Corporate, Luxury Matte Black & Gold Foil\n"
+                "• 📸 *Polaroids:* Classic 90s Vintage Frame, Retro Film Grain\n"
+                "• 📖 *Photo Books:* Wedding & Couples, Keepsake Noir\n"
+                "• ☕ *Mugs:* Addis Ababa Coffee Culture Ceramic\n\n"
+                "👉 Tap **'🎨 Ready Designs'** in the menu or type `/designs` to flip through our visual design carousel!\n"
+                "📸 *Prefer your own design?* You can always upload your own custom photos during ordering!"
             )
 
         # How to order

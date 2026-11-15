@@ -13,7 +13,9 @@ from aiogram.types import (
     InlineKeyboardButton,
     ReplyKeyboardMarkup,
     KeyboardButton,
-    ReplyKeyboardRemove
+    ReplyKeyboardRemove,
+    FSInputFile,
+    InputMediaPhoto
 )
 
 from keyboards.reply_markup import (
@@ -29,6 +31,8 @@ router = Router(name="order_router")
 
 RECEIPTS_DIR = Path(__file__).resolve().parent.parent / "data" / "receipts"
 RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)
+DESIGNS_IMAGES_DIR = Path(__file__).resolve().parent.parent / "data" / "designs_images"
+DESIGNS_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 class OrderFSM(StatesGroup):
     waiting_for_product = State()
@@ -469,10 +473,79 @@ async def callback_card_design(callback: types.CallbackQuery, state: FSMContext)
 # DESIGN & ARTWORK SELECTION MODE
 # -------------------------------------------------------------
 
+def get_order_design_card(index: int, product_id: str, qty: int):
+    designs = database.get_designs(product_id=product_id)
+    if not designs:
+        designs = database.get_designs()
+    if not designs:
+        return None, None, None
+
+    idx = index % len(designs)
+    d = designs[idx]
+
+    caption = (
+        f"🎨 *READY DESIGN {idx + 1} OF {len(designs)}*\n"
+        f"`[ 🟢 🟡 ⚪ ⚪ ] Step 2 of 4: Select Ready Design`\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"✨ *{d['title']}*\n"
+        f"📦 *Product:* {d['product_name']}\n"
+        f"🏷 *Sub-Product / Style:* `{d['subproduct']}`\n"
+        f"📝 {d.get('description', '')}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"👉 *Tap '✅ Use This Design' to apply to your {qty} copies, or tap below to upload your own design image if not satisfied.*"
+    )
+
+    prev_idx = (idx - 1) % len(designs)
+    next_idx = (idx + 1) % len(designs)
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="◀ Prev", callback_data=f"odes_nav:{idx}:{prev_idx}"),
+            InlineKeyboardButton(text=f"• {idx + 1}/{len(designs)} •", callback_data="noop"),
+            InlineKeyboardButton(text="Next ▶", callback_data=f"odes_nav:{idx}:{next_idx}")
+        ],
+        [
+            InlineKeyboardButton(text="✅ Use This Design for My Order", callback_data=f"odes_pick:{d['id']}")
+        ],
+        [
+            InlineKeyboardButton(text="📸 Not Satisfied: Upload My Own Design", callback_data="odes_custom")
+        ],
+        [
+            InlineKeyboardButton(text="◀ Back", callback_data="dmode:back"),
+            InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")
+        ]
+    ])
+
+    image_path = None
+    cand = DESIGNS_IMAGES_DIR / f"{d['id']}.png"
+    if cand.exists():
+        image_path = cand
+    else:
+        custom_url = d.get("image_url", "").split("?")[0]
+        if custom_url.startswith("/designs-images/"):
+            fname = custom_url.replace("/designs-images/", "")
+            cand = DESIGNS_IMAGES_DIR / fname
+            if cand.exists():
+                image_path = cand
+
+    if not image_path or not image_path.exists():
+        image_path = Path(__file__).resolve().parent.parent / "data" / "products_images" / "stickers.png"
+
+    return caption, FSInputFile(image_path), keyboard
+
 async def advance_to_design_mode(message: types.Message, state: FSMContext):
     data = await state.get_data()
     qty = data.get("quantity", 1)
     prod_name = data.get("product_name", "Items")
+
+    # If user already selected a ready design prior to stepper
+    if data.get("selected_design_id") and data.get("design_note"):
+        if isinstance(message, types.CallbackQuery):
+            await message.message.answer(f"✅ Using Design: *{data.get('design_note')}*", parse_mode="Markdown")
+        else:
+            await message.answer(f"✅ Using Design: *{data.get('design_note')}*", parse_mode="Markdown")
+        await advance_to_deadline_picker(message, state)
+        return
 
     await state.set_state(OrderFSM.waiting_for_design_mode)
     text = (
@@ -480,9 +553,14 @@ async def advance_to_design_mode(message: types.Message, state: FSMContext):
         f"`[ 🟢 🟡 ⚪ ⚪ ] Step 2 of 4: Design Source`\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"Item: *{qty}x {prod_name}*\n\n"
-        "How would you like to provide the designs/photos for this order?"
+        "How would you like to provide the designs/photos for this order?\n\n"
+        "• 📸 *Upload My Photo:* Send your own custom pictures or artwork files\n"
+        "• 🎨 *Ready Designs:* Browse our curated ready-made templates and styles"
     )
-    await message.edit_text(text, parse_mode="Markdown", reply_markup=get_design_mode_keyboard(qty, prod_name))
+    if isinstance(message, types.CallbackQuery):
+        await message.message.edit_text(text, parse_mode="Markdown", reply_markup=get_design_mode_keyboard(qty, prod_name))
+    else:
+        await message.edit_text(text, parse_mode="Markdown", reply_markup=get_design_mode_keyboard(qty, prod_name))
 
 @router.callback_query(OrderFSM.waiting_for_design_mode, F.data.startswith("dmode:"))
 async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext):
@@ -490,15 +568,29 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
     data = await state.get_data()
     qty = data.get("quantity", 1)
     prod_name = data.get("product_name", "items")
+    prod_id = data.get("product_id", "stickers")
 
     if mode == "templates":
-        await callback.message.edit_text(
-            "🎨 *SELORA READY DESIGN TEMPLATES*\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "Choose a template style for your prints:",
-            parse_mode="Markdown",
-            reply_markup=get_template_gallery_keyboard()
-        )
+        caption, img, markup = get_order_design_card(0, prod_id, qty)
+        if caption and img:
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+            await callback.message.answer_photo(
+                photo=img,
+                caption=caption,
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
+        else:
+            await callback.message.edit_text(
+                "⚠️ *No pre-made designs found for this specific item.*\n\n"
+                "Please upload your own custom photo or artwork below:",
+                parse_mode="Markdown"
+            )
+            await state.update_data(design_mode="single", photos=[])
+            await state.set_state(OrderFSM.waiting_for_photos)
         await callback.answer()
         return
 
@@ -541,16 +633,60 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
         )
         await callback.answer()
 
-@router.callback_query(OrderFSM.waiting_for_design_mode, F.data.startswith("tmpl:"))
-async def callback_template_chosen(callback: types.CallbackQuery, state: FSMContext):
-    tmpl_name = callback.data.split(":", 1)[1]
+@router.callback_query(OrderFSM.waiting_for_design_mode, F.data.startswith("odes_nav:"))
+async def callback_order_design_nav(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    prod_id = data.get("product_id", "stickers")
+    qty = data.get("quantity", 1)
+    parts = callback.data.split(":")
+    next_idx = int(parts[2])
+    caption, img, markup = get_order_design_card(next_idx, prod_id, qty)
+    if caption and img:
+        try:
+            await callback.message.edit_media(
+                media=InputMediaPhoto(media=img, caption=caption, parse_mode="Markdown"),
+                reply_markup=markup
+            )
+        except Exception as e:
+            logger.warning(f"Could not edit order design media: {e}")
+    await callback.answer()
+
+@router.callback_query(OrderFSM.waiting_for_design_mode, F.data.startswith("odes_pick:"))
+async def callback_order_design_pick(callback: types.CallbackQuery, state: FSMContext):
+    design_id = callback.data.split(":", 1)[1]
+    d = database.get_design_by_id(design_id)
+    title = d['title'] if d else "Selected Design"
+    subproduct = d.get('subproduct', '') if d else ""
+    design_note = f"Ready Design: {title} ({subproduct})"
+
     await state.update_data(
         design_mode="template",
-        design_note=f"Selora Template: {tmpl_name}",
+        design_note=design_note,
+        selected_design_id=design_id,
         file_id=None
     )
-    await callback.message.answer(f"✅ Selected Template: *{tmpl_name}*", parse_mode="Markdown")
+    await callback.message.answer(f"✅ Selected Design: *{title}* (`{subproduct}`)", parse_mode="Markdown")
     await advance_to_deadline_picker(callback.message, state)
+    await callback.answer()
+
+@router.callback_query(OrderFSM.waiting_for_design_mode, F.data == "odes_custom")
+async def callback_order_design_custom(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    qty = data.get("quantity", 1)
+    prod_name = data.get("product_name", "items")
+    await state.update_data(design_mode="single", photos=[])
+    await state.set_state(OrderFSM.waiting_for_photos)
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    await callback.message.answer(
+        f"📸 *CUSTOM ARTWORK UPLOAD*\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"No problem! Please send your custom artwork or photo below for your *{qty} copies* of {prod_name}:",
+        parse_mode="Markdown",
+        reply_markup=get_cancel_keyboard()
+    )
     await callback.answer()
 
 # -------------------------------------------------------------

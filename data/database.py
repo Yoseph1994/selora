@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).resolve().parent
 DB_PATH = DATA_DIR / "selora_orders.db"
 PRODUCTS_FILE = DATA_DIR / "products.json"
+DESIGNS_FILE = DATA_DIR / "designs.json"
 
 def get_db_url() -> Optional[str]:
     url = os.getenv("DATABASE_URL", "").strip()
@@ -483,6 +484,116 @@ def get_all_customers_user_ids() -> List[int]:
     rows = cursor.fetchall()
     conn.close()
     return [r[0] for r in rows if r[0]]
+
+# -------------------------------------------------------------
+# DYNAMIC DESIGNS & SUBPRODUCTS MANAGEMENT
+# -------------------------------------------------------------
+
+def get_designs_data() -> Dict[str, Any]:
+    """Load raw designs data from designs.json."""
+    if not DESIGNS_FILE.exists():
+        return {"designs": []}
+    try:
+        with open(DESIGNS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error reading designs.json: {e}")
+        return {"designs": []}
+
+def get_designs(product_id: Optional[str] = None, subproduct: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Fetch designs filtered optionally by product_id and/or subproduct."""
+    data = get_designs_data()
+    designs = data.get("designs", [])
+    if product_id and product_id != "all":
+        designs = [d for d in designs if d.get("product_id") == product_id]
+    if subproduct and subproduct != "all":
+        designs = [d for d in designs if d.get("subproduct", "").lower() == subproduct.lower()]
+    return designs
+
+def get_design_by_id(design_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieve a single design by its ID."""
+    data = get_designs_data()
+    for d in data.get("designs", []):
+        if d.get("id") == design_id:
+            return d
+    return None
+
+def add_design(
+    title: str,
+    product_id: str,
+    subproduct: str,
+    description: str = "",
+    image_url: str = "",
+    product_name: Optional[str] = None,
+    design_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """Add a new design or subproduct design to designs.json."""
+    import re
+    data = get_designs_data()
+    designs = data.setdefault("designs", [])
+
+    if not design_id:
+        clean = re.sub(r"[^\w\s-]", "", title.lower()).strip()
+        base_id = f"des_{product_id}_{re.sub(r'[-\s]+', '_', clean)}" or f"des_{int(datetime.now().timestamp())}"
+        design_id = base_id
+        counter = 1
+        existing_ids = {d.get("id") for d in designs}
+        while design_id in existing_ids:
+            design_id = f"{base_id}_{counter}"
+            counter += 1
+
+    if not product_name:
+        prod_data = get_products_data()
+        for p in prod_data.get("products", []):
+            if p["id"] == product_id:
+                product_name = p["name"]
+                break
+        if not product_name:
+            product_name = product_id.replace("_", " ").title()
+
+    new_design = {
+        "id": design_id,
+        "title": title.strip(),
+        "product_id": product_id.strip(),
+        "product_name": product_name.strip(),
+        "subproduct": subproduct.strip(),
+        "description": description.strip(),
+        "image_url": image_url or f"/designs-images/{design_id}.png",
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+    designs.append(new_design)
+
+    with open(DESIGNS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    logger.info(f"Added new design: {design_id} - {title} ({subproduct})")
+    return new_design
+
+def delete_design(design_id: str) -> bool:
+    """Delete a design by ID."""
+    data = get_designs_data()
+    designs = data.get("designs", [])
+    initial_len = len(designs)
+    data["designs"] = [d for d in designs if d.get("id") != design_id]
+
+    if len(data["designs"]) < initial_len:
+        with open(DESIGNS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        logger.info(f"Deleted design: {design_id}")
+        return True
+    return False
+
+def get_design_categories() -> Dict[str, List[str]]:
+    """Return dictionary mapping product_ids to unique subproduct names."""
+    data = get_designs_data()
+    mapping: Dict[str, set] = {}
+    for d in data.get("designs", []):
+        pid = d.get("product_id")
+        sub = d.get("subproduct")
+        if pid and sub:
+            mapping.setdefault(pid, set()).add(sub)
+    return {k: sorted(list(v)) for k, v in mapping.items()}
 
 # Initialize DB on import
 init_db()

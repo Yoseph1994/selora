@@ -11,14 +11,17 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
     keyboard = [
         [
             KeyboardButton(text="🏷 Products & Prices"),
-            KeyboardButton(text="📝 Place an Order")
+            KeyboardButton(text="🎨 Ready Designs")
         ],
         [
-            KeyboardButton(text="🔍 Track My Order"),
-            KeyboardButton(text="📍 Delivery & Pickup")
+            KeyboardButton(text="📝 Place an Order"),
+            KeyboardButton(text="🔍 Track My Order")
         ],
         [
-            KeyboardButton(text="💬 Ask Question / AI"),
+            KeyboardButton(text="📍 Delivery & Pickup"),
+            KeyboardButton(text="💬 Ask Question / AI")
+        ],
+        [
             KeyboardButton(text="📞 Contact Owner")
         ]
     ]
