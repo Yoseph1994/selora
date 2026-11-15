@@ -303,6 +303,76 @@ def update_product_image(product_id: str, image_url: str) -> bool:
         logger.error(f"Failed to update product image: {e}")
         return False
 
+def add_product(
+    name: str,
+    price: float,
+    unit: str = "per piece",
+    description: str = "",
+    min_order: Optional[int] = None,
+    image_url: Optional[str] = None,
+    product_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """Add a new product to products.json catalog."""
+    import re
+    try:
+        with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        products = data.setdefault("products", [])
+
+        if not product_id:
+            # Generate clean alphanumeric slug
+            clean = re.sub(r"[^\w\s-]", "", name.lower()).strip()
+            base_id = re.sub(r"[-\s]+", "_", clean) or "item"
+            product_id = base_id
+            counter = 1
+            existing_ids = {p["id"] for p in products}
+            while product_id in existing_ids:
+                product_id = f"{base_id}_{counter}"
+                counter += 1
+
+        new_item = {
+            "id": product_id,
+            "name": name.strip(),
+            "price": float(price) if price is not None else 0.0,
+            "unit": unit.strip() or "each",
+            "description": description.strip() or f"High quality custom printed {name.strip()} from Selora Prints.",
+            "image_url": image_url or f"/product-images/{product_id}.png"
+        }
+        if min_order and int(min_order) > 1:
+            new_item["min_order"] = int(min_order)
+
+        products.append(new_item)
+
+        with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"Successfully added new product: {product_id} ({name})")
+        return new_item
+    except Exception as e:
+        logger.error(f"Failed to add product: {e}")
+        raise e
+
+def delete_product(product_id: str) -> bool:
+    """Remove a product from products.json by ID."""
+    try:
+        with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        products = data.get("products", [])
+        initial_len = len(products)
+        data["products"] = [p for p in products if p["id"] != product_id]
+
+        if len(data["products"]) < initial_len:
+            with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            logger.info(f"Successfully deleted product: {product_id}")
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Failed to delete product: {e}")
+        return False
+
 def get_orders_by_user(user_id: int) -> List[Dict[str, Any]]:
     """Retrieve all orders placed by a specific customer."""
     conn = sqlite3.connect(DB_PATH)

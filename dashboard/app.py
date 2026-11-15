@@ -288,6 +288,59 @@ async def cancel_order_api(order_code: str):
     database.update_order_status(order_code, "cancelled")
     return {"success": True, "message": f"Order {order_code} cancelled"}
 
+@app.post("/api/products/add", dependencies=[Depends(require_api_auth)])
+async def add_product_api(
+    name: str = Form(...),
+    price: float = Form(...),
+    unit: str = Form("each"),
+    min_order: Optional[int] = Form(None),
+    description: str = Form(""),
+    image: Optional[UploadFile] = File(None)
+):
+    """Add a new product to the catalog, with optional design photo upload."""
+    import time
+    import re
+    if not name.strip():
+        raise HTTPException(status_code=400, detail="Product name is required")
+
+    clean_name = re.sub(r"[^\w\s-]", "", name.lower()).strip()
+    slug = re.sub(r"[-\s]+", "_", clean_name) or "product"
+
+    image_url = None
+    if image and image.filename:
+        ext = Path(image.filename).suffix.lower()
+        if ext in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
+            filename = f"{slug}_{int(time.time())}{ext}"
+            dest_path = PRODUCT_IMAGES_DIR / filename
+            try:
+                with open(dest_path, "wb") as buffer:
+                    shutil.copyfileobj(image.file, buffer)
+                image_url = f"/product-images/{filename}"
+            except Exception as e:
+                logger.error(f"Error saving uploaded design: {e}")
+
+    try:
+        new_item = database.add_product(
+            name=name,
+            price=price,
+            unit=unit,
+            description=description,
+            min_order=min_order,
+            image_url=image_url
+        )
+        return {"success": True, "product": new_item}
+    except Exception as e:
+        logger.error(f"Error creating product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/products/{product_id}", dependencies=[Depends(require_api_auth)])
+async def delete_product_api(product_id: str):
+    """Delete a product from the catalog."""
+    success = database.delete_product(product_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"success": True, "message": f"Product {product_id} removed from catalog"}
+
 @app.post("/api/products/{product_id}/price", dependencies=[Depends(require_api_auth)])
 async def update_product_price_api(product_id: str, payload: PriceUpdateRequest):
     success = database.update_product_price(product_id, payload.price)

@@ -79,8 +79,25 @@ def get_product_card(index: int):
         ]
     ])
 
-    image_path = PRODUCT_IMAGES_DIR / f"{p['id']}.png"
-    if not image_path.exists():
+    image_path = None
+    # 1. Check if image_url points to a local file
+    custom_url = p.get("image_url", "")
+    if custom_url.startswith("/product-images/"):
+        fname = custom_url.replace("/product-images/", "")
+        cand = PRODUCT_IMAGES_DIR / fname
+        if cand.exists():
+            image_path = cand
+
+    # 2. Check standard extensions by product ID
+    if not image_path:
+        for ext in [".png", ".jpg", ".jpeg", ".webp"]:
+            cand = PRODUCT_IMAGES_DIR / f"{p['id']}{ext}"
+            if cand.exists():
+                image_path = cand
+                break
+
+    # 3. Fallback to default banner
+    if not image_path or not image_path.exists():
         image_path = PRODUCT_IMAGES_DIR / "stickers.png"
 
     return caption, FSInputFile(image_path), keyboard
