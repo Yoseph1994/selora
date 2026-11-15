@@ -1,48 +1,32 @@
-import json
 import logging
-from pathlib import Path
 from typing import Optional
 import config
 
 logger = logging.getLogger(__name__)
 
-# Load products and store knowledge
-DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "products.json"
-DESIGNS_FILE = Path(__file__).resolve().parent.parent / "data" / "designs.json"
-
-try:
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        STORE_DATA = json.load(f)
-except Exception as e:
-    logger.error(f"Failed to load products.json: {e}")
-    STORE_DATA = {}
-
-def get_designs_summary() -> str:
-    if not DESIGNS_FILE.exists():
-        return ""
-    try:
-        with open(DESIGNS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        lines = []
-        for d in data.get("designs", [])[:15]:
-            lines.append(f"- {d.get('title')} ({d.get('product_name')}, Style: {d.get('subproduct')})")
-        return "\n".join(lines)
-    except Exception:
-        return ""
-
 def get_system_prompt() -> str:
+    from bot.data import database
+
+    products_data = database.get_products_data()
+    designs_data = database.get_designs_data()
+
     products_text = ""
-    for p in STORE_DATA.get("products", []):
-        min_ord = f" (Minimum order: {p['min_order']})" if "min_order" in p else ""
+    for p in products_data.get("products", []):
+        min_ord = f" (Minimum order: {p['min_order']})" if p.get("min_order") else ""
         price_val = f"{p['price']} birr" if p.get('price') is not None else "Custom / upon inquiry"
         products_text += f"- {p['name']}: {price_val} {p.get('unit', '')}{min_ord}. {p.get('description', '')}\n"
+
+    designs_lines = []
+    for d in designs_data.get("designs", [])[:15]:
+        designs_lines.append(f"- {d.get('title')} ({d.get('product_name')}, Style: {d.get('subproduct')})")
+    designs_summary = "\n".join(designs_lines)
 
     prompt = f"""You are the official AI assistant for "Selora Prints", a boutique printing and custom gifts business based in Addis Ababa, Ethiopia.
 Your brand personality is warm, creative, helpful, and polite with a yellow aesthetic (💛).
 
 STORE INFORMATION:
-- Store Name: {STORE_DATA.get('store_name', 'Selora Prints')}
-- Location: {STORE_DATA.get('location', 'Ledeta, Addis Ababa')}
+- Store Name: Selora Prints
+- Location: Ledeta, Addis Ababa
 - Store Pickup: Free pickup directly from our store in Ledeta.
 - Delivery: Delivered across Addis Ababa via Yango. The customer pays the delivery fee directly to the Yango driver upon arrival.
 - 50% Advance Pre-Payment: All orders require a 50% deposit before production begins.
@@ -59,11 +43,11 @@ STORE INFORMATION:
   3. Their delivery location (or store pickup in Ledeta)
   4. Send any photos/artwork files if ordering custom items (Polaroids, Mugs, Puzzles, Stickers).
 
-PRODUCT CATALOG & CURRENT PRICES:
+PRODUCT CATALOG & CURRENT PRICES (Live Database):
 {products_text}
 
 READY DESIGN COLLECTIONS & STYLES (Customers can pick ready designs or upload custom photos):
-{get_designs_summary()}
+{designs_summary}
 
 IMPORTANT RULES:
 1. Always be polite, warm, and concise. Use emojis like 💛, ✨, 🏷, 🚚.

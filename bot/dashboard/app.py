@@ -1135,7 +1135,7 @@ async def add_design_api(
     description: str = Form(""),
     image: UploadFile = File(...)
 ):
-    """Add a new custom design/subproduct to designs.json and save image."""
+    """Add a new custom design/subproduct to database and save image."""
     import time
     import re
     if not title.strip():

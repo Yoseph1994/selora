@@ -17,9 +17,328 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).resolve().parent
 DB_PATH = DATA_DIR / "selora_orders.db"
-PRODUCTS_FILE = DATA_DIR / "products.json"
-DESIGNS_FILE = DATA_DIR / "designs.json"
-PORTFOLIO_FILE = DATA_DIR / "portfolio.json"
+
+# Default seed catalog, styles, and portfolio when initializing an empty database
+DEFAULT_PRODUCTS = [
+    {
+        "id": "stickers",
+        "name": "🏷 Stickers",
+        "price": 20.0,
+        "unit": "per piece",
+        "min_order": 15,
+        "description": "High-quality custom printed stickers, vibrant colors and durable finish. Minimum order: 15 pieces.",
+        "image_url": "/product-images/stickers.png",
+        "has_ready_designs": True
+    },
+    {
+        "id": "bookmarks",
+        "name": "🔖 Bookmarks",
+        "price": 50.0,
+        "unit": "per piece",
+        "min_order": 2,
+        "description": "Beautiful custom printed bookmarks for book lovers and students. Minimum order: 2 pieces.",
+        "image_url": "/product-images/bookmarks.png",
+        "has_ready_designs": True
+    },
+    {
+        "id": "business_cards",
+        "name": "💼 Business Cards",
+        "price": 10.0,
+        "unit": "per piece",
+        "min_order": 50,
+        "description": "Professional high-resolution business cards for your brand and networking. Minimum order: 50 pieces.",
+        "image_url": "/product-images/business_cards.png",
+        "has_ready_designs": True
+    },
+    {
+        "id": "polaroid",
+        "name": "📸 Polaroid Prints",
+        "price": None,
+        "unit": "per piece",
+        "min_order": 10,
+        "description": "Classic vintage-style polaroid photo prints of your personal photos and memories. Minimum order: 10 pieces.",
+        "image_url": "/product-images/polaroid.png",
+        "has_ready_designs": False
+    },
+    {
+        "id": "mini_notebook",
+        "name": "📓 Mini Notebook",
+        "price": 200.0,
+        "unit": "each",
+        "min_order": 1,
+        "description": "Compact, portable pocket-sized notebook for quick notes and sketches.",
+        "image_url": "/product-images/mini_notebook.png",
+        "has_ready_designs": True
+    },
+    {
+        "id": "notebook",
+        "name": "📔 Notebook",
+        "price": 500.0,
+        "unit": "each",
+        "min_order": 1,
+        "description": "Standard custom branded/aesthetic notebook with high quality paper.",
+        "image_url": "/product-images/notebook.png",
+        "has_ready_designs": True
+    },
+    {
+        "id": "minibook_white",
+        "name": "📖 Mini Book (White)",
+        "price": 600.0,
+        "unit": "each",
+        "min_order": 1,
+        "description": "Custom bound pocket minibook with elegant white cover. Personal photos album.",
+        "image_url": "/product-images/minibook.png",
+        "has_ready_designs": False
+    },
+    {
+        "id": "minibook_black",
+        "name": "📖 Mini Book (Black)",
+        "price": 700.0,
+        "unit": "each",
+        "min_order": 1,
+        "description": "Sleek custom bound pocket minibook with premium black cover. Personal photos album.",
+        "image_url": "/product-images/minibook.png",
+        "has_ready_designs": False
+    },
+    {
+        "id": "book_medium",
+        "name": "📖 Medium Photo Book",
+        "price": 800.0,
+        "unit": "each",
+        "min_order": 1,
+        "description": "Medium-sized custom photo book for your personal memories with high-res binding.",
+        "image_url": "/product-images/minibook.png",
+        "has_ready_designs": False
+    },
+    {
+        "id": "book_a5",
+        "name": "📖 A5 Photo Book",
+        "price": 1000.0,
+        "unit": "each",
+        "min_order": 1,
+        "description": "A5 premium custom bound photo book for personal collections and special occasions.",
+        "image_url": "/product-images/notebook.png",
+        "has_ready_designs": False
+    },
+    {
+        "id": "book_a4",
+        "name": "📖 A4 Photo Book",
+        "price": 1500.0,
+        "unit": "each",
+        "min_order": 1,
+        "description": "Large A4 luxury custom photo book for portfolios, weddings, and milestones.",
+        "image_url": "/product-images/notebook.png",
+        "has_ready_designs": False
+    },
+    {
+        "id": "mug",
+        "name": "☕ Mug",
+        "price": 1500.0,
+        "unit": "each",
+        "min_order": 1,
+        "description": "Custom printed ceramic mug, dishwasher and microwave safe. Great for gifts!",
+        "image_url": "/product-images/mug.png",
+        "has_ready_designs": True
+    },
+    {
+        "id": "puzzle",
+        "name": "🧩 Puzzle",
+        "price": 1500.0,
+        "unit": "each",
+        "min_order": 1,
+        "description": "Personalized custom photo jigsaw puzzle made from your favorite photo.",
+        "image_url": "/product-images/puzzle.png",
+        "has_ready_designs": False
+    },
+    {
+        "id": "sticker_poster_a5",
+        "name": "🟢 Sticker Poster A5",
+        "price": 40.0,
+        "unit": "per piece",
+        "min_order": 10,
+        "description": "Peel & stick wall/glass/smooth surface poster in A5 size. Minimum order: 10 pieces.",
+        "image_url": "/product-images/sticker_poster_a5.png",
+        "has_ready_designs": True
+    },
+    {
+        "id": "sticker_poster_a4",
+        "name": "🟢 Sticker Poster A4",
+        "price": 70.0,
+        "unit": "per piece",
+        "min_order": 10,
+        "description": "Peel & stick wall/glass/smooth surface poster in A4 size. Minimum order: 10 pieces.",
+        "image_url": "/product-images/sticker_poster_a4.png",
+        "has_ready_designs": True
+    }
+]
+
+DEFAULT_DESIGNS = [
+    {
+        "id": "des_stickers_1",
+        "title": "Studio Ghibli Aesthetic Pack",
+        "product_id": "stickers",
+        "product_name": "🏷 Stickers",
+        "subproduct": "Studio Ghibli Anime",
+        "category": "Anime & Ghibli",
+        "description": "Whimsical watercolor characters and scenes inspired by Miyazaki classics.",
+        "image_url": "/designs-images/des_stickers_1.png"
+    },
+    {
+        "id": "des_stickers_2",
+        "title": "Vintage Coffee & Cozy Books",
+        "product_id": "stickers",
+        "product_name": "🏷 Stickers",
+        "subproduct": "Vintage & Coffee",
+        "category": "Vintage & Aesthetic",
+        "description": "Warm muted earth tones featuring lattes, antique typewriters, and autumn leaves.",
+        "image_url": "/designs-images/des_stickers_2.png"
+    },
+    {
+        "id": "des_stickers_3",
+        "title": "Daily Wisdom & Self-Care Quotes",
+        "product_id": "stickers",
+        "product_name": "🏷 Stickers",
+        "subproduct": "Typography & Quotes",
+        "category": "Typography",
+        "description": "Modern bold typography and uplifting affirmations in warm gold and pastel colors.",
+        "image_url": "/designs-images/des_stickers_3.png"
+    },
+    {
+        "id": "des_bookmarks_1",
+        "title": "Dark Academia Library & Constellations",
+        "product_id": "bookmarks",
+        "product_name": "🔖 Bookmarks",
+        "subproduct": "Dark Academia",
+        "category": "Dark Academia",
+        "description": "Gothic arches, golden celestial star maps, and moody Renaissance oil painting textures.",
+        "image_url": "/designs-images/des_bookmarks_1.png"
+    },
+    {
+        "id": "des_bookmarks_2",
+        "title": "Pressed Wildflower Watercolor",
+        "product_id": "bookmarks",
+        "product_name": "🔖 Bookmarks",
+        "subproduct": "Floral & Botanicals",
+        "category": "Floral & Nature",
+        "description": "Delicate botanicals with pressed lavender, chamomile, and soft pastel greenery.",
+        "image_url": "/designs-images/des_bookmarks_2.png"
+    },
+    {
+        "id": "des_cards_1",
+        "title": "Monochrome Executive Clean",
+        "product_id": "business_cards",
+        "product_name": "💼 Business Cards",
+        "subproduct": "Modern Corporate",
+        "category": "Minimalist",
+        "description": "High-contrast minimalist layout ideal for tech founders, lawyers, and consultants.",
+        "image_url": "/designs-images/des_cards_1.png"
+    },
+    {
+        "id": "des_cards_2",
+        "title": "Matte Black & Gold Luxury Foil",
+        "product_id": "business_cards",
+        "product_name": "💼 Business Cards",
+        "subproduct": "Luxury & Foil",
+        "category": "Luxury",
+        "description": "Ultra-premium textured black cardstock simulation with elegant gold metallic accents.",
+        "image_url": "/designs-images/des_cards_2.png"
+    },
+    {
+        "id": "des_polaroid_1",
+        "title": "Classic White 90s Vintage Border",
+        "product_id": "polaroid",
+        "product_name": "📸 Polaroid Prints",
+        "subproduct": "Classic Vintage",
+        "category": "Vintage",
+        "description": "Authentic nostalgic instant camera frame with writable bottom margin.",
+        "image_url": "/designs-images/des_polaroid_1.png"
+    },
+    {
+        "id": "des_polaroid_2",
+        "title": "Retro Film Grain & Date Stamp",
+        "product_id": "polaroid",
+        "product_name": "📸 Polaroid Prints",
+        "subproduct": "Retro Film",
+        "category": "Retro",
+        "description": "Vintage orange date stamp in corner with subtle film emulsion texture.",
+        "image_url": "/designs-images/des_polaroid_2.png"
+    },
+    {
+        "id": "des_book_1",
+        "title": "Timeless Wedding & Couple Chronicle",
+        "product_id": "minibook_white",
+        "product_name": "📖 Mini White Cover",
+        "subproduct": "Wedding & Couple",
+        "category": "Wedding & Romance",
+        "description": "Pure white linen aesthetic with romantic typography, perfect for couples and anniversary gifts.",
+        "image_url": "/designs-images/des_book_1.png"
+    },
+    {
+        "id": "des_book_2",
+        "title": "Noir Luxury Keepsake Portfolio",
+        "product_id": "minibook_black",
+        "product_name": "📖 Mini Black Cover",
+        "subproduct": "Luxury Keepsake",
+        "category": "Luxury Portfolio",
+        "description": "Matte black cover finish for high-end photography, portfolio showcases, and moody aesthetics.",
+        "image_url": "/designs-images/des_book_2.png"
+    },
+    {
+        "id": "des_mug_1",
+        "title": "Addis Ababa Coffee Culture Ceramic",
+        "product_id": "mug",
+        "product_name": "☕ Custom Mug",
+        "subproduct": "Ethiopian Heritage",
+        "category": "Heritage & Culture",
+        "description": "Traditional average and coffee ceremony artwork printed in rich ceramic glaze.",
+        "image_url": "/designs-images/des_mug_1.png"
+    }
+]
+
+DEFAULT_PORTFOLIO = [
+    {
+        "id": "work_1",
+        "title": "Aesthetic Laptop & Bottle Stickers",
+        "category": "Stickers",
+        "description": "Die-cut waterproof vinyl stickers with holographic and matte lamination. Tested on laptops, bottles, and phone cases.",
+        "image_url": "/product-images/stickers.png"
+    },
+    {
+        "id": "work_2",
+        "title": "Hardcover Keepsake Minibooks",
+        "category": "Photo Books",
+        "description": "Pocket minibooks featuring 24 full-color photographic pages on archival luster paper with foil-stamped covers.",
+        "image_url": "/product-images/minibook.png"
+    },
+    {
+        "id": "work_3",
+        "title": "Velvet Touch Luxury Bookmarks",
+        "category": "Bookmarks",
+        "description": "Double-sided 400gsm artboard bookmarks with custom typography, tassel ribbons, and soft-touch velvet finish.",
+        "image_url": "/product-images/bookmarks.png"
+    },
+    {
+        "id": "work_4",
+        "title": "Executive Matte Business Cards",
+        "category": "Business Cards",
+        "description": "Premium 600gsm cotton business cards with spot UV gloss and rounded corners for creative agencies and professionals.",
+        "image_url": "/product-images/business_cards.png"
+    },
+    {
+        "id": "work_5",
+        "title": "Custom Ceramic Celebration Mugs",
+        "category": "Mugs",
+        "description": "Glossy high-definition dye sublimation mugs with custom illustrations, photos, and personalized names.",
+        "image_url": "/product-images/mug.png"
+    },
+    {
+        "id": "work_6",
+        "title": "Personalized 120-Piece Photo Puzzle",
+        "category": "Puzzles",
+        "description": "Glossy cardboard photo puzzle in a custom presentation gift box for family anniversaries and birthdays.",
+        "image_url": "/product-images/puzzle.png"
+    }
+]
 
 def get_db_url() -> Optional[str]:
     url = os.getenv("DATABASE_URL", "").strip()
@@ -250,10 +569,8 @@ def init_db():
         cursor.execute(q("SELECT COUNT(*) FROM products", is_pg))
         count_row = cursor.fetchone()
         count = count_row[0] if not is_pg else (list(count_row.values())[0] if isinstance(count_row, dict) else count_row[0])
-        if count == 0 and PRODUCTS_FILE.exists():
-            with open(PRODUCTS_FILE, "r", encoding="utf-8") as pf:
-                pdata = json.load(pf)
-            for p in pdata.get("products", []):
+        if count == 0:
+            for p in DEFAULT_PRODUCTS:
                 cursor.execute(
                     q("INSERT INTO products (id, name, price, unit, min_order, description, image_url, has_ready_designs, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", is_pg),
                     (
@@ -269,7 +586,7 @@ def init_db():
                     )
                 )
             conn.commit()
-            logger.info("Seeded products table in database from products.json")
+            logger.info("Seeded products table in database with default catalog")
     except Exception as e:
         logger.warning(f"Product seed notice: {e}")
 
@@ -278,10 +595,8 @@ def init_db():
         cursor.execute(q("SELECT COUNT(*) FROM designs", is_pg))
         count_row = cursor.fetchone()
         count = count_row[0] if not is_pg else (list(count_row.values())[0] if isinstance(count_row, dict) else count_row[0])
-        if count == 0 and DESIGNS_FILE.exists():
-            with open(DESIGNS_FILE, "r", encoding="utf-8") as df:
-                ddata = json.load(df)
-            for d in ddata.get("designs", []):
+        if count == 0:
+            for d in DEFAULT_DESIGNS:
                 cursor.execute(
                     q("INSERT INTO designs (id, product_id, product_name, subproduct, category, title, description, image_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", is_pg),
                     (
@@ -297,7 +612,7 @@ def init_db():
                     )
                 )
             conn.commit()
-            logger.info("Seeded designs table in database from designs.json")
+            logger.info("Seeded designs table in database with default styles")
     except Exception as e:
         logger.warning(f"Design seed notice: {e}")
 
@@ -306,10 +621,8 @@ def init_db():
         cursor.execute(q("SELECT COUNT(*) FROM portfolio", is_pg))
         count_row = cursor.fetchone()
         count = count_row[0] if not is_pg else (list(count_row.values())[0] if isinstance(count_row, dict) else count_row[0])
-        if count == 0 and PORTFOLIO_FILE.exists():
-            with open(PORTFOLIO_FILE, "r", encoding="utf-8") as portf:
-                portdata = json.load(portf)
-            for item in portdata.get("items", []):
+        if count == 0:
+            for item in DEFAULT_PORTFOLIO:
                 cursor.execute(
                     q("INSERT INTO portfolio (id, title, category, description, image_url, created_at) VALUES (?, ?, ?, ?, ?, ?)", is_pg),
                     (
@@ -322,7 +635,7 @@ def init_db():
                     )
                 )
             conn.commit()
-            logger.info("Seeded portfolio table in database from portfolio.json")
+            logger.info("Seeded portfolio table in database with showcase items")
     except Exception as e:
         logger.warning(f"Portfolio seed notice: {e}")
 
@@ -821,18 +1134,6 @@ def update_product_price(product_id: str, new_price: float) -> bool:
     try:
         cursor.execute(q("UPDATE products SET price = ? WHERE id = ?", is_pg), (new_price, product_id))
         conn.commit()
-        try:
-            if PRODUCTS_FILE.exists():
-                with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                for p in data.get("products", []):
-                    if p["id"] == product_id:
-                        p["price"] = new_price
-                        break
-                with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
         return cursor.rowcount > 0
     except Exception as e:
         logger.error(f"Failed to update product price in DB: {e}")
@@ -847,18 +1148,6 @@ def update_product_image(product_id: str, image_url: str) -> bool:
     try:
         cursor.execute(q("UPDATE products SET image_url = ? WHERE id = ?", is_pg), (image_url, product_id))
         conn.commit()
-        try:
-            if PRODUCTS_FILE.exists():
-                with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                for p in data.get("products", []):
-                    if p["id"] == product_id:
-                        p["image_url"] = image_url
-                        break
-                with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
         return cursor.rowcount > 0
     except Exception as e:
         logger.error(f"Failed to update product image in DB: {e}")
@@ -914,16 +1203,6 @@ def add_product(
             "has_ready_designs": bool(has_ready_designs)
         }
 
-        try:
-            if PRODUCTS_FILE.exists():
-                with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-                    pdata = json.load(f)
-                pdata.setdefault("products", []).append(new_item)
-                with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-                    json.dump(pdata, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
-
         logger.info(f"Successfully added new product to DB: {product_id} ({name})")
         return new_item
     except Exception as e:
@@ -939,15 +1218,6 @@ def delete_product(product_id: str) -> bool:
     try:
         cursor.execute(q("DELETE FROM products WHERE id = ?", is_pg), (product_id,))
         conn.commit()
-        try:
-            if PRODUCTS_FILE.exists():
-                with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-                    pdata = json.load(f)
-                pdata["products"] = [p for p in pdata.get("products", []) if p["id"] != product_id]
-                with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-                    json.dump(pdata, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
         return cursor.rowcount > 0
     except Exception as e:
         logger.error(f"Failed to delete product from DB: {e}")
@@ -1094,16 +1364,6 @@ def add_design(
             "created_at": created_at
         }
 
-        try:
-            if DESIGNS_FILE.exists():
-                with open(DESIGNS_FILE, "r", encoding="utf-8") as f:
-                    ddata = json.load(f)
-                ddata.setdefault("designs", []).append(new_design)
-                with open(DESIGNS_FILE, "w", encoding="utf-8") as f:
-                    json.dump(ddata, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
-
         return new_design
     except Exception as e:
         logger.error(f"Failed to add design to DB: {e}")
@@ -1118,15 +1378,6 @@ def delete_design(design_id: str) -> bool:
     try:
         cursor.execute(q("DELETE FROM designs WHERE id = ?", is_pg), (design_id,))
         conn.commit()
-        try:
-            if DESIGNS_FILE.exists():
-                with open(DESIGNS_FILE, "r", encoding="utf-8") as f:
-                    ddata = json.load(f)
-                ddata["designs"] = [d for d in ddata.get("designs", []) if d.get("id") != design_id]
-                with open(DESIGNS_FILE, "w", encoding="utf-8") as f:
-                    json.dump(ddata, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
         return cursor.rowcount > 0
     except Exception as e:
         logger.error(f"Failed to delete design from DB: {e}")
@@ -1205,11 +1456,7 @@ def get_portfolio_items() -> List[Dict[str, Any]]:
         conn.close()
 
 def save_portfolio_items(items: List[Dict[str, Any]]):
-    try:
-        with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
-            json.dump({"items": items}, f, indent=2, ensure_ascii=False)
-    except Exception:
-        pass
+    pass
 
 def add_portfolio_item(title: str, category: str, description: str, image_url: str) -> Dict[str, Any]:
     """Add a new past work item to portfolio table in DB."""
@@ -1224,7 +1471,7 @@ def add_portfolio_item(title: str, category: str, description: str, image_url: s
         )
         conn.commit()
 
-        item = {
+        return {
             "id": new_id,
             "title": title.strip(),
             "category": category.strip(),
@@ -1232,18 +1479,6 @@ def add_portfolio_item(title: str, category: str, description: str, image_url: s
             "image_url": image_url.strip(),
             "created_at": created_at
         }
-
-        try:
-            if PORTFOLIO_FILE.exists():
-                with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
-                    pdata = json.load(f)
-                pdata.setdefault("items", []).append(item)
-                with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
-                    json.dump(pdata, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
-
-        return item
     except Exception as e:
         logger.error(f"Failed to add portfolio item to DB: {e}")
         raise e
@@ -1257,15 +1492,6 @@ def delete_portfolio_item(item_id: str) -> bool:
     try:
         cursor.execute(q("DELETE FROM portfolio WHERE id = ?", is_pg), (item_id,))
         conn.commit()
-        try:
-            if PORTFOLIO_FILE.exists():
-                with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
-                    pdata = json.load(f)
-                pdata["items"] = [i for i in pdata.get("items", []) if i.get("id") != item_id]
-                with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
-                    json.dump(pdata, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
         return cursor.rowcount > 0
     except Exception as e:
         logger.error(f"Failed to delete portfolio item from DB: {e}")

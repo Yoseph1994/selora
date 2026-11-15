@@ -197,7 +197,7 @@
 
       <!-- Products Grid -->
       <div id="products-grid" class="grid grid-cols-2 gap-3.5 pt-1">
-        <!-- Injected dynamically via JS from products.json -->
+        <!-- Injected dynamically via JS from database -->
       </div>
     </section>
 
@@ -244,7 +244,7 @@
         </div>
       </div>
       <div id="designs-grid" class="grid grid-cols-2 gap-3.5 pt-1">
-        <!-- Injected dynamically via JS from designs.json -->
+        <!-- Injected dynamically via JS from database -->
       </div>
     </section>
 
@@ -1483,22 +1483,6 @@
       if (activeBtn) {
         activeBtn.className = "port-cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-bold bg-amber-400 text-slate-950 shadow-sm text-xs";
       }
-
-      if (cat === 'all') {
-        renderPortfolio(PORTFOLIO);
-      } else {
-        const filtered = PORTFOLIO.filter(item => {
-          const c = (item.category || '').toLowerCase();
-          const t = (item.title || '').toLowerCase();
-          if (cat === 'stickers') return c.includes('sticker') || t.includes('sticker');
-          if (cat === 'books') return c.includes('book') || t.includes('book');
-          if (cat === 'cards') return c.includes('card') || c.includes('bookmark') || t.includes('card') || t.includes('bookmark');
-          if (cat === 'merch') return c.includes('mug') || c.includes('puzzle') || t.includes('mug') || t.includes('puzzle');
-          return false;
-        });
-        renderPortfolio(filtered);
-      }
-    }
 
       if (cat === 'all') {
         renderPortfolio(PORTFOLIO);
