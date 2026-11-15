@@ -1,3 +1,4 @@
+import os
 import asyncio
 import logging
 import sys
@@ -47,9 +48,13 @@ def find_available_port(start_port: int = 8000, max_attempts: int = 10) -> int:
 
 async def run_dashboard():
     """Run dynamic web dashboard on background server with automatic port recovery."""
-    target_port = find_available_port(config.DASHBOARD_PORT)
-    if target_port != config.DASHBOARD_PORT:
-        logger.warning(f"⚠️ Port {config.DASHBOARD_PORT} was occupied, running Dashboard on port {target_port}")
+    port_env = os.getenv("PORT")
+    if port_env:
+        target_port = int(port_env)
+    else:
+        target_port = find_available_port(config.DASHBOARD_PORT)
+        if target_port != config.DASHBOARD_PORT:
+            logger.warning(f"⚠️ Port {config.DASHBOARD_PORT} was occupied, running Dashboard on port {target_port}")
 
     logger.info(f"🌐 Dynamic Web Dashboard is LIVE at: http://localhost:{target_port}")
     uvicorn_config = uvicorn.Config(

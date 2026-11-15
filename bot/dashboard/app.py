@@ -40,11 +40,26 @@ app.mount("/product-images", StaticFiles(directory=str(PRODUCT_IMAGES_DIR)), nam
 app.mount("/designs-images", StaticFiles(directory=str(DESIGNS_IMAGES_DIR)), name="designs_images")
 
 # Mount Next.js Telegram Mini App
-MINIAPP_OUT_DIR = BASE_DIR.parent.parent / "miniapp" / "out"
-if MINIAPP_OUT_DIR.exists():
+MINIAPP_CANDIDATES = [
+    BASE_DIR.parent.parent / "miniapp" / "out",
+    BASE_DIR.parent / "miniapp_out",
+    BASE_DIR.parent / "miniapp" / "out",
+    BASE_DIR / "miniapp_out"
+]
+MINIAPP_OUT_DIR = None
+for candidate in MINIAPP_CANDIDATES:
+    if candidate.exists() and (candidate / "index.html").exists():
+        MINIAPP_OUT_DIR = candidate
+        break
+
+if MINIAPP_OUT_DIR:
     @app.get("/miniapp")
     async def miniapp_noslash():
         return RedirectResponse(url="/miniapp/", status_code=301)
+
+    @app.get("/miniapp/")
+    async def miniapp_slash_index():
+        return FileResponse(MINIAPP_OUT_DIR / "index.html")
 
     app.mount("/miniapp", StaticFiles(directory=str(MINIAPP_OUT_DIR), html=True), name="miniapp")
 
