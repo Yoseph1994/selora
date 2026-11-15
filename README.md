@@ -1,98 +1,27 @@
-# 💛 Selora Prints — Telegram Bot & Dynamic Dashboard
+# 💛 Selora Prints — Multi-Platform Architecture
 
-A complete automated business system for **Selora Prints**, featuring:
-- **50% Pre-payment Deposit & Receipt Verification Flow**
-- **1-Click Telegram Approval Buttons**
-- **Dynamic Web Dashboard** (Real-time orders, payment receipts viewer, and dynamic price manager)
-- **Telegram Premium Business Assistant** (Auto-replies to DMs on the owner's personal account)
-- **Standalone Customer Bot** (@SeloraPrintsBot)
-- **Multilingual AI Assistant** (English & Amharic powered by Gemini)
-
----
-
-## 💰 50% Pre-payment & Approval Workflow
+This repository contains two dedicated applications for Selora Prints:
 
 ```
-Customer Places Order
-        │
-        ▼
-Bot prompts 50% Advance Deposit (shows CBE & Telebirr account numbers)
-        │
-        ▼
-Customer transfers deposit & uploads payment screenshot
-        │
-        ▼
-Bot saves order (Code: SP-1001) & stores receipt image
-        │
-        ▼
-┌──────────────────────────────────────────────────────────────┐
-│  Alert sent to Owner's Telegram & Dynamic Web Dashboard:     │
-│  • View receipt image                                        │
-│  • [✅ Approve Payment]  [❌ Reject]                        │
-└───────────────────────────────┬──────────────────────────────┘
-                                │
-                        Owner Approves
-                                │
-                                ▼
-Customer receives instant celebratory confirmation:
-"🎉 Your 50% deposit for Order #SP-1001 is verified! Order is now in production!"
+Kebrons/
+├── bot/        # Python Aiogram 3 Bot + FastAPI Web Dashboard + SQLite/Postgres DB
+└── miniapp/    # Telegram Serverless Next.js 14 Mini App (@tgcloud)
 ```
 
 ---
 
-## 🌐 Dynamic Web Dashboard
-
-Run `main.py` or double-click `start_selora.bat`, then open:
-👉 **`http://localhost:8000`**
-
-### 🔒 Dashboard Authentication
-The dashboard is password-protected.
-- **Default Username:** `admin`
-- **Default Password:** `selora2026`
-*(You can customize these anytime in [.env](file:///c:/Users/hp/Desktop/Kebrons/.env) via `DASHBOARD_USERNAME` and `DASHBOARD_PASSWORD`)*
-
-### Features on the Dashboard:
-1. **Live Order Pipeline:** Filter by *Review Pending*, *In Production*, *Completed*, or *Cancelled*.
-2. **Receipt Inspector:** Click **"View Receipt"** to view the customer's full-resolution payment screenshot modal.
-3. **1-Click Actions:** Approve deposit, mark completed, or cancel with automatic customer notification in Telegram!
-4. **Dynamic Price Manager:** Change any product price live. Changes sync instantly across the Telegram Bot and AI without restarting!
-5. **Export CSV:** One-click spreadsheet download for bookkeeping.
+## 🤖 1. The Bot & Web Dashboard (`/bot`)
+The full-featured Python printing business bot and staff operations dashboard.
+- **Aiogram 3** Telegram bot with interactive product ordering, 50% deposit receipts, design galleries, and bilingual support (EN/አማ).
+- **FastAPI Web Dashboard** for production staff with separate columns (Items Ordered, Artwork/Design, Customer Notes, Pricing, Delivery, Status, Actions), packing slip printing, invoice generation, sales analytics with Chart.js, and admin security settings.
+- **Deploy:** Ready for Render, Docker, or local execution (`cd bot && python main.py`).
 
 ---
 
-## 🚀 Quick Setup
-
-### 1. Configure `.env`
-Edit [.env](file:///c:/Users/hp/Desktop/Kebrons/.env):
-```ini
-# Bot Token from @BotFather
-BOT_TOKEN=123456789:ABC...
-
-# Owner's numeric Telegram User ID (get from @userinfobot)
-ADMIN_CHAT_ID=123456789
-
-# Owner's Telegram username
-ADMIN_USERNAME=selora_prints
-
-# 50% Pre-payment Accounts
-PAYMENT_CBE_ACCOUNT=1000123456789
-PAYMENT_TELEBIRR=0911223344
-PAYMENT_ACCOUNT_NAME=Selora Prints
-PAYMENT_DEPOSIT_PERCENT=50
-
-# Optional: Google Gemini API key for smart AI answers
-GEMINI_API_KEY=AIzaSy...
-```
-
-### 2. Connect Telegram Business (Telegram Premium)
-1. On the phone with Telegram Premium, open **Settings** > **Telegram Business** > **Chatbots**.
-2. Select your bot (`@SeloraPrintsBot`).
-3. Turn on **"Reply to messages"**.
-4. Save!
-
-### 3. Start Both Services
-Double-click **`start_selora.bat`** or run:
-```powershell
-python main.py
-```
-Both the Telegram Bot and the Dynamic Web Dashboard (`http://localhost:8000`) will be live!
+## 📱 2. The Next.js Telegram Serverless Mini App (`/miniapp`)
+A modern, zero-hosting-cost Telegram Mini App built on **Next.js 14** and **Telegram Native Serverless (`@tgcloud`)**.
+- Built with **Next.js**, **React 18**, and **Tailwind CSS**.
+- Runs directly on Telegram's native V8 isolate cloud — no external VPS or cloud provider bills.
+- Built-in SQLite database powered by `@tgcloud/sdk`.
+- Complete catalog, real-time 50% deposit calculations, CBE/Telebirr payment copy, GPS pin capture, and live order tracking pipeline.
+- **Deploy:** `cd miniapp && npm run deploy` (automatically runs `next build && tgcloud push`).

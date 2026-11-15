@@ -1,19 +1,23 @@
-# Sensitive credentials
-.env
-
-# Python cache & artifacts
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.sqlite3
-*.db
-*.db-journal
-
-# Virtual environments
-venv/
+*.so
+.Python
 env/
-.venv/
+venv/
+ENV/
+.env
 
-# Temporary exports
-data/selora_orders_export.csv
+# Database & artifacts
+*.db
+*.sqlite3
+*.csv
 
+# Node & Next.js
+node_modules/
+.next/
+out/
+.tgcloud/
+.DS_Store
+*.log

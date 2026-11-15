@@ -1,0 +1,6 @@
+{
+  // Telegram Serverless configuration for Selora Prints Next.js Mini App
+  "static": {
+    "source": "out"
+  }
+}
