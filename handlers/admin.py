@@ -42,10 +42,14 @@ async def handle_payment_approval(callback: types.CallbackQuery):
     )
     if len(new_caption) > 1020:
         new_caption = new_caption[:1015] + "..."
+    ready_btn = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📦 Mark Ready & Send Delivery DM", callback_data=f"admin_mark_ready:{order_code}")],
+        [InlineKeyboardButton(text="💬 DM Customer", url=f"tg://user?id={order.get('user_id')}")]
+    ])
     await callback.message.edit_caption(
         caption=new_caption,
         parse_mode="Markdown",
-        reply_markup=None
+        reply_markup=ready_btn
     )
 
     # Notify Customer
@@ -70,6 +74,28 @@ async def handle_payment_approval(callback: types.CallbackQuery):
     except Exception as e:
         logger.error(f"Failed to notify customer {order['user_id']}: {e}")
         await callback.answer("✅ Order approved (could not notify customer chat).")
+
+@router.callback_query(F.data.startswith("admin_mark_ready:"))
+async def handle_admin_mark_ready(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("🔒 Admin only action.", show_alert=True)
+        return
+
+    order_code = callback.data.split(":")[1]
+    order = database.get_order_by_code(order_code)
+    if not order:
+        await callback.answer("Order not found.", show_alert=True)
+        return
+
+    from handlers.order import send_ready_for_delivery_dm
+    database.update_order_status(order_code, "ready_for_delivery")
+
+    ok = await send_ready_for_delivery_dm(callback.bot, order)
+    if ok:
+        await callback.message.answer(f"✅ Order `{order_code}` marked Ready! Delivery DM sent to customer.", parse_mode="Markdown")
+        await callback.answer("Delivery DM sent to customer!")
+    else:
+        await callback.answer("Order marked ready, but could not DM customer.", show_alert=True)
 
 @router.callback_query(F.data.startswith("pay_reject:"))
 async def handle_payment_rejection(callback: types.CallbackQuery):

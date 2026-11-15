@@ -45,11 +45,12 @@ class OrderFSM(StatesGroup):
     waiting_for_design_mode = State()
     waiting_for_photos = State()
     waiting_for_deadline = State()
-    waiting_for_delivery_type = State()
     waiting_for_recipient_name = State()
     waiting_for_phone = State()
-    waiting_for_location = State()
     waiting_for_payment_receipt = State()
+
+class PostDeliveryFSM(StatesGroup):
+    waiting_for_address = State()
 
 # ─── Helpers ──────────────────────────────────────────────────
 STEP_TOTAL = 5
@@ -902,7 +903,7 @@ async def callback_cal_day(callback: types.CallbackQuery, state: FSMContext):
     date_label = selected.strftime("%a, %b %d")
 
     await state.update_data(deadline=date_label, rush_fee=rush_fee)
-    await state.set_state(OrderFSM.waiting_for_delivery_type)
+    await state.set_state(OrderFSM.waiting_for_recipient_name)
 
     if rush_fee > 0:
         confirm_text = f"✓ Completion Date: *{date_label}* _(⚡ Urgent Rush +200 ETB)_"
@@ -911,45 +912,18 @@ async def callback_cal_day(callback: types.CallbackQuery, state: FSMContext):
 
     await callback.message.edit_text(confirm_text, parse_mode="Markdown")
 
+    user = callback.from_user
     await callback.message.answer(
-        _step_header(5, "Delivery & Payment", "📦") + "\n"
+        _step_header(5, "Contact Information", "👤") + "\n"
         "─────────────────────\n"
-        "How would you like to receive your prints?\n\n"
-        "▸ *Store Pickup:* Free at our Ledeta store\n"
-        "▸ *Yango Delivery:* Across Addis Ababa",
+        "Who is this order for?\n\n"
+        "👉 *Tap below to confirm recipient name:*",
         parse_mode="Markdown",
-        reply_markup=get_delivery_choice_keyboard()
+        reply_markup=get_recipient_name_keyboard(user.full_name)
     )
     await callback.answer()
 
-# ─── DELIVERY SELECTION & DISPATCH INTAKE ─────────────────────
-
-@router.callback_query(OrderFSM.waiting_for_delivery_type, F.data.startswith("delivery_choice:"))
-async def process_delivery_choice(callback: types.CallbackQuery, state: FSMContext):
-    choice = callback.data.split(":")[1]
-    user = callback.from_user
-    if choice == "pickup":
-        await state.update_data(
-            delivery_type="Store Pickup (Ledeta - Free)",
-            delivery_location="Ledeta Store (In-Person Pickup)",
-            recipient_name=user.full_name,
-            phone="Store Pickup / In Person"
-        )
-        await callback.message.edit_text("✓ *Store Pickup (Ledeta — Free)*", parse_mode="Markdown")
-        await show_payment_summary(callback.message, state)
-    else:
-        await state.update_data(delivery_type="Yango / Feres / RIDE Delivery")
-        await state.set_state(OrderFSM.waiting_for_recipient_name)
-        await callback.message.edit_text("✓ *Yango / Feres / RIDE Delivery*", parse_mode="Markdown")
-        await callback.message.answer(
-            "╭─── 👤 Recipient Info ───╮\n"
-            "│  1 of 3 · Recipient Name\n"
-            "╰─────────────────────────╯\n\n"
-            "Who will meet the driver to receive the package?",
-            parse_mode="Markdown",
-            reply_markup=get_recipient_name_keyboard(user.full_name)
-        )
-    await callback.answer()
+# ─── CONTACT INFORMATION INTAKE (PRE-PAYMENT) ─────────────────
 
 @router.callback_query(OrderFSM.waiting_for_recipient_name, F.data.startswith("recip_name:"))
 async def callback_recipient_name(callback: types.CallbackQuery, state: FSMContext):
@@ -961,10 +935,10 @@ async def callback_recipient_name(callback: types.CallbackQuery, state: FSMConte
         await state.set_state(OrderFSM.waiting_for_phone)
         await callback.message.answer(
             "╭─── 📱 Contact Phone ───╮\n"
-            "│  2 of 3 · Driver Contact\n"
+            "│  Order & Driver Contact\n"
             "╰─────────────────────────╯\n\n"
-            "The driver will call this number on arrival.\n\n"
-            "Tap *'📱 Share Phone Number'* or type your 10-digit number:",
+            "Please provide a phone number for order updates and driver coordination:\n\n"
+            "Tap *'📱 Share Phone Number'* or type your 10-digit number (e.g. `0911223344`):",
             parse_mode="Markdown",
             reply_markup=get_phone_request_keyboard()
         )
@@ -986,10 +960,10 @@ async def process_custom_recipient_name(message: types.Message, state: FSMContex
     await state.set_state(OrderFSM.waiting_for_phone)
     await message.answer(
         "╭─── 📱 Contact Phone ───╮\n"
-        "│  2 of 3 · Driver Contact\n"
+        "│  Order & Driver Contact\n"
         "╰─────────────────────────╯\n\n"
-        "The driver will call this number on arrival.\n\n"
-        "Tap *'📱 Share Phone Number'* or type your 10-digit number:",
+        "Please provide a phone number for order updates and driver coordination:\n\n"
+        "Tap *'📱 Share Phone Number'* or type your 10-digit number (e.g. `0911223344`):",
         parse_mode="Markdown",
         reply_markup=get_phone_request_keyboard()
     )
@@ -999,19 +973,19 @@ async def process_phone_contact(message: types.Message, state: FSMContext):
     phone = message.contact.phone_number
     if not phone.startswith("+") and len(phone) == 10 and phone.startswith("0"):
         phone = f"+251{phone[1:]}"
-    await state.update_data(phone=phone)
-    await message.answer(f"✓ Contact Phone: *{phone}*", parse_mode="Markdown")
-    await state.set_state(OrderFSM.waiting_for_location)
-    await message.answer(
-        "╭─── 📍 Delivery Location ───╮\n"
-        "│  3 of 3 · Drop-off Point\n"
-        "╰──────────────────────────╯\n\n"
-        "▸ 🎯 *Recommended:* Tap *'📍 Send Exact GPS Pin'*\n"
-        "▸ 🏙 Or select your sub-city / area\n"
-        "▸ ✏ Or type your building / street name",
-        parse_mode="Markdown",
-        reply_markup=get_location_dispatch_keyboard()
+    await state.update_data(
+        phone=phone,
+        delivery_type="Pending Dispatch (Coordinated when Ready)",
+        delivery_location="To be selected upon order completion"
     )
+    await message.answer(
+        f"✓ Contact Phone: *{phone}*\n\n"
+        "📦 *Delivery Coordination Notice:*\n"
+        "_To ensure fast & accurate dispatch, your delivery method (Free Store Pickup vs. Yango/Feres Taxi Delivery) will be chosen once your items are printed and ready for pickup/delivery!_",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await show_payment_summary(message, state)
 
 @router.message(OrderFSM.waiting_for_phone, F.text)
 async def process_phone_text(message: types.Message, state: FSMContext):
@@ -1019,75 +993,18 @@ async def process_phone_text(message: types.Message, state: FSMContext):
         await cancel_order(message, state)
         return
     phone = message.text.strip()
-    await state.update_data(phone=phone)
-    await message.answer(f"✓ Contact Phone: *{phone}*", parse_mode="Markdown")
-    await state.set_state(OrderFSM.waiting_for_location)
-    await message.answer(
-        "╭─── 📍 Delivery Location ───╮\n"
-        "│  3 of 3 · Drop-off Point\n"
-        "╰──────────────────────────╯\n\n"
-        "▸ 🎯 *Recommended:* Tap *'📍 Send Exact GPS Pin'*\n"
-        "▸ 🏙 Or select your sub-city / area\n"
-        "▸ ✏ Or type your building / street name",
-        parse_mode="Markdown",
-        reply_markup=get_location_dispatch_keyboard()
+    await state.update_data(
+        phone=phone,
+        delivery_type="Pending Dispatch (Coordinated when Ready)",
+        delivery_location="To be selected upon order completion"
     )
-
-@router.message(OrderFSM.waiting_for_location, F.location)
-async def process_location_gps(message: types.Message, state: FSMContext):
-    lat = message.location.latitude
-    lon = message.location.longitude
-    maps_url = f"https://www.google.com/maps?q={lat},{lon}"
-    loc_text = f"GPS Pin ({lat:.4f}, {lon:.4f})"
-    await state.update_data(delivery_location=loc_text, delivery_maps_url=maps_url)
     await message.answer(
-        f"🎯 *GPS Pin Received!*\n[Open in Google Maps]({maps_url})",
+        f"✓ Contact Phone: *{phone}*\n\n"
+        "📦 *Delivery Coordination Notice:*\n"
+        "_To ensure fast & accurate dispatch, your delivery method (Free Store Pickup vs. Yango/Feres Taxi Delivery) will be chosen once your items are printed and ready for pickup/delivery!_",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
-    await show_payment_summary(message, state)
-
-@router.message(OrderFSM.waiting_for_location, F.text == "🏙️ Choose Addis Ababa Sub-City / Area")
-async def process_location_subcity_prompt(message: types.Message, state: FSMContext):
-    await message.answer(
-        "🏙 *Select your sub-city / area:*",
-        parse_mode="Markdown",
-        reply_markup=get_subcities_keyboard()
-    )
-
-@router.callback_query(OrderFSM.waiting_for_location, F.data.startswith("subcity:"))
-async def process_subcity_choice(callback: types.CallbackQuery, state: FSMContext):
-    subcity = callback.data.split(":", 1)[1]
-    if subcity == "back":
-        await callback.message.edit_text("📍 Tap an option below to set your delivery location:")
-        await callback.answer()
-        return
-
-    loc_text = f"{subcity}, Addis Ababa"
-    await state.update_data(delivery_location=loc_text)
-    await callback.message.edit_text(f"✓ Location: *{loc_text}*", parse_mode="Markdown")
-    await callback.message.answer("_Preparing payment summary..._", parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
-    await show_payment_summary(callback.message, state)
-    await callback.answer()
-
-@router.message(OrderFSM.waiting_for_location, F.text == "✏️ Type Landmark / Street Name")
-async def process_location_type_prompt(message: types.Message, state: FSMContext):
-    await message.answer(
-        "✏ *Type your street, building, or landmark:*\n\n_e.g., Bole Medhanialem near Edna Mall, Floor 3_",
-        parse_mode="Markdown"
-    )
-
-@router.message(OrderFSM.waiting_for_location, F.text)
-async def process_location_text(message: types.Message, state: FSMContext):
-    if message.text in ["❌ Cancel", "❌ Cancel Order"]:
-        await cancel_order(message, state)
-        return
-    if message.text in ["🏙️ Choose Addis Ababa Sub-City / Area", "✏️ Type Landmark / Street Name"]:
-        return
-
-    loc_text = message.text.strip()
-    await state.update_data(delivery_location=loc_text)
-    await message.answer(f"✓ Location: *{loc_text}*", parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
     await show_payment_summary(message, state)
 
 # ─── PAYMENT SUMMARY & VERIFICATION ──────────────────────────
@@ -1113,9 +1030,6 @@ async def show_payment_summary(message: types.Message, state: FSMContext):
 
     recip_str = data.get('recipient_name', 'Customer')
     phone_str = data.get('phone', 'N/A')
-    loc_display = data.get('delivery_location', 'Ledeta Store')
-    if data.get('delivery_maps_url'):
-        loc_display += f" — [GPS]({data.get('delivery_maps_url')})"
 
     payment_prompt = (
         "╭─── 💳 Order Summary ───╮\n"
@@ -1125,24 +1039,28 @@ async def show_payment_summary(message: types.Message, state: FSMContext):
         f"│  Needed by: {data.get('deadline')}\n"
         "│\n"
         f"│  Recipient: {recip_str}\n"
-        f"│  Phone: {phone_str}\n"
-        f"│  Delivery: {data.get('delivery_type')}\n"
-        f"│  Location: {loc_display}\n"
+        f"│  Contact Phone: {phone_str}\n"
+        "│  Delivery: Coordinated when ready\n"
         "│\n"
         "╰─────────────────────────╯\n\n"
         "─── Cost Breakdown ───\n\n"
         f"▸ Items Subtotal: {subtotal} ETB\n"
         f"{fee_lines}"
-        f"▸ *Total:* {total} ETB\n\n"
-        f"✦ *50% Deposit Due:* *{deposit} ETB*\n"
-        f"_Remaining {remaining} ETB paid upon pickup/delivery_\n\n"
-        "─── Payment Details ───\n\n"
-        f"🏦 *CBE:* `{config.PAYMENT_CBE_ACCOUNT}`\n"
-        f"Name: *{config.PAYMENT_CBE_NAME}*\n\n"
-        f"📱 *Telebirr:* `{config.PAYMENT_TELEBIRR}`\n"
-        f"Name: *{config.PAYMENT_TELEBIRR_NAME}*\n\n"
+        f"▸ *Total Order Price:* {total} ETB\n\n"
+        f"✦ *50% Advance Deposit Due:* *{deposit} ETB*\n"
+        f"_Remaining {remaining} ETB paid upon pickup or delivery_\n\n"
+        "ℹ️ *Delivery Fee Policy:*\n"
+        "• 🏪 *Store Pickup (Ledeta):* 100% Free\n"
+        "• 🚚 *Doorstep Taxi Delivery:* Driver fare depends on transportation distance and taxi rate (~300 – 1,000 ETB all-inclusive via Yango/Feres/RIDE), paid directly to the driver upon delivery. If you prefer to avoid the delivery fee, you are warmly welcome to visit our Ledeta office for free pickup!\n\n"
+        "─── Payment Accounts ───\n\n"
+        f"🏦 *CBE (Commercial Bank of Ethiopia):*\n"
+        f"`{config.PAYMENT_CBE_ACCOUNT}`\n"
+        f"Account Name: *{config.PAYMENT_CBE_NAME}*\n\n"
+        f"📱 *Telebirr:*\n"
+        f"`{config.PAYMENT_TELEBIRR}`\n"
+        f"Account Name: *{config.PAYMENT_TELEBIRR_NAME}*\n\n"
         "─────────────────────\n"
-        "Transfer the deposit, then upload your receipt screenshot below:"
+        "Transfer the 50% deposit, then upload your screenshot below:"
     )
 
     await message.answer(payment_prompt, parse_mode="Markdown", reply_markup=get_cancel_keyboard())
@@ -1286,3 +1204,366 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
             logger.error(f"Failed to alert admin of new order: {e}")
 
     await state.clear()
+
+
+# ─── POST-PRODUCTION DELIVERY COORDINATION & DM INTAKE ────────
+
+def get_post_delivery_choice_keyboard(order_code: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🏪 Free Store Pickup (Ledeta)", callback_data=f"post_del:pickup:{order_code}")
+        ],
+        [
+            InlineKeyboardButton(text="🚚 Doorstep Taxi Delivery (Yango/Feres)", callback_data=f"post_del:taxi:{order_code}")
+        ]
+    ])
+
+def get_post_taxi_location_keyboard(order_code: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🏙️ Select Sub-City / Area", callback_data=f"post_subcity_pick:{order_code}")
+        ],
+        [
+            InlineKeyboardButton(text="✏️ Type Building / Street Name", callback_data=f"post_type_addr:{order_code}")
+        ],
+        [
+            InlineKeyboardButton(text="🏪 Switch to Free Store Pickup", callback_data=f"post_del:pickup:{order_code}")
+        ]
+    ])
+
+def get_post_subcities_keyboard(order_code: str) -> InlineKeyboardMarkup:
+    subcities = [
+        "Bole / Medhanialem", "Kazanchis / Bambis",
+        "CMC / Ayat / Summit", "Piassa / Arat Kilo",
+        "Sarbet / Bisrate Gabriel", "Megenagna / 22",
+        "Gerji / Imperial", "Lebu / Jemo",
+        "Mexico / Ledeta", "4 Kilo / 6 Kilo",
+        "Gotera / Saris", "Kera / Bulgaria"
+    ]
+    rows = []
+    for i in range(0, len(subcities), 2):
+        row = [InlineKeyboardButton(text=subcities[i], callback_data=f"post_set_sub:{order_code}:{subcities[i]}")]
+        if i + 1 < len(subcities):
+            row.append(InlineKeyboardButton(text=subcities[i+1], callback_data=f"post_set_sub:{order_code}:{subcities[i+1]}"))
+        rows.append(row)
+    rows.append([InlineKeyboardButton(text="◀ Back", callback_data=f"post_del:taxi:{order_code}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+async def send_ready_for_delivery_dm(bot, order: dict) -> bool:
+    """Send interactive DM to customer when order is printed and ready for pickup/delivery."""
+    order_code = order["order_code"]
+    user_id = order.get("user_id")
+    if not user_id:
+        return False
+
+    recip = order.get('recipient_name') or order.get('full_name') or 'Customer'
+    phone = order.get('phone') or 'N/A'
+
+    text = (
+        "🎉 *Great News! Your Order is Printed & Ready to Ship!* 💛\n\n"
+        f"🔖 *Order Code:* `{order_code}`\n"
+        f"🏷 *Items:* {order.get('items', '')}\n"
+        f"👤 *Recipient:* {recip} (`{phone}`)\n"
+        "─────────────────────\n"
+        "Your custom prints have finished drying & binding. Please choose how you would like to receive your package:\n\n"
+        "• 🏪 *Free Store Pickup:* Pick up in person at our Ledeta store (Free of charge).\n"
+        "• 🚚 *Doorstep Taxi Delivery:* Dispatched directly to your door via Yango / Feres / RIDE.\n\n"
+        "⚠️ *Delivery Fee Notice:*\n"
+        "The delivery fee depends on transportation distance and taxi rate (all inclusive, including Yango/Feres/RIDE) and is typically *300 – 1,000 ETB* depending on your distance in Addis Ababa, paid directly to the driver upon delivery. If you prefer to avoid the fee, you are warmly welcome to visit our Ledeta office for free pickup!\n\n"
+        "👉 *Tap an option below to proceed:*"
+    )
+    try:
+        await bot.send_message(
+            chat_id=user_id,
+            text=text,
+            parse_mode="Markdown",
+            reply_markup=get_post_delivery_choice_keyboard(order_code)
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send ready delivery DM for {order_code}: {e}")
+        return False
+
+@router.callback_query(F.data.startswith("post_del:pickup:"))
+async def callback_post_del_pickup(callback: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    order_code = callback.data.split(":")[2]
+    order = database.get_order_by_code(order_code)
+
+    database.update_order_delivery(order_code, "Store Pickup (Ledeta - Free)", "Ledeta Store (In-Person Pickup)")
+    database.update_order_status(order_code, "ready_for_delivery")
+
+    text = (
+        f"✅ *Store Pickup Confirmed for Order {order_code}!* 💛\n\n"
+        "📍 *Store Address:* Selora Prints, Ledeta (near Balcha Hospital), Addis Ababa\n"
+        "⏰ *Pickup Hours:* Monday – Saturday, 9:00 AM – 6:00 PM\n"
+        "📞 *Store Phone:* 0906287728\n"
+        "─────────────────────\n"
+        f"Your package is packed and waiting for you! Please present your order code `{order_code}` upon arrival.\n\n"
+        "_Need to switch to doorstep taxi delivery instead? Tap below anytime._"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ Switch to Taxi Delivery", callback_data=f"post_del:taxi:{order_code}")],
+        [InlineKeyboardButton(text="🔍 Track Order", callback_data=f"track_orders_menu")]
+    ])
+    try:
+        await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=kb)
+    except Exception:
+        await callback.message.answer(text, parse_mode="Markdown", reply_markup=kb)
+
+    # Notify Admin
+    if config.ADMIN_CHAT_ID:
+        try:
+            cust_name = order.get('recipient_name') or order.get('full_name') or 'Customer'
+            cust_phone = order.get('phone') or 'N/A'
+            await callback.bot.send_message(
+                chat_id=config.ADMIN_CHAT_ID,
+                text=(
+                    f"🏪 *STORE PICKUP CONFIRMED — {order_code}*\n"
+                    f"👤 *Customer:* {cust_name}\n"
+                    f"📞 *Phone:* {cust_phone}\n"
+                    f"Order is marked for free in-store pickup at Ledeta."
+                ),
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+    await callback.answer("Store pickup confirmed!")
+
+@router.callback_query(F.data.startswith("post_del:taxi:"))
+async def callback_post_del_taxi(callback: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    order_code = callback.data.split(":")[2]
+
+    text = (
+        f"🚚 *DOORSTEP TAXI DELIVERY — {order_code}*\n"
+        "─────────────────────\n"
+        "Where should the driver deliver your package?\n\n"
+        "1️⃣ 🎯 *Recommended:* Tap **'Send Exact GPS Pin'** below (best for Yango/Feres navigation)\n"
+        "2️⃣ 🏙 Or select your sub-city / area from list\n"
+        "3️⃣ ✏ Or type your exact building / street / landmark\n\n"
+        "⚠️ *Reminder:* Taxi fare (~300 – 1,000 ETB) is paid directly to the driver upon drop-off."
+    )
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=get_post_taxi_location_keyboard(order_code))
+
+    # Send GPS helper keyboard
+    gps_kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📍 Send Exact GPS Pin (Best for Driver)", request_location=True)],
+            [KeyboardButton(text="❌ Cancel")]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    await callback.message.answer(
+        "💡 _You can also tap the button below to share your exact live GPS location with the driver:_ ",
+        parse_mode="Markdown",
+        reply_markup=gps_kb
+    )
+    await state.set_state(PostDeliveryFSM.waiting_for_address)
+    await state.update_data(post_order_code=order_code)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("post_subcity_pick:"))
+async def callback_post_subcity_pick(callback: types.CallbackQuery, state: FSMContext):
+    order_code = callback.data.split(":")[1]
+    await callback.message.edit_text(
+        "🏙 *Select your Addis Ababa sub-city / area:*",
+        parse_mode="Markdown",
+        reply_markup=get_post_subcities_keyboard(order_code)
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("post_set_sub:"))
+async def callback_post_set_sub(callback: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    parts = callback.data.split(":")
+    order_code = parts[1]
+    subcity = parts[2]
+    loc_text = f"{subcity}, Addis Ababa"
+
+    database.update_order_delivery(order_code, "Yango / Feres Taxi Delivery", loc_text)
+    database.update_order_status(order_code, "ready_for_delivery")
+    order = database.get_order_by_code(order_code)
+
+    cust_name = order.get('recipient_name') or order.get('full_name') if order else 'Customer'
+    cust_phone = order.get('phone') or 'N/A' if order else 'N/A'
+
+    confirm_text = (
+        f"✅ *Delivery Location Saved for Order {order_code}!* 💛\n\n"
+        f"📍 *Drop-off Area:* {loc_text}\n"
+        f"👤 *Recipient:* {cust_name}\n"
+        f"📞 *Driver Call Phone:* `{cust_phone}`\n"
+        "─────────────────────\n"
+        "🚕 Our team is preparing your package for driver dispatch (Yango / Feres / RIDE). "
+        f"The driver will call you at `{cust_phone}` upon arriving.\n\n"
+        "⚠️ *Taxi Fare:* ~300 – 1,000 ETB paid directly to the driver upon drop-off.\n\n"
+        "_Need to change address or switch to store pickup? Tap below anytime._"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ Change Delivery Details", callback_data=f"post_del:change:{order_code}")],
+        [InlineKeyboardButton(text="🔍 Track Order Status", callback_data="track_orders_menu")]
+    ])
+    try:
+        await callback.message.edit_text(confirm_text, parse_mode="Markdown", reply_markup=kb)
+    except Exception:
+        await callback.message.answer(confirm_text, parse_mode="Markdown", reply_markup=kb)
+    await callback.message.answer("Delivery location updated.", reply_markup=ReplyKeyboardRemove())
+
+    # Alert Admin
+    if config.ADMIN_CHAT_ID:
+        try:
+            await callback.bot.send_message(
+                chat_id=config.ADMIN_CHAT_ID,
+                text=(
+                    f"🚨 *TAXI DELIVERY DISPATCH READY — {order_code}*\n"
+                    f"👤 *Recipient:* {cust_name}\n"
+                    f"📞 *Driver Call Phone:* [{cust_phone}](tel:{cust_phone})\n"
+                    f"📍 *Area:* {loc_text}\n"
+                    "Ready to call Yango / Feres / RIDE!"
+                ),
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+    await callback.answer("Delivery location saved!")
+
+@router.callback_query(F.data.startswith("post_type_addr:"))
+async def callback_post_type_addr(callback: types.CallbackQuery, state: FSMContext):
+    order_code = callback.data.split(":")[1]
+    await state.set_state(PostDeliveryFSM.waiting_for_address)
+    await state.update_data(post_order_code=order_code)
+    await callback.message.edit_text(
+        "✏️ *Please type your exact street, building name, or landmark below:*\n\n"
+        "_(e.g., Bole Medhanialem next to Edna Mall, Morning Star Bldg 3rd Fl)_",
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.message(PostDeliveryFSM.waiting_for_address, F.location)
+async def process_post_location_gps(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    order_code = data.get("post_order_code")
+    await state.clear()
+
+    lat = message.location.latitude
+    lon = message.location.longitude
+    maps_url = f"https://www.google.com/maps?q={lat},{lon}"
+    loc_text = f"GPS Pin ({lat:.4f}, {lon:.4f})"
+
+    if order_code:
+        database.update_order_delivery(order_code, "Yango / Feres Taxi Delivery", loc_text)
+        database.update_order_status(order_code, "ready_for_delivery")
+
+    order = database.get_order_by_code(order_code) if order_code else {}
+    cust_name = order.get('recipient_name') or order.get('full_name') or 'Customer'
+    cust_phone = order.get('phone') or 'N/A'
+
+    confirm_text = (
+        f"✅ *Exact GPS Location Received for Order {order_code}!* 🎯\n\n"
+        f"📍 [Open Coordinates in Google Maps]({maps_url})\n"
+        f"👤 *Recipient:* {cust_name}\n"
+        f"📞 *Driver Call Phone:* `{cust_phone}`\n"
+        "─────────────────────\n"
+        "🚕 Our driver will navigate directly to your GPS coordinates via Yango / Feres / RIDE. "
+        f"They will call `{cust_phone}` when outside!\n\n"
+        "_Need to change delivery details? Tap below anytime._"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ Change Delivery Details", callback_data=f"post_del:change:{order_code}")],
+        [InlineKeyboardButton(text="🔍 Track Order Status", callback_data="track_orders_menu")]
+    ])
+    await message.answer(confirm_text, parse_mode="Markdown", reply_markup=kb)
+    await message.answer("GPS pinned.", reply_markup=ReplyKeyboardRemove())
+
+    # Alert Admin
+    if config.ADMIN_CHAT_ID:
+        try:
+            await message.bot.send_message(
+                chat_id=config.ADMIN_CHAT_ID,
+                text=(
+                    f"🚨 *TAXI DELIVERY GPS PIN RECEIVED — {order_code}*\n"
+                    f"👤 *Recipient:* {cust_name}\n"
+                    f"📞 *Driver Call Phone:* [{cust_phone}](tel:{cust_phone})\n"
+                    f"📍 *GPS Link:* [Google Maps Link]({maps_url})\n"
+                    "Ready to dispatch driver directly to GPS pin!"
+                ),
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+
+@router.message(PostDeliveryFSM.waiting_for_address, F.text)
+async def process_post_location_text(message: types.Message, state: FSMContext):
+    if message.text in ["❌ Cancel", "❌ Cancel Order"]:
+        await state.clear()
+        await message.answer("Cancelled address update.", reply_markup=ReplyKeyboardRemove())
+        return
+
+    data = await state.get_data()
+    order_code = data.get("post_order_code")
+    await state.clear()
+
+    loc_text = message.text.strip()
+    if order_code:
+        database.update_order_delivery(order_code, "Yango / Feres Taxi Delivery", loc_text)
+        database.update_order_status(order_code, "ready_for_delivery")
+
+    order = database.get_order_by_code(order_code) if order_code else {}
+    cust_name = order.get('recipient_name') or order.get('full_name') or 'Customer'
+    cust_phone = order.get('phone') or 'N/A'
+
+    confirm_text = (
+        f"✅ *Delivery Address Saved for Order {order_code}!* 💛\n\n"
+        f"📍 *Address:* {loc_text}\n"
+        f"👤 *Recipient:* {cust_name}\n"
+        f"📞 *Driver Call Phone:* `{cust_phone}`\n"
+        "─────────────────────\n"
+        f"🚕 We are preparing your taxi dispatch. Driver will call you at `{cust_phone}` upon arrival. (~300 – 1,000 ETB paid to driver).\n\n"
+        "_Need to update or switch to office pickup? Tap below anytime._"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ Change Delivery Details", callback_data=f"post_del:change:{order_code}")],
+        [InlineKeyboardButton(text="🔍 Track Order Status", callback_data="track_orders_menu")]
+    ])
+    await message.answer(confirm_text, parse_mode="Markdown", reply_markup=kb)
+    await message.answer("Address saved.", reply_markup=ReplyKeyboardRemove())
+
+    # Alert Admin
+    if config.ADMIN_CHAT_ID:
+        try:
+            await message.bot.send_message(
+                chat_id=config.ADMIN_CHAT_ID,
+                text=(
+                    f"🚨 *TAXI DELIVERY ADDRESS RECEIVED — {order_code}*\n"
+                    f"👤 *Recipient:* {cust_name}\n"
+                    f"📞 *Call Phone:* [{cust_phone}](tel:{cust_phone})\n"
+                    f"📍 *Address:* {loc_text}\n"
+                    "Ready to call Yango / Feres / RIDE!"
+                ),
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+
+@router.callback_query(F.data.startswith("post_del:change:"))
+async def callback_post_del_change(callback: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    order_code = callback.data.split(":")[2]
+    order = database.get_order_by_code(order_code)
+
+    text = (
+        f"✏️ *CHANGE DELIVERY METHOD / DETAILS — {order_code}*\n"
+        "─────────────────────\n"
+        f"• *Current Method:* {order.get('delivery_type', 'None')}\n"
+        f"• *Current Location:* {order.get('delivery_location', 'None')}\n"
+        "─────────────────────\n"
+        "Choose how you would like to receive your package:\n\n"
+        "• 🏪 *Free Store Pickup:* In person at Ledeta store\n"
+        "• 🚚 *Doorstep Taxi Delivery:* Yango / Feres dispatch (~300 – 1,000 ETB paid to driver)"
+    )
+    try:
+        await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=get_post_delivery_choice_keyboard(order_code))
+    except Exception:
+        await callback.message.answer(text, parse_mode="Markdown", reply_markup=get_post_delivery_choice_keyboard(order_code))
+    await callback.answer()

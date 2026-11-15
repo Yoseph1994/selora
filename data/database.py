@@ -249,7 +249,7 @@ def update_order_payment(order_code: str, payment_status: str, order_status: Opt
     return success
 
 def update_order_status(order_code: str, status: str) -> bool:
-    """Update overall order status (e.g. pending, approved, in_production, completed, cancelled)."""
+    """Update overall order status (e.g. pending, approved, in_production, ready_for_delivery, completed, cancelled)."""
     conn, is_pg = get_connection()
     cursor = conn.cursor()
     updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -258,6 +258,21 @@ def update_order_status(order_code: str, status: str) -> bool:
         SET status = ?, updated_at = ?
         WHERE order_code = ?
     """, is_pg), (status, updated_at, order_code))
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return success
+
+def update_order_delivery(order_code: str, delivery_type: str, delivery_location: str) -> bool:
+    """Update delivery method and location for an order."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute(q("""
+        UPDATE orders
+        SET delivery_type = ?, delivery_location = ?, updated_at = ?
+        WHERE order_code = ?
+    """, is_pg), (delivery_type, delivery_location, updated_at, order_code))
     success = cursor.rowcount > 0
     conn.commit()
     conn.close()

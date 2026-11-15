@@ -8,16 +8,19 @@ router = Router(name="delivery_router")
 DELIVERY_TEXT = (
     "╭─── 📍 Delivery & Pickup ───╮\n"
     "│\n"
-    "│  *Store Pickup — Free*\n"
-    "│  Ledeta, Addis Ababa\n"
-    "│  Pickup details shared once ready\n"
+    "│  *🏪 Store Pickup — Free*\n"
+    "│  Ledeta (near Balcha), Addis Ababa\n"
+    "│  Mon – Sat: 9:00 AM – 6:00 PM\n"
     "│\n"
-    "│  *Yango Delivery — Addis Ababa*\n"
-    "│  Door-to-door, fast & reliable\n"
-    "│  Delivery fee paid to driver on arrival\n"
+    "│  *🚚 Doorstep Taxi Delivery*\n"
+    "│  Fast via Yango / Feres / RIDE\n"
+    "│  Driver fare (~300 – 1,000 ETB)\n"
+    "│  Paid directly to driver on arrival\n"
     "│\n"
     "╰─────────────────────────╯\n\n"
-    "_Ready to order? Choose your delivery method during checkout._"
+    "💡 *Delivery Coordination:*\n"
+    "To ensure accurate dispatch, your delivery method (Office Pickup vs. Taxi Delivery) is arranged directly once your custom items are printed and ready for pickup/delivery!\n\n"
+    "_If you prefer to avoid the delivery fee, in-person pickup at our Ledeta office is completely free!_"
 )
 
 def get_delivery_action_keyboard() -> InlineKeyboardMarkup:

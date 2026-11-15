@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from aiogram import Router, F, types
 from aiogram.filters import Command
 from data import database
@@ -7,7 +8,24 @@ import config
 logger = logging.getLogger(__name__)
 router = Router(name="track_router")
 
-def _status_pipeline(status: str, pay_status: str) -> str:
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+def get_track_order_keyboard(order: dict) -> Optional[InlineKeyboardMarkup]:
+    status = order.get("status", "pending")
+    pay_status = order.get("payment_status", "pending_review")
+    order_code = order.get("order_code", "")
+
+    buttons = []
+    # If payment approved, allow managing/changing delivery
+    if pay_status == "approved" or status in ("in_production", "ready_for_delivery", "completed"):
+        buttons.append([
+            InlineKeyboardButton(text="✏️ Change Delivery Details", callback_data=f"post_del:change:{order_code}")
+        ])
+    if config.ADMIN_USERNAME:
+        buttons.append([
+            InlineKeyboardButton(text="💬 Message Owner", url=f"https://t.me/{config.ADMIN_USERNAME}")
+        ])
+    return InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
     """Returns a visual status pipeline string."""
     if pay_status == "pending_review":
         return (
@@ -69,7 +87,7 @@ async def track_orders_handler(message: types.Message):
         code = parts[1].upper()
         order = database.get_order_by_code(code)
         if order:
-            await message.answer(render_status_card(order), parse_mode="Markdown")
+            await message.answer(render_status_card(order), parse_mode="Markdown", reply_markup=get_track_order_keyboard(order))
         else:
             await message.answer(
                 f"❌ Order `{code}` not found.\n\n"
@@ -98,4 +116,4 @@ async def track_orders_handler(message: types.Message):
     if len(user_orders) > 1:
         reply_text += f"\n\n_({len(user_orders)} orders total — type `/track SP-XXXX` to view another)_"
 
-    await message.answer(reply_text, parse_mode="Markdown")
+    await message.answer(reply_text, parse_mode="Markdown", reply_markup=get_track_order_keyboard(latest))

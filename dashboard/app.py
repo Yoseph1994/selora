@@ -213,9 +213,9 @@ async def webapp_submit_order(payload: WebappOrderRequest):
 
     return {"success": True, "order_code": order_code}
 
-async def send_telegram_notification(user_id: int, message_text: str):
+async def send_telegram_notification(user_id: int, message_text: str, reply_markup: Optional[dict] = None):
     """Send Telegram message to customer when action is taken from the dashboard."""
-    if not config.BOT_TOKEN:
+    if not config.BOT_TOKEN or not user_id:
         return
     url = f"https://api.telegram.org/bot{config.BOT_TOKEN}/sendMessage"
     payload = {
@@ -223,6 +223,8 @@ async def send_telegram_notification(user_id: int, message_text: str):
         "text": message_text,
         "parse_mode": "Markdown"
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload) as resp:
@@ -346,6 +348,39 @@ async def approve_order(order_code: str):
     await send_telegram_notification(order["user_id"], customer_msg)
     return {"success": True, "message": f"Order {order_code} approved and in production"}
 
+@app.post("/api/orders/{order_code}/ready", dependencies=[Depends(require_api_auth)])
+async def mark_order_ready(order_code: str):
+    order = database.get_order_by_code(order_code)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    database.update_order_status(order_code, "ready_for_delivery")
+
+    recip = order.get('recipient_name') or order.get('full_name') or 'Customer'
+    phone = order.get('phone') or 'N/A'
+
+    dm_text = (
+        "🎉 *Great News! Your Order is Printed & Ready to Ship!* 💛\n\n"
+        f"🔖 *Order Code:* `{order_code}`\n"
+        f"🏷 *Items:* {order.get('items', '')}\n"
+        f"👤 *Recipient:* {recip} (`{phone}`)\n"
+        "─────────────────────\n"
+        "Your custom prints have finished drying & binding. Please choose how you would like to receive your package:\n\n"
+        "• 🏪 *Free Store Pickup:* Pick up in person at our Ledeta store (Free of charge).\n"
+        "• 🚚 *Doorstep Taxi Delivery:* Dispatched directly to your door via Yango / Feres / RIDE.\n\n"
+        "⚠️ *Delivery Fee Notice:*\n"
+        "The delivery fee depends on transportation distance and taxi rate (all inclusive, including Yango/Feres/RIDE) and is typically *300 – 1,000 ETB* depending on your location in Addis Ababa, paid directly to the driver upon delivery. If you prefer to avoid the fee, you are warmly welcome to visit our Ledeta office for free pickup!\n\n"
+        "👉 *Tap an option below to proceed:*"
+    )
+    markup = {
+        "inline_keyboard": [
+            [{"text": "🏪 Free Store Pickup (Ledeta)", "callback_data": f"post_del:pickup:{order_code}"}],
+            [{"text": "🚚 Doorstep Taxi Delivery (300-1,000 ETB)", "callback_data": f"post_del:taxi:{order_code}"}]
+        ]
+    }
+    await send_telegram_notification(order["user_id"], dm_text, reply_markup=markup)
+    return {"success": True, "message": f"Order {order_code} marked ready and delivery DM sent to customer"}
+
 @app.post("/api/orders/{order_code}/complete", dependencies=[Depends(require_api_auth)])
 async def complete_order(order_code: str):
     order = database.get_order_by_code(order_code)
@@ -355,11 +390,11 @@ async def complete_order(order_code: str):
     database.update_order_status(order_code, "completed")
 
     customer_msg = (
-        "✨ *Your Order is Ready!* 💛\n\n"
+        "✨ *Your Order Has Been Fulfilled!* 💛\n\n"
         f"🔖 *Order Code:* `{order_code}`\n\n"
-        "Good news! Your order has been completed and is ready for pickup or delivery.\n\n"
-        f"📍 *Method:* {order.get('delivery_type')} ({order.get('delivery_location')})\n\n"
-        f"Thank you for choosing Selora Prints! If you have any questions, chat with the owner @{config.ADMIN_USERNAME} 🙏"
+        "Your order has been successfully picked up or delivered!\n"
+        "Thank you so much for choosing Selora Prints. We hope you love your prints! ✨\n\n"
+        f"Any questions or feedback? Chat with us anytime: @{config.ADMIN_USERNAME} 🙏"
     )
     await send_telegram_notification(order["user_id"], customer_msg)
     return {"success": True, "message": f"Order {order_code} marked completed"}
