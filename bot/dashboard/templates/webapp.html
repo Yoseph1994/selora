@@ -8,7 +8,7 @@
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
-  <!-- Premium Fonts: Plus Jakarta Sans & Inter -->
+  <!-- Professional Fonts: Plus Jakarta Sans & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -58,27 +58,56 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
-    input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(1);
-      cursor: pointer;
-    }
     .field-error {
       border-color: #f43f5e !important;
       box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.3) !important;
+    }
+    .cal-cell {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+    }
+    .cal-cell.disabled {
+      color: #475569;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .cal-cell.selectable {
+      cursor: pointer;
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .cal-cell.selectable:hover {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+    }
+    .cal-cell.selected {
+      background: #f59e0b !important;
+      color: #090d16 !important;
+      font-weight: 800 !important;
+    }
+    .cal-cell.rush {
+      border: 1px dashed rgba(245, 158, 11, 0.6);
+      color: #fbbf24;
     }
   </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased pb-24 overflow-x-hidden">
 
-  <!-- ─── CLEAN APP HEADER (NO FLASHY AI GIMMICKS) ──────────────── -->
+  <!-- TOP APP HEADER -->
   <header class="sticky top-0 z-30 bg-[#090d16]/90 backdrop-blur-xl border-b border-surface-border px-4 py-3 flex items-center justify-between">
     <div class="flex items-center space-x-3">
-      <div class="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-extrabold text-sm tracking-tight">
+      <div class="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-extrabold text-sm tracking-tight shadow-md">
         S
       </div>
       <div>
         <h1 class="font-bold text-sm tracking-tight text-white leading-none">Selora Prints</h1>
-        <p class="text-[11px] text-slate-400 mt-0.5">Addis Ababa, Ledeta</p>
+        <p class="text-[11px] text-slate-400 mt-0.5">Custom Printing • Addis Ababa, Ledeta</p>
       </div>
     </div>
 
@@ -93,7 +122,7 @@
         <span id="lang-label">አማርኛ</span>
       </button>
 
-      <!-- User Badge -->
+      <!-- Customer Badge -->
       <div class="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-surface-border text-slate-300 text-xs font-medium flex items-center space-x-1.5">
         <i class="fa-solid fa-user text-slate-400 text-[11px]"></i>
         <span id="user-display-name" class="truncate max-w-[80px]">Customer</span>
@@ -101,20 +130,20 @@
     </div>
   </header>
 
-  <!-- ─── SUBTLE 50% DEPOSIT POLICY NOTIFICATION ────────────────── -->
+  <!-- 50% DEPOSIT POLICY NOTIFICATION -->
   <div class="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between text-xs">
     <span class="text-amber-200/90 text-[11px] font-medium" id="deposit-banner-text">
-      50% deposit required to begin production. Balance due upon delivery or pickup.
+      50% advance deposit required to start production. Remaining 50% paid upon pickup or delivery.
     </span>
     <span class="text-[10px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 shrink-0 ml-2">
       50% ETB
     </span>
   </div>
 
-  <!-- ─── MAIN APP TABS ─────────────────────────────────────────── -->
+  <!-- MAIN APP TABS -->
   <main class="flex-1 max-w-lg mx-auto w-full px-4 pt-3 space-y-4">
 
-    <!-- ─── TAB 1: SHOP / CATALOG ───────────────────────────────── -->
+    <!-- TAB 1: SHOP / CATALOG -->
     <section id="tab-catalog" class="space-y-4">
       <!-- Search Input -->
       <div class="relative">
@@ -123,59 +152,67 @@
           type="text" 
           id="product-search-input"
           oninput="handleSearch(this.value)"
-          placeholder="Search stickers, business cards, mugs, photo books..." 
+          placeholder="Search stickers, business cards, photo books, mugs..." 
           class="w-full bg-surface-card border border-surface-border rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60 transition"
         />
       </div>
 
-      <!-- Category Filter Pills -->
+      <!-- Category Filter Pills (Mirrors Bot Catalog Exactly) -->
       <div class="flex items-center space-x-1.5 overflow-x-auto hide-scrollbar text-xs pb-1">
         <button onclick="setCategory('all')" id="cat-all" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-bold bg-white text-slate-950">
           All Products
         </button>
-        <button onclick="setCategory('stickers')" id="cat-stickers" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
-          Stickers
-        </button>
-        <button onclick="setCategory('stationery')" id="cat-stationery" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
-          Bookmarks & Cards
-        </button>
         <button onclick="setCategory('books')" id="cat-books" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
-          Photo Books
+          Photo Books & Minibooks
+        </button>
+        <button onclick="setCategory('stickers')" id="cat-stickers" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+          Stickers & Posters
+        </button>
+        <button onclick="setCategory('cards')" id="cat-cards" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+          Business Cards & Bookmarks
+        </button>
+        <button onclick="setCategory('polaroid')" id="cat-polaroid" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+          Polaroids
+        </button>
+        <button onclick="setCategory('notebooks')" id="cat-notebooks" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+          Notebooks
         </button>
         <button onclick="setCategory('merch')" id="cat-merch" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
-          Mugs & Gifts
+          Mugs & Puzzles
         </button>
       </div>
 
       <!-- Products Grid -->
       <div id="products-grid" class="grid grid-cols-2 gap-3 pt-1">
-        <!-- Injected via JavaScript -->
+        <!-- Injected dynamically via JS from products.json -->
       </div>
     </section>
 
-    <!-- ─── TAB 2: DESIGNS GALLERY ──────────────────────────────── -->
+    <!-- TAB 2: READY DESIGNS GALLERY -->
     <section id="tab-designs" class="space-y-4 hidden">
-      <div>
-        <h2 class="text-sm font-bold text-white" id="designs-title">Studio Ready Designs</h2>
-        <p class="text-xs text-slate-400 mt-0.5" id="designs-desc">Select any design to print with your order</p>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-bold text-white" id="designs-title">Studio Ready Designs</h2>
+          <p class="text-xs text-slate-400 mt-0.5" id="designs-desc">Select any design to print with your order</p>
+        </div>
       </div>
       <div id="designs-grid" class="grid grid-cols-2 gap-3">
-        <!-- Injected via JavaScript -->
+        <!-- Injected dynamically via JS from designs.json -->
       </div>
     </section>
 
-    <!-- ─── TAB 3: LIVE TRACKING ────────────────────────────────── -->
+    <!-- TAB 3: LIVE TRACKING -->
     <section id="tab-track" class="space-y-4 hidden">
       <div>
-        <h2 class="text-sm font-bold text-white" id="track-title">Order Status Tracker</h2>
-        <p class="text-xs text-slate-400 mt-0.5" id="track-desc">Enter your order code (e.g. SP-1004) to view live progress.</p>
+        <h2 class="text-sm font-bold text-white" id="track-title">Live Order Status Tracker</h2>
+        <p class="text-xs text-slate-400 mt-0.5" id="track-desc">Enter your order code (e.g. SLR-1004) to view live progress.</p>
       </div>
 
       <form onsubmit="handleTrackQuery(event)" class="flex space-x-2">
         <input 
           type="text" 
           id="track-code-input"
-          placeholder="SP-1004" 
+          placeholder="SLR-1004" 
           class="flex-1 bg-surface-card border border-surface-border rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 uppercase tracking-wider focus:outline-none focus:border-amber-400/60"
         />
         <button 
@@ -197,16 +234,16 @@
       </div>
     </section>
 
-    <!-- ─── TAB 4: STUDIO & BANKING ─────────────────────────────── -->
+    <!-- TAB 4: STUDIO & OFFICIAL ACCOUNTS -->
     <section id="tab-info" class="space-y-4 hidden">
       <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-3">
         <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-base">
+          <div class="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-base shadow-md">
             S
           </div>
           <div>
             <h3 class="font-bold text-sm text-white">Selora Prints Studio</h3>
-            <p class="text-xs text-slate-400">Custom Printing & Merchandise • Addis Ababa</p>
+            <p class="text-xs text-slate-400">Custom Merchandise & Photo Studio • Addis Ababa</p>
           </div>
         </div>
 
@@ -214,15 +251,15 @@
           <div class="flex items-start space-x-2.5">
             <i class="fa-solid fa-location-dot text-amber-400 mt-1"></i>
             <div>
-              <span class="font-semibold text-white">Ledeta, Addis Ababa</span>
-              <p class="text-[11px] text-slate-400">Behind Balcha Hospital. Mon to Sat: 8:30 AM - 6:30 PM</p>
+              <span class="font-semibold text-white">Ledeta Office (Behind Balcha Hospital)</span>
+              <p class="text-[11px] text-slate-400">Free Customer Pickup • Monday to Saturday: 8:30 AM to 6:30 PM</p>
             </div>
           </div>
           <div class="flex items-start space-x-2.5">
             <i class="fa-solid fa-clock text-amber-400 mt-1"></i>
             <div>
               <span class="font-semibold text-white">Production Turnaround</span>
-              <p class="text-[11px] text-slate-400">Standard: 3 to 4 business days. Urgent 2-day rush: +200 ETB.</p>
+              <p class="text-[11px] text-slate-400">Standard: 3 to 4 business days. Urgent 2-day priority rush: +200 ETB.</p>
             </div>
           </div>
         </div>
@@ -272,7 +309,7 @@
 
   </main>
 
-  <!-- ─── CLEAN BOTTOM NAVIGATION BAR ───────────────────────────── -->
+  <!-- BOTTOM NAVIGATION BAR -->
   <nav class="fixed bottom-0 left-0 right-0 z-30 bg-[#090d16]/95 backdrop-blur-xl border-t border-surface-border max-w-lg mx-auto px-4 py-2 flex items-center justify-around">
     <button onclick="switchTab('catalog')" id="nav-catalog" class="nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-amber-400 font-bold">
       <i class="fa-solid fa-bag-shopping text-sm"></i>
@@ -292,14 +329,14 @@
     </button>
   </nav>
 
-  <!-- ─── 5-STEP GUIDED ORDER MODAL (100% IN-APP WITH REQUIRED *) ──── -->
+  <!-- 5-STEP GUIDED ORDER MODAL (100% IN-APP WITH FULL BOT LOGIC) -->
   <div id="order-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col justify-end hidden">
-    <div class="bg-[#0f1422] border-t border-surface-border rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl max-w-lg mx-auto w-full overflow-hidden">
+    <div class="bg-[#0f1422] border-t border-surface-border rounded-t-3xl max-h-[94vh] flex flex-col shadow-2xl max-w-lg mx-auto w-full overflow-hidden">
       
       <!-- Modal Header -->
       <div class="px-4 py-3 border-b border-surface-border flex items-center justify-between">
         <div class="flex items-center space-x-2">
-          <button onclick="prevOrderStep()" id="btn-modal-back" class="p-1 rounded-lg text-slate-400 hover:text-white hidden">
+          <button onclick="prevOrderStep()" id="btn-modal-back" class="p-1.5 rounded-lg text-slate-400 hover:text-white hidden">
             <i class="fa-solid fa-arrow-left text-sm"></i>
           </button>
           <div>
@@ -337,7 +374,7 @@
             </div>
           </div>
 
-          <!-- Quantity Stepper -->
+          <!-- Quantity Stepper with Large & Small Steps -->
           <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-3">
             <div class="flex items-center justify-between">
               <label class="text-xs font-semibold text-white" id="lbl-select-qty">
@@ -348,8 +385,12 @@
               </span>
             </div>
 
-            <div class="flex items-center space-x-3">
-              <button type="button" onclick="adjustQuantity(-1)" class="w-10 h-10 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] flex items-center justify-center font-bold text-base text-white active:scale-95 transition">
+            <!-- Stepper Controls (Mirrors get_stepper_keyboard) -->
+            <div class="flex items-center space-x-2">
+              <button type="button" onclick="adjustQuantityWithStep('large', -1)" id="btn-step-large-minus" class="px-2.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-bold text-slate-300 active:scale-95 transition">
+                -10
+              </button>
+              <button type="button" onclick="adjustQuantityWithStep('small', -1)" id="btn-step-small-minus" class="w-9 h-9 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] flex items-center justify-center font-bold text-sm text-white active:scale-95 transition">
                 -
               </button>
               <input 
@@ -358,14 +399,49 @@
                 onchange="handleManualQtyChange(this.value)"
                 class="flex-1 bg-surface-elevated border border-surface-border rounded-xl py-2 text-center text-sm font-bold text-white focus:outline-none focus:border-amber-400/60" 
               />
-              <button type="button" onclick="adjustQuantity(1)" class="w-10 h-10 rounded-xl bg-amber-500 hover:bg-amber-400 flex items-center justify-center font-bold text-base text-slate-950 active:scale-95 transition">
+              <button type="button" onclick="adjustQuantityWithStep('small', 1)" id="btn-step-small-plus" class="w-9 h-9 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] flex items-center justify-center font-bold text-sm text-white active:scale-95 transition">
                 +
+              </button>
+              <button type="button" onclick="adjustQuantityWithStep('large', 1)" id="btn-step-large-plus" class="px-2.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-bold text-slate-950 active:scale-95 transition">
+                +10
               </button>
             </div>
 
             <!-- Quick Qty Chips -->
             <div id="quick-qty-chips" class="flex items-center space-x-2 pt-1 overflow-x-auto hide-scrollbar">
               <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Business Card Special Option (Exact Bot Feature: Ready vs Selora Custom +100 ETB) -->
+          <div id="box-card-design-option" class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-2 hidden">
+            <label class="text-xs font-semibold text-white">
+              Business Card Design Service <span class="text-rose-500 font-bold">*</span>:
+            </label>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div 
+                onclick="setCardDesignOption('ready')" 
+                id="opt-card-ready"
+                class="p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-white">Ready Design</span>
+                  <span class="text-[10px] font-bold text-emerald-400">Free</span>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">I will upload my ready print file</p>
+              </div>
+
+              <div 
+                onclick="setCardDesignOption('selora')" 
+                id="opt-card-selora"
+                class="p-3 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-amber-300">Selora Design</span>
+                  <span class="text-[10px] font-bold text-amber-400">+100 ETB</span>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">Our designer creates your card</p>
+              </div>
             </div>
           </div>
 
@@ -376,7 +452,7 @@
               <h4 id="step1-subtotal" class="text-lg font-bold text-amber-300">0 ETB</h4>
             </div>
             <div class="text-right">
-              <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">50% Advance</span>
+              <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">50% Advance Due</span>
               <p id="step1-deposit" class="text-sm font-bold text-white">0 ETB</p>
             </div>
           </div>
@@ -384,17 +460,17 @@
 
         <!-- STEP 2: ARTWORK / IMAGES & CUSTOM NOTES -->
         <div id="order-step-2" class="space-y-4 hidden">
-          <!-- Mode Toggle -->
-          <div class="flex bg-surface-card p-1 rounded-xl border border-surface-border text-xs">
+          <!-- Ready vs Upload Mode Toggle -->
+          <div id="box-design-mode-toggle" class="flex bg-surface-card p-1 rounded-xl border border-surface-border text-xs">
             <button type="button" onclick="setDesignMode('ready')" id="btn-mode-ready" class="flex-1 py-2 rounded-lg font-bold bg-amber-500 text-slate-950 transition">
-              Studio Ready Designs
+              Ready Designs
             </button>
             <button type="button" onclick="setDesignMode('upload')" id="btn-mode-upload" class="flex-1 py-2 rounded-lg font-bold text-slate-400 hover:text-white transition">
-              Upload My Photos/Files <span class="text-rose-500 font-bold">*</span>
+              Upload Photos / Artwork <span class="text-rose-500 font-bold">*</span>
             </button>
           </div>
 
-          <!-- Ready Designs Grid -->
+          <!-- Curated Ready Designs Grid -->
           <div id="box-mode-ready" class="space-y-2">
             <label class="text-xs font-semibold text-slate-300 flex items-center justify-between" id="lbl-choose-pattern">
               <span>Choose a curated design <span class="text-rose-500 font-bold">*</span>:</span>
@@ -406,38 +482,91 @@
           </div>
 
           <!-- Upload Photos / Artwork Direct File Dropzone -->
-          <div id="box-mode-upload" class="space-y-2 hidden">
-            <label class="text-xs font-semibold text-slate-300">
-              Attach Artwork or Photos <span class="text-rose-500 font-bold">*</span>:
-            </label>
-            <input type="file" id="artwork-file-input" accept="image/*,application/pdf" onchange="handleArtworkFileSelect(event)" class="hidden">
-            <div 
-              id="artwork-dropzone"
-              onclick="document.getElementById('artwork-file-input').click()"
-              class="border border-dashed border-surface-border hover:border-amber-400/60 bg-surface-card rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition text-center group"
-            >
-              <div id="artwork-preview-container" class="hidden flex flex-col items-center space-y-2">
-                <img id="artwork-preview-img" src="" alt="Artwork Preview" class="w-24 h-24 rounded-xl object-cover border border-surface-border shadow-md">
-                <div class="text-xs font-semibold text-emerald-400 flex items-center space-x-1">
-                  <i class="fa-solid fa-circle-check"></i>
-                  <span id="artwork-filename-txt">File ready</span>
+          <div id="box-mode-upload" class="space-y-3 hidden">
+            <!-- Upload Multi vs Single Mode (Exact Bot Feature: dmode:single vs dmode:multi) -->
+            <div id="box-multi-photo-toggle" class="space-y-1.5 hidden">
+              <label class="text-xs font-semibold text-slate-300">
+                Photo Selection Mode <span class="text-rose-500 font-bold">*</span>:
+              </label>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div 
+                  onclick="setPhotoUploadMode('single')" 
+                  id="opt-photo-single"
+                  class="p-2.5 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition"
+                >
+                  <span class="font-bold text-white text-[11px] block">1 photo for all copies</span>
+                  <span class="text-[10px] text-slate-400">Same photo on all items</span>
                 </div>
-                <span class="text-[10px] text-slate-400">Tap to replace file</span>
+                <div 
+                  onclick="setPhotoUploadMode('multi')" 
+                  id="opt-photo-multi"
+                  class="p-2.5 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition"
+                >
+                  <span class="font-bold text-amber-300 text-[11px] block" id="lbl-multi-photo-title">Different photos</span>
+                  <span class="text-[10px] text-slate-400" id="lbl-multi-photo-desc">Upload individual photos</span>
+                </div>
               </div>
-              <div id="artwork-placeholder-container" class="flex flex-col items-center">
-                <div class="w-10 h-10 rounded-full bg-white/[0.04] text-slate-300 flex items-center justify-center mb-2">
-                  <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+            </div>
+
+            <!-- Single File Dropzone -->
+            <div id="box-single-file-upload" class="space-y-2">
+              <label class="text-xs font-semibold text-slate-300">
+                Attach Artwork or Photo <span class="text-rose-500 font-bold">*</span>:
+              </label>
+              <input type="file" id="artwork-file-input" accept="image/*,application/pdf" onchange="handleArtworkFileSelect(event)" class="hidden">
+              <div 
+                id="artwork-dropzone"
+                onclick="document.getElementById('artwork-file-input').click()"
+                class="border border-dashed border-surface-border hover:border-amber-400/60 bg-surface-card rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition text-center group"
+              >
+                <div id="artwork-preview-container" class="hidden flex flex-col items-center space-y-2">
+                  <img id="artwork-preview-img" src="" alt="Artwork Preview" class="w-24 h-24 rounded-xl object-cover border border-surface-border shadow-md">
+                  <div class="text-xs font-semibold text-emerald-400 flex items-center space-x-1">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span id="artwork-filename-txt">File ready</span>
+                  </div>
+                  <span class="text-[10px] text-slate-400">Tap to replace file</span>
                 </div>
-                <h4 class="text-xs font-bold text-white" id="lbl-tap-upload-art">Tap to select photo or artwork file</h4>
-                <p class="text-[10px] text-slate-400 mt-1">JPG, PNG, PDF up to 25MB <span class="text-rose-400 font-medium">(Required)</span></p>
+                <div id="artwork-placeholder-container" class="flex flex-col items-center">
+                  <div class="w-10 h-10 rounded-full bg-white/[0.04] text-slate-300 flex items-center justify-center mb-2">
+                    <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+                  </div>
+                  <h4 class="text-xs font-bold text-white">Tap to select photo or artwork file</h4>
+                  <p class="text-[10px] text-slate-400 mt-1">High-res JPG, PNG, or PDF <span class="text-rose-400 font-medium">(Required)</span></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Multi-File Dropzone (For Polaroids / Multi-photo orders) -->
+            <div id="box-multi-file-upload" class="space-y-2 hidden">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold text-slate-300">
+                  Upload Photos <span class="text-rose-500 font-bold">*</span>:
+                </label>
+                <span id="multi-photo-counter" class="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  0 / 0 photos
+                </span>
+              </div>
+              <input type="file" id="multi-artwork-input" accept="image/*" multiple onchange="handleMultiPhotoSelect(event)" class="hidden">
+              <div 
+                onclick="document.getElementById('multi-artwork-input').click()"
+                class="border border-dashed border-surface-border hover:border-amber-400/60 bg-surface-card rounded-2xl p-4 flex items-center justify-center cursor-pointer transition text-center space-x-2"
+              >
+                <i class="fa-solid fa-images text-amber-400 text-sm"></i>
+                <span class="text-xs font-bold text-white">Tap to add photos</span>
+                <span class="text-[10px] text-slate-400">(Select multiple at once)</span>
+              </div>
+              <!-- Multi-photo Thumbnails Grid -->
+              <div id="multi-photo-preview-grid" class="grid grid-cols-4 gap-2 pt-1 max-h-44 overflow-y-auto hide-scrollbar">
+                <!-- Injected via JS -->
               </div>
             </div>
           </div>
 
-          <!-- Special Custom Notes -->
-          <div class="space-y-1.5">
+          <!-- Special Custom Notes / Instructions -->
+          <div class="space-y-1.5 pt-1">
             <label class="text-xs font-semibold text-slate-300" id="lbl-custom-notes">
-              Customization Instructions / Text (Optional):
+              Custom Instructions / Text (Optional):
             </label>
             <textarea 
               id="order-notes-input"
@@ -450,55 +579,55 @@
 
         <!-- STEP 3: PICK DATE & DELIVERY -->
         <div id="order-step-3" class="space-y-4 hidden">
-          <!-- Production Urgency & Date Picker -->
+          <!-- Calendar Date Picker (Exact Mirror of Bot build_calendar_keyboard) -->
           <div class="space-y-2">
-            <label class="text-xs font-semibold text-white" id="lbl-turnaround-title">
-              Turnaround Speed <span class="text-rose-500 font-bold">*</span>:
-            </label>
-            <div class="grid grid-cols-2 gap-2">
-              <div 
-                onclick="setUrgency('standard')" 
-                id="opt-urgency-standard"
-                class="p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition"
-              >
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold text-white">Standard</span>
-                  <span class="text-[10px] font-semibold text-emerald-400">Included</span>
-                </div>
-                <p class="text-[10px] text-slate-400 mt-1">3 to 4 business days</p>
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-white">
+                Completion Deadline <span class="text-rose-500 font-bold">*</span>:
+              </label>
+              <span id="selected-deadline-badge" class="text-[10px] font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                Select a date
+              </span>
+            </div>
+
+            <!-- Month View Calendar -->
+            <div class="bg-surface-card border border-surface-border rounded-2xl p-3 space-y-2">
+              <!-- Calendar Navigation -->
+              <div class="flex items-center justify-between px-1">
+                <button type="button" onclick="navigateCalendar(-1)" id="cal-btn-prev" class="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-xs text-slate-300">
+                  <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                </button>
+                <span id="cal-month-title" class="text-xs font-bold text-white tracking-wide">November 2026</span>
+                <button type="button" onclick="navigateCalendar(1)" id="cal-btn-next" class="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-xs text-slate-300">
+                  <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </button>
               </div>
 
-              <div 
-                onclick="setUrgency('rush')" 
-                id="opt-urgency-rush"
-                class="p-3 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition"
-              >
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold text-amber-300 flex items-center">
-                    <i class="fa-solid fa-bolt text-xs mr-1"></i> 2-Day Rush
-                  </span>
-                  <span class="text-[10px] font-bold text-amber-400">+200 ETB</span>
-                </div>
-                <p class="text-[10px] text-slate-400 mt-1">Urgent queue priority</p>
+              <!-- Day of week headers -->
+              <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 pb-1 border-b border-surface-border">
+                <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
+              </div>
+
+              <!-- Calendar Day Grid -->
+              <div id="cal-days-grid" class="grid grid-cols-7 gap-1">
+                <!-- Injected via JavaScript -->
               </div>
             </div>
 
-            <!-- Specific Date Picker Input -->
-            <div class="pt-1 space-y-1">
-              <label class="text-xs font-semibold text-slate-300 flex items-center space-x-1">
-                <span>Needed by Date <span class="text-rose-500 font-bold">*</span>:</span>
-              </label>
-              <input 
-                type="date" 
-                id="order-deadline-date" 
-                class="w-full bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400/60"
-              />
-              <p class="text-[10px] text-slate-400 italic">Minimum turnaround is 2 days. Next-day rush is not accepted to guarantee print quality.</p>
+            <div class="flex items-center justify-between text-[10px] text-slate-400 px-1 pt-0.5">
+              <span class="flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-full border border-dashed border-amber-400"></span>
+                <span>⚡ Rush Day (+200 ETB)</span>
+              </span>
+              <span class="flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-full bg-white/20"></span>
+                <span>Standard (Included)</span>
+              </span>
             </div>
           </div>
 
-          <!-- Delivery Method -->
-          <div class="space-y-2">
+          <!-- Delivery Method Selection -->
+          <div class="space-y-2 pt-1">
             <label class="text-xs font-semibold text-white" id="lbl-delivery-method">
               Delivery Method <span class="text-rose-500 font-bold">*</span>:
             </label>
@@ -525,88 +654,149 @@
               >
                 <i class="fa-solid fa-taxi text-amber-400 mt-0.5"></i>
                 <div>
-                  <span class="text-xs font-bold text-white">Addis Ababa Delivery (Yango / Feres)</span>
-                  <p class="text-[11px] text-slate-400 mt-0.5">300 to 1,000 ETB delivery fee paid to driver upon receipt.</p>
+                  <span class="text-xs font-bold text-white">Addis Ababa Delivery (Yango / Feres / Ride)</span>
+                  <p class="text-[11px] text-slate-400 mt-0.5">Taxi driver fee (~300 to 1,000 ETB) paid directly to driver upon receipt.</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Dropoff Location & GPS Pin (Required when delivery selected) -->
-          <div id="box-yango-location" class="space-y-1.5 pt-1 hidden">
-            <label class="text-xs font-semibold text-slate-300" id="lbl-dropoff-addr">
-              Dropoff Address & Landmark <span class="text-rose-500 font-bold">*</span>:
+          <!-- Addis Ababa Sub-Cities Picker (Exact Bot Feature: get_subcities_keyboard) -->
+          <div id="box-yango-location" class="space-y-2 pt-1 hidden">
+            <label class="text-xs font-semibold text-slate-300">
+              Select Addis Ababa Sub-City / Area <span class="text-rose-500 font-bold">*</span>:
             </label>
-            <div class="flex space-x-2">
-              <input 
-                type="text" 
-                id="delivery-address-input" 
-                placeholder="e.g. Bole Atlas, behind Edna Mall"
-                class="flex-1 bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60" 
-              />
-              <button 
-                type="button" 
-                onclick="pinCurrentLocation()" 
-                id="btn-pin-gps"
-                class="px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-surface-border text-xs font-semibold text-amber-300 flex items-center space-x-1"
-              >
-                <i class="fa-solid fa-location-crosshairs text-xs"></i>
-                <span id="gps-pin-label">GPS</span>
+            
+            <div class="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1" id="subcities-grid">
+              <!-- 12 Subcities from bot/handlers/order.py -->
+              <button type="button" onclick="selectSubCity('Bole / Medhanialem')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                Bole / Medhanialem
               </button>
+              <button type="button" onclick="selectSubCity('Kazanchis / Bambis')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                Kazanchis / Bambis
+              </button>
+              <button type="button" onclick="selectSubCity('CMC / Ayat / Summit')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                CMC / Ayat / Summit
+              </button>
+              <button type="button" onclick="selectSubCity('Piassa / Arat Kilo')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                Piassa / Arat Kilo
+              </button>
+              <button type="button" onclick="selectSubCity('Sarbet / Bisrate Gabriel')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                Sarbet / Bisrate Gabriel
+              </button>
+              <button type="button" onclick="selectSubCity('Megenagna / 22')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                Megenagna / 22
+              </button>
+              <button type="button" onclick="selectSubCity('Gerji / Imperial')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                Gerji / Imperial
+              </button>
+              <button type="button" onclick="selectSubCity('Lebu / Jemo')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                Lebu / Jemo
+              </button>
+              <button type="button" onclick="selectSubCity('Mexico / Ledeta')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                Mexico / Ledeta
+              </button>
+              <button type="button" onclick="selectSubCity('4 Kilo / 6 Kilo')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                4 Kilo / 6 Kilo
+              </button>
+              <button type="button" onclick="selectSubCity('Gotera / Saris')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                Gotera / Saris
+              </button>
+              <button type="button" onclick="selectSubCity('Kera / Bulgaria')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+                Kera / Bulgaria
+              </button>
+            </div>
+
+            <!-- Specific Landmark & GPS Button -->
+            <div class="space-y-1.5 pt-1">
+              <label class="text-xs font-semibold text-slate-300">
+                Landmark / Street Address <span class="text-rose-500 font-bold">*</span>:
+              </label>
+              <div class="flex space-x-2">
+                <input 
+                  type="text" 
+                  id="delivery-address-input" 
+                  placeholder="e.g. Near Edna Mall, Building #4"
+                  class="flex-1 bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60" 
+                />
+                <button 
+                  type="button" 
+                  onclick="pinCurrentLocation()" 
+                  id="btn-pin-gps"
+                  class="px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-surface-border text-xs font-semibold text-amber-300 flex items-center space-x-1 shrink-0"
+                >
+                  <i class="fa-solid fa-location-crosshairs text-xs"></i>
+                  <span id="gps-pin-label">GPS Pin</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          <!-- Contact Fields (Both Required) -->
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <div>
-              <label class="text-xs font-semibold text-slate-300" id="lbl-recipient-name">
+          <!-- Contact Fields (Mirrors Bot Recipient & Phone Step) -->
+          <div class="space-y-2 pt-1 border-t border-surface-border">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-white">
                 Recipient Name <span class="text-rose-500 font-bold">*</span>:
               </label>
-              <input 
-                type="text" 
-                id="order-recipient-name" 
-                class="w-full bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400/60 mt-1" 
-              />
+              <button type="button" onclick="useTelegramName()" id="btn-use-tg-name" class="text-[10px] text-amber-400 hover:underline font-medium">
+                Use My Telegram Name
+              </button>
             </div>
+            <input 
+              type="text" 
+              id="order-recipient-name" 
+              placeholder="e.g. Kebron Girma"
+              class="w-full bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400/60" 
+            />
+
             <div>
-              <label class="text-xs font-semibold text-slate-300" id="lbl-phone-number">
-                Phone Number <span class="text-rose-500 font-bold">*</span>:
+              <label class="text-xs font-semibold text-white block mt-2">
+                Contact Phone <span class="text-rose-500 font-bold">*</span>:
               </label>
               <input 
                 type="tel" 
                 id="order-phone-number" 
-                placeholder="09... / 07..." 
+                placeholder="0911223344 or 07..." 
                 class="w-full bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60 mt-1" 
               />
+              <p class="text-[10px] text-slate-400 mt-1">Required for driver coordination and delivery status updates.</p>
             </div>
           </div>
         </div>
 
         <!-- STEP 4: 50% DEPOSIT & RECEIPT PROOF UPLOAD -->
         <div id="order-step-4" class="space-y-4 hidden">
-          <!-- Financial Card -->
+          <!-- Financial Cost Breakdown Card -->
           <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-2">
             <div class="flex justify-between text-xs text-slate-300">
-              <span id="lbl-total-order-val">Total Order Value:</span>
-              <span id="step4-total-val" class="font-bold text-white">0 ETB</span>
+              <span>Items Subtotal:</span>
+              <span id="step4-items-subtotal" class="font-bold text-white">0 ETB</span>
+            </div>
+            <div id="step4-design-row" class="flex justify-between text-[11px] text-amber-300 hidden">
+              <span>Selora Custom Design Service:</span>
+              <span>+100 ETB</span>
             </div>
             <div id="step4-rush-row" class="flex justify-between text-[11px] text-amber-300 hidden">
-              <span>Includes 2-Day Rush Fee:</span>
+              <span>⚡ Priority 2-Day Rush Fee:</span>
               <span>+200 ETB</span>
+            </div>
+            <div class="flex justify-between text-xs text-slate-300 pt-1 border-t border-surface-border">
+              <span>Total Order Value:</span>
+              <span id="step4-total-val" class="font-bold text-white">0 ETB</span>
             </div>
             <div class="pt-2 border-t border-surface-border flex justify-between items-baseline">
               <div>
-                <span class="text-xs font-bold text-amber-300" id="lbl-req-deposit">Required 50% Deposit:</span>
-                <p class="text-[10px] text-slate-400" id="lbl-to-start-prod">To begin production</p>
+                <span class="text-xs font-bold text-amber-300">Required 50% Advance Deposit:</span>
+                <p class="text-[10px] text-slate-400">Balance paid upon pickup or delivery</p>
               </div>
               <span id="step4-deposit-val" class="text-xl font-extrabold text-amber-400">0 ETB</span>
             </div>
           </div>
 
-          <!-- Accounts with 1-Tap Copy -->
+          <!-- Official Payment Accounts with 1-Tap Copy -->
           <div class="space-y-2">
-            <label class="text-xs font-semibold text-white" id="lbl-transfer-to">
-              Payment Method & Account <span class="text-rose-500 font-bold">*</span>:
+            <label class="text-xs font-semibold text-white">
+              Transfer Deposit To <span class="text-rose-500 font-bold">*</span>:
             </label>
             
             <div class="flex bg-surface-card p-1 rounded-xl border border-surface-border text-xs">
@@ -618,6 +808,7 @@
               </button>
             </div>
 
+            <!-- CBE Box -->
             <div id="box-cbe-details" class="bg-surface-card border border-surface-border rounded-xl p-3 flex items-center justify-between">
               <div>
                 <span class="text-[10px] text-slate-400">CBE Account Number</span>
@@ -630,6 +821,7 @@
               </button>
             </div>
 
+            <!-- Telebirr Box -->
             <div id="box-telebirr-details" class="bg-surface-card border border-surface-border rounded-xl p-3 flex items-center justify-between hidden">
               <div>
                 <span class="text-[10px] text-slate-400">Telebirr Mobile Number</span>
@@ -645,7 +837,7 @@
 
           <!-- Receipt Screenshot Upload (STRICTLY REQUIRED WITH *) -->
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-white" id="lbl-upload-receipt">
+            <label class="text-xs font-semibold text-white">
               Upload Payment Screenshot / Receipt <span class="text-rose-500 font-bold">*</span>:
             </label>
             <input type="file" id="receipt-file-input" accept="image/*" onchange="handleReceiptFileSelect(event)" class="hidden">
@@ -667,7 +859,7 @@
               </div>
               <div id="receipt-placeholder-container" class="flex items-center space-x-2 text-slate-300 text-xs">
                 <i class="fa-solid fa-receipt text-amber-400"></i>
-                <span id="lbl-tap-attach-receipt">Tap to attach transfer screenshot</span>
+                <span>Tap to attach transfer screenshot</span>
                 <span class="text-rose-400 font-medium text-[10px]">(Required)</span>
               </div>
             </div>
@@ -688,15 +880,15 @@
             <div class="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto mb-2">
               <i class="fa-solid fa-check text-xl"></i>
             </div>
-            <h3 class="text-base font-bold text-white" id="lbl-order-success-title">Order Successfully Placed</h3>
-            <p class="text-xs text-slate-400" id="lbl-order-success-desc">Your order and deposit proof have been received for verification.</p>
+            <h3 class="text-base font-bold text-white">Order Confirmed</h3>
+            <p class="text-xs text-slate-400">Your deposit has been submitted for studio review.</p>
           </div>
 
           <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-3 shadow-xl">
             <div class="flex items-center justify-between border-b border-surface-border pb-3">
               <div>
                 <span class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Order Code</span>
-                <h4 id="ticket-order-code" class="text-xl font-extrabold text-amber-400 tracking-wider">SP-1004</h4>
+                <h4 id="ticket-order-code" class="text-xl font-extrabold text-amber-400 tracking-wider">SLR-1004</h4>
               </div>
               <button type="button" onclick="copyOrderCode()" id="btn-copy-ticket" class="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center space-x-1 active:scale-95 transition">
                 <i class="fa-regular fa-copy text-xs"></i>
@@ -740,7 +932,7 @@
               class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1.5 active:scale-98 transition"
             >
               <i class="fa-solid fa-magnifying-glass text-xs"></i>
-              <span id="btn-track-ticket-txt">Track Order Live Status</span>
+              <span>Track Order Live Status</span>
             </button>
             <button 
               type="button"
@@ -774,23 +966,44 @@
     </div>
   </div>
 
-  <!-- ─── SCRIPT APPLICATION LOGIC ──────────────────────────────── -->
+  <!-- JAVASCRIPT APPLICATION CORE -->
   <script>
     // ─── STATE MANAGEMENT ──────────────────────────────────────────
-    let currentLang = 'en'; // 'en' | 'am'
+    let currentLang = 'en';
     let currentTab = 'catalog';
     let currentStep = 1;
     let selectedProduct = null;
     let currentQuantity = 15;
-    let designMode = 'ready'; // 'ready' | 'upload'
+    
+    // Business Cards option: 'ready' (Free) | 'selora' (+100 ETB)
+    let cardDesignChoice = 'ready';
+    
+    // Design Mode: 'ready' (Curated designs) | 'upload' (Customer artwork)
+    let designMode = 'ready';
     let chosenDesign = null;
+    
+    // Photo Upload Mode: 'single' (1 photo for all) | 'multi' (different photo per item)
+    let photoUploadMode = 'single';
     let uploadedArtworkFile = null;
-    let uploadedReceiptFile = null;
-    let currentUrgency = 'standard'; // 'standard' | 'rush'
+    let multiUploadedFiles = []; // array of Files for multi-photo orders
+    
+    // Calendar Date & Turnaround Speed
+    let currentCalYear = new Date().getFullYear();
+    let currentCalMonth = new Date().getMonth() + 1; // 1-12
+    let selectedDeadlineDate = '';
+    let selectedDeadlineRushFee = 0; // 0 or 200
+    
+    // Delivery & Location
     let currentDelivery = 'pickup'; // 'pickup' | 'yango'
-    let currentPaymentMethod = 'CBE';
+    let selectedSubCity = '';
     let gpsCoords = '';
+    
+    // Payment
+    let currentPaymentMethod = 'CBE';
+    let uploadedReceiptFile = null;
     let confirmedOrderData = null;
+    
+    // Telegram User Session
     let tgUser = { id: 12345678, first_name: 'Customer', username: '' };
 
     // ─── TRANSLATIONS ──────────────────────────────────────────────
@@ -800,68 +1013,44 @@
         designs: 'Designs',
         track: 'Track',
         studio: 'Studio',
-        depositBanner: '50% deposit required to begin production. Balance due upon delivery or pickup.',
-        all: 'All Products',
-        stickers: 'Stickers',
-        cards: 'Bookmarks & Cards',
-        books: 'Photo Books',
-        merch: 'Mugs & Gifts',
-        order: 'Order',
+        depositBanner: '50% advance deposit required to start production. Remaining 50% paid upon pickup or delivery.',
         min: 'Min',
+        order: 'Order',
         step1Title: 'Step 1/4: Quantity & Specs',
         step2Title: 'Step 2/4: Artwork & Design',
         step3Title: 'Step 3/4: Delivery & Deadline',
         step4Title: 'Step 4/4: 50% Deposit & Proof',
         step5Title: 'Order Confirmed',
-        selectQty: 'Quantity',
         subtotal: 'Estimated Total',
-        deposit50: '50% Deposit',
+        deposit50: '50% Deposit Due',
         nextArtwork: 'Next: Artwork',
         nextDelivery: 'Next: Delivery',
         nextDeposit: 'Next: 50% Deposit',
-        submitOrder: 'Submit Order',
-        uploadArtPlaceholder: 'Tap to select photo or artwork file',
-        customNotesPlaceholder: 'e.g. Matte finish, text: "Happy 25th Birthday", logo in corner...',
-        turnaroundTitle: 'Turnaround Speed',
-        deliveryMethod: 'Delivery Method',
-        orderPlaced: 'Order Successfully Placed',
-        trackStatus: 'Track Order Live Status'
+        submitOrder: 'Submit Order'
       },
       am: {
         shop: 'ሱቅ',
         designs: 'ዲዛይኖች',
         track: 'ክትትል',
         studio: 'ስቱዲዮ',
-        depositBanner: 'ስራ ለመጀመር 50% ቅድመ ክፍያ ያስፈልጋል። ቀሪው ሲረከቡ ይከፈላል።',
-        all: 'ሁሉም ዕቃዎች',
-        stickers: 'ስቲከሮች',
-        cards: 'ማርከሮች እና ካርዶች',
-        books: 'ፎቶ አልበሞች',
-        merch: 'ኩባያ እና ስጦታዎች',
-        order: 'እዘዝ',
+        depositBanner: 'ስራ ለመጀመር 50% ቅድመ ክፍያ ያስፈልጋል። ቀሪው 50% ሲረከቡ ይከፈላል።',
         min: 'ዝቅተኛ',
+        order: 'እዘዝ',
         step1Title: 'ደረጃ 1/4፡ ብዛት እና መጠን',
         step2Title: 'ደረጃ 2/4፡ ዲዛይን እና ፎቶ',
         step3Title: 'ደረጃ 3/4፡ ማድረሻ እና ቀን',
         step4Title: 'ደረጃ 4/4፡ 50% ቅድመ ክፍያ',
         step5Title: 'ትዕዛዝ ተረጋግጧል',
-        selectQty: 'ብዛት',
         subtotal: 'የታሰበው ዋጋ',
         deposit50: '50% ቅድመ ክፍያ',
         nextArtwork: 'ቀጣይ፡ ዲዛይን',
         nextDelivery: 'ቀጣይ፡ አድራሻ',
         nextDeposit: 'ቀጣይ፡ 50% ክፍያ',
-        submitOrder: 'ትዕዛዝ አረጋግጥ',
-        uploadArtPlaceholder: 'ፎቶ ወይም ፋይል ለመጫን እዚህ ይጫኑ',
-        customNotesPlaceholder: 'ምሳሌ፡ ማት ሽፋን፣ የሚጻፍ ጽሑፍ፣ የዲዛይን ምርጫ...',
-        turnaroundTitle: 'የህትመት ፍጥነት',
-        deliveryMethod: 'የመረከቢያ መንገድ',
-        orderPlaced: 'ትዕዛዝዎ በተሳካ ሁኔታ ተመዝግቧል',
-        trackStatus: 'የትዕዛዙን ሁኔታ በቀጥታ ተከታተል'
+        submitOrder: 'ትዕዛዝ አረጋግጥ'
       }
     };
 
-    // ─── LIVE DASHBOARD SYNC (JINJA2 + REALTIME API) ───────────────
+    // ─── DASHBOARD SYNC (JINJA2 + REALTIME API) ────────────────────
     const RAW_SERVER_PRODUCTS = {{ products | default([]) | tojson }};
     const RAW_SERVER_DESIGNS = {{ designs | default([]) | tojson }};
 
@@ -870,10 +1059,12 @@
       return rawList.map(p => {
         let cat = "stickers";
         const idLower = (p.id || '').toLowerCase();
-        if (idLower.includes("card") || idLower.includes("bookmark")) cat = "stationery";
-        else if (idLower.includes("book") || idLower.includes("notebook")) cat = "books";
+        if (idLower.includes("book") || idLower.includes("minibook")) cat = "books";
+        else if (idLower.includes("card") || idLower.includes("bookmark")) cat = "cards";
+        else if (idLower.includes("polaroid")) cat = "polaroid";
+        else if (idLower.includes("notebook")) cat = "notebooks";
         else if (idLower.includes("mug") || idLower.includes("puzzle")) cat = "merch";
-        else if (idLower.includes("poster")) cat = "stickers";
+        else if (idLower.includes("poster") || idLower.includes("sticker")) cat = "stickers";
 
         let img = p.image_url || p.imageUrl || `/product-images/${p.id}.png`;
 
@@ -886,7 +1077,8 @@
           unit: p.unit ? p.unit.replace(/^per\s+/, '') : "piece",
           unitAm: p.unitAm || (p.unit ? p.unit.replace(/^per\s+/, '') : "ፍሬ"),
           minOrder: p.min_order || p.minOrder || 1,
-          description: p.description || "High quality custom print from Selora Prints.",
+          hasReadyDesigns: p.has_ready_designs !== false,
+          description: p.description || "High-quality custom merchandise from Selora Prints.",
           descriptionAm: p.descriptionAm || p.description,
           imageUrl: img
         };
@@ -926,15 +1118,13 @@
         }
       }
 
-      // Initialize date picker minimum date (2 days from today)
-      const dateInput = document.getElementById('order-deadline-date');
-      const minDate = new Date();
-      minDate.setDate(minDate.getDate() + 2);
-      const minDateStr = minDate.toISOString().split('T')[0];
-      dateInput.min = minDateStr;
-      dateInput.value = minDateStr;
+      // Initialize calendar month
+      const now = new Date();
+      currentCalYear = now.getFullYear();
+      currentCalMonth = now.getMonth() + 1;
+      renderCalendar(currentCalYear, currentCalMonth);
 
-      // Render with server products immediately
+      // Render server catalog
       if (PRODUCTS && PRODUCTS.length) {
         renderProducts(PRODUCTS);
       }
@@ -942,7 +1132,7 @@
         renderDesigns(DESIGNS);
       }
 
-      // Re-fetch in background to ensure any dashboard uploads made seconds ago are active
+      // Re-fetch in background so any new dashboard uploads appear instantly
       fetch('/api/webapp/config')
         .then(res => res.json())
         .then(data => {
@@ -957,7 +1147,7 @@
             }
           }
         })
-        .catch(err => console.log('Serving server-rendered catalog.'));
+        .catch(err => console.log('Loaded server catalog.'));
     });
 
     // ─── HAPTIC FEEDBACK ───────────────────────────────────────────
@@ -975,7 +1165,7 @@
       } catch (e) {}
     }
 
-    // ─── RENDER CATALOG CARDS (CLEAN LUXURY RETAIL) ────────────────
+    // ─── RENDER PRODUCTS GRID (CLEAN LUXURY RETAIL) ───────────────
     function renderProducts(items) {
       const container = document.getElementById('products-grid');
       container.innerHTML = '';
@@ -994,7 +1184,7 @@
             <div class="relative aspect-square bg-[#0c101c] overflow-hidden">
               <img src="${prod.imageUrl}" alt="${name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='/product-images/stickers.png'">
               <div class="absolute top-2 left-2 bg-[#090d16]/85 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
-                ${prod.price} ETB <span class="text-slate-400 font-normal">/${unit}</span>
+                ${prod.price ? `${prod.price} ETB` : 'Custom Quote'} <span class="text-slate-400 font-normal">/${unit}</span>
               </div>
             </div>
             <div class="p-3">
@@ -1013,7 +1203,7 @@
       });
     }
 
-    // ─── RENDER DESIGNS ────────────────────────────────────────────
+    // ─── RENDER DESIGNS GALLERY ────────────────────────────────────
     function renderDesigns(items) {
       const container = document.getElementById('designs-grid');
       container.innerHTML = '';
@@ -1099,19 +1289,135 @@
       });
     }
 
+    // ─── INTERACTIVE CALENDAR DATE PICKER (EXACT BOT LOGIC) ────────
+    function renderCalendar(year, month) {
+      const grid = document.getElementById('cal-days-grid');
+      const title = document.getElementById('cal-month-title');
+      grid.innerHTML = '';
+
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      title.textContent = `${monthNames[month - 1]} ${year}`;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      const rushDay = new Date(today);
+      rushDay.setDate(today.getDate() + 2);
+
+      const maxDate = new Date(today);
+      maxDate.setDate(today.getDate() + 60); // 2 months out
+
+      // Determine day of week of 1st day of month (Monday = 0)
+      const firstDayOfMonth = new Date(year, month - 1, 1);
+      let startingDay = firstDayOfMonth.getDay() - 1; // 0 = Mon, 6 = Sun
+      if (startingDay === -1) startingDay = 6;
+
+      const daysInMonth = new Date(year, month, 0).getDate();
+
+      // Empty padding cells before 1st of month
+      for (let i = 0; i < startingDay; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = "cal-cell disabled";
+        emptyCell.textContent = "";
+        grid.appendChild(emptyCell);
+      }
+
+      // Populate month days
+      for (let d = 1; d <= daysInMonth; d++) {
+        const cellDate = new Date(year, month - 1, d);
+        cellDate.setHours(0, 0, 0, 0);
+        const iso = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+        const cell = document.createElement('div');
+
+        if (cellDate <= today) {
+          // Past or today blocked
+          cell.className = "cal-cell disabled text-slate-600";
+          cell.textContent = "·";
+        } else if (cellDate.getTime() === tomorrow.getTime()) {
+          // Tomorrow blocked (min 2-day turnaround)
+          cell.className = "cal-cell disabled text-slate-600";
+          cell.textContent = "✕";
+          cell.title = "Next-day rush is not available to guarantee print quality";
+        } else if (cellDate > maxDate) {
+          // Beyond 60 days
+          cell.className = "cal-cell disabled text-slate-600";
+          cell.textContent = "·";
+        } else if (cellDate.getTime() === rushDay.getTime()) {
+          // Rush day (+200 ETB)
+          cell.className = `cal-cell selectable rush ${selectedDeadlineDate === iso ? 'selected' : ''}`;
+          cell.innerHTML = `⚡${d}`;
+          cell.onclick = () => selectDeadline(iso, 200, `${monthNames[month-1]} ${d}, ${year} (⚡ 2-Day Rush +200 ETB)`);
+        } else {
+          // Standard day (3+ days)
+          cell.className = `cal-cell selectable ${selectedDeadlineDate === iso ? 'selected' : ''}`;
+          cell.textContent = d;
+          cell.onclick = () => selectDeadline(iso, 0, `${monthNames[month-1]} ${d}, ${year}`);
+        }
+
+        grid.appendChild(cell);
+      }
+    }
+
+    function navigateCalendar(delta) {
+      haptic('light');
+      currentCalMonth += delta;
+      if (currentCalMonth > 12) {
+        currentCalMonth = 1;
+        currentCalYear++;
+      } else if (currentCalMonth < 1) {
+        currentCalMonth = 12;
+        currentCalYear--;
+      }
+      renderCalendar(currentCalYear, currentCalMonth);
+    }
+
+    function selectDeadline(isoDate, rushFee, label) {
+      haptic('selection');
+      selectedDeadlineDate = isoDate;
+      selectedDeadlineRushFee = rushFee;
+      
+      document.getElementById('selected-deadline-badge').textContent = label;
+      document.getElementById('selected-deadline-badge').className = rushFee > 0 
+        ? "text-[10px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40"
+        : "text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/40";
+      
+      renderCalendar(currentCalYear, currentCalMonth);
+      hideValidationError();
+      clearFieldErrors();
+      updateCalculations();
+    }
+
     // ─── ORDER MODAL WORKFLOW ──────────────────────────────────────
     function openOrderModal(prod) {
       haptic('medium');
       selectedProduct = prod;
       currentQuantity = prod.minOrder || 1;
-      currentUrgency = 'standard';
-      currentDelivery = 'pickup';
-      currentPaymentMethod = 'CBE';
+      cardDesignChoice = 'ready';
+      designMode = prod.hasReadyDesigns ? 'ready' : 'upload';
+      photoUploadMode = 'single';
       uploadedArtworkFile = null;
+      multiUploadedFiles = [];
       uploadedReceiptFile = null;
       chosenDesign = null;
+      selectedSubCity = '';
+      currentDelivery = 'pickup';
+      currentPaymentMethod = 'CBE';
+      gpsCoords = '';
       hideValidationError();
+      clearFieldErrors();
 
+      // Pre-select default deadline (standard: today + 3 days)
+      const defDate = new Date();
+      defDate.setDate(defDate.getDate() + 3);
+      const isoDef = `${defDate.getFullYear()}-${String(defDate.getMonth()+1).padStart(2, '0')}-${String(defDate.getDate()).padStart(2, '0')}`;
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      selectDeadline(isoDef, 0, `${monthNames[defDate.getMonth()]} ${defDate.getDate()}, ${defDate.getFullYear()}`);
+
+      // Reset file containers
       document.getElementById('artwork-preview-container').classList.add('hidden');
       document.getElementById('artwork-placeholder-container').classList.remove('hidden');
       document.getElementById('receipt-preview-container').classList.add('hidden');
@@ -1119,11 +1425,9 @@
       document.getElementById('order-notes-input').value = '';
       document.getElementById('order-trans-ref').value = '';
       document.getElementById('selected-design-status').textContent = 'None selected';
+      document.getElementById('multi-photo-preview-grid').innerHTML = '';
 
-      // Reset field error highlights
-      clearFieldErrors();
-
-      // Populate Product Details
+      // Set Product Meta
       const name = currentLang === 'en' ? prod.name : prod.nameAm;
       const desc = currentLang === 'en' ? prod.description : prod.descriptionAm;
       const unit = currentLang === 'en' ? prod.unit : prod.unitAm;
@@ -1133,15 +1437,57 @@
       document.getElementById('modal-prod-desc').textContent = desc;
       document.getElementById('modal-prod-category').textContent = prod.category;
       document.getElementById('modal-prod-img').src = prod.imageUrl;
-      document.getElementById('modal-prod-price-tag').textContent = `${prod.price} ETB / ${unit}`;
+      document.getElementById('modal-prod-price-tag').textContent = `${prod.price ? `${prod.price} ETB` : 'Custom Quote'} / ${unit}`;
       document.getElementById('modal-min-order-pill').textContent = `Min: ${prod.minOrder || 1}`;
       document.getElementById('order-qty-input').value = currentQuantity;
 
-      // Populate Quick Chips
+      // Business Card specific option (Free vs +100 ETB)
+      const isCard = prod.id === 'business_cards';
+      document.getElementById('box-card-design-option').classList.toggle('hidden', !isCard);
+      setCardDesignOption('ready');
+
+      // Setup Stepper Buttons (+10 / +5 / +1)
+      setupStepperIncrements(prod.minOrder || 1);
+
+      // Populate Quick Qty Chips
+      populateQuickChips(prod.minOrder || 1);
+
+      // Populate Designs Picker in Step 2
+      populateDesignsPicker(prod.id);
+
+      // Handle Ready vs Upload design mode initial state
+      if (!prod.hasReadyDesigns) {
+        document.getElementById('box-design-mode-toggle').classList.add('hidden');
+        setDesignMode('upload');
+      } else {
+        document.getElementById('box-design-mode-toggle').classList.remove('hidden');
+        setDesignMode('ready');
+      }
+
+      setOrderStep(1);
+      updateCalculations();
+      document.getElementById('order-modal').classList.remove('hidden');
+    }
+
+    function closeOrderModal() {
+      haptic('light');
+      document.getElementById('order-modal').classList.add('hidden');
+    }
+
+    function setupStepperIncrements(minOrder) {
+      const stepLarge = minOrder >= 50 ? 10 : (minOrder >= 10 ? 5 : 2);
+      const stepSmall = minOrder >= 50 ? 5 : 1;
+
+      document.getElementById('btn-step-large-minus').textContent = `-${stepLarge}`;
+      document.getElementById('btn-step-large-plus').textContent = `+${stepLarge}`;
+      document.getElementById('btn-step-small-minus').textContent = minOrder >= 50 ? `-${stepSmall}` : "-";
+      document.getElementById('btn-step-small-plus').textContent = minOrder >= 50 ? `+${stepSmall}` : "+";
+    }
+
+    function populateQuickChips(minQ) {
       const chipsContainer = document.getElementById('quick-qty-chips');
       chipsContainer.innerHTML = '';
-      const minQ = prod.minOrder || 1;
-      const presets = [minQ, minQ * 2, minQ * 5, 100, 250].filter((v, idx, arr) => arr.indexOf(v) === idx && v >= minQ);
+      const presets = [minQ, minQ * 2, minQ * 5, 50, 100, 250].filter((v, idx, arr) => arr.indexOf(v) === idx && v >= minQ);
       presets.forEach(pv => {
         const chip = document.createElement('button');
         chip.type = 'button';
@@ -1155,49 +1501,17 @@
         };
         chipsContainer.appendChild(chip);
       });
-
-      // Populate Designs Picker in Step 2
-      populateDesignsPicker(prod.id);
-
-      setOrderStep(1);
-      updateCalculations();
-      document.getElementById('order-modal').classList.remove('hidden');
     }
 
-    function closeOrderModal() {
-      haptic('light');
-      document.getElementById('order-modal').classList.add('hidden');
-    }
-
-    function populateDesignsPicker(prodId) {
-      const container = document.getElementById('modal-designs-picker');
-      container.innerHTML = '';
-      DESIGNS.forEach(des => {
-        const item = document.createElement('div');
-        item.className = "p-2 rounded-xl border border-surface-border hover:border-amber-400/60 bg-surface-card cursor-pointer transition flex items-center space-x-2";
-        item.onclick = () => {
-          haptic('light');
-          chosenDesign = des;
-          document.querySelectorAll('#modal-designs-picker > div').forEach(el => el.classList.remove('border-amber-400', 'bg-amber-400/10'));
-          item.classList.add('border-amber-400', 'bg-amber-400/10');
-          document.getElementById('selected-design-status').textContent = des.title;
-          hideValidationError();
-        };
-
-        item.innerHTML = `
-          <img src="${des.imageUrl}" alt="" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.src='/designs-images/des_stickers_1.png'">
-          <div class="overflow-hidden">
-            <p class="text-[11px] font-bold text-white truncate">${des.title}</p>
-            <span class="text-[9px] text-amber-400/90">${des.category}</span>
-          </div>
-        `;
-        container.appendChild(item);
-      });
-    }
-
-    function adjustQuantity(delta) {
+    function adjustQuantityWithStep(scale, direction) {
       const minQ = selectedProduct ? (selectedProduct.minOrder || 1) : 1;
-      const next = currentQuantity + delta;
+      let step = 1;
+      if (scale === 'large') {
+        step = minQ >= 50 ? 10 : (minQ >= 10 ? 5 : 2);
+      } else {
+        step = minQ >= 50 ? 5 : 1;
+      }
+      const next = currentQuantity + (step * direction);
       if (next >= minQ) {
         haptic('light');
         currentQuantity = next;
@@ -1214,21 +1528,56 @@
       updateCalculations();
     }
 
-    function calculateTotal() {
+    // ─── BUSINESS CARDS DESIGN OPTION (FREE VS +100 ETB) ───────────
+    function setCardDesignOption(choice) {
+      haptic('selection');
+      cardDesignChoice = choice;
+      const optReady = document.getElementById('opt-card-ready');
+      const optSelora = document.getElementById('opt-card-selora');
+      const designRow = document.getElementById('step4-design-row');
+
+      if (choice === 'ready') {
+        optReady.className = "p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition";
+        optSelora.className = "p-3 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition";
+        designRow.classList.add('hidden');
+      } else {
+        optSelora.className = "p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition";
+        optReady.className = "p-3 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition";
+        designRow.classList.remove('hidden');
+      }
+      updateCalculations();
+    }
+
+    // ─── TOTAL & 50% DEPOSIT CALCULATION (EXACT BOT FORMULA) ───────
+    function calculateSubtotal() {
       if (!selectedProduct) return 0;
-      const base = (selectedProduct.price || 0) * currentQuantity;
-      const rush = currentUrgency === 'rush' ? 200 : 0;
-      return Math.round(base + rush);
+      return (selectedProduct.price || 0) * currentQuantity;
+    }
+
+    function calculateTotal() {
+      const base = calculateSubtotal();
+      const designFee = (selectedProduct?.id === 'business_cards' && cardDesignChoice === 'selora') ? 100 : 0;
+      const rushFee = selectedDeadlineRushFee || 0;
+      return Math.round(base + designFee + rushFee);
     }
 
     function updateCalculations() {
+      const subtotal = calculateSubtotal();
       const total = calculateTotal();
       const deposit = Math.round(total * 0.50);
+      const balance = total - deposit;
 
-      document.getElementById('step1-subtotal').textContent = `${total} ETB`;
+      document.getElementById('step1-subtotal').textContent = `${subtotal} ETB`;
       document.getElementById('step1-deposit').textContent = `${deposit} ETB`;
+      document.getElementById('step4-items-subtotal').textContent = `${subtotal} ETB`;
       document.getElementById('step4-total-val').textContent = `${total} ETB`;
       document.getElementById('step4-deposit-val').textContent = `${deposit} ETB`;
+
+      if (selectedDeadlineRushFee > 0) {
+        document.getElementById('step4-rush-row').classList.remove('hidden');
+      } else {
+        document.getElementById('step4-rush-row').classList.add('hidden');
+      }
 
       if (currentStep === 4) {
         document.getElementById('modal-footer-price-label').textContent = I18N[currentLang].deposit50;
@@ -1237,23 +1586,11 @@
         document.getElementById('modal-footer-price-label').textContent = I18N[currentLang].subtotal;
         document.getElementById('modal-footer-price-val').textContent = `${total} ETB`;
       }
-    }
 
-    // ─── VALIDATION HELPERS ────────────────────────────────────────
-    function showValidationError(msg) {
-      haptic('error');
-      const banner = document.getElementById('modal-validation-banner');
-      document.getElementById('modal-validation-msg').textContent = msg;
-      banner.classList.remove('hidden');
-      banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    function hideValidationError() {
-      document.getElementById('modal-validation-banner').classList.add('hidden');
-    }
-
-    function clearFieldErrors() {
-      document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+      // Update multi-photo texts
+      document.getElementById('lbl-multi-photo-title').textContent = `Different photos (${currentQuantity} pcs)`;
+      document.getElementById('lbl-multi-photo-desc').textContent = `Upload ${currentQuantity} photos`;
+      document.getElementById('multi-photo-counter').textContent = `${multiUploadedFiles.length} / ${currentQuantity} photos`;
     }
 
     // ─── STEPPER LOGIC WITH REQUIRED * ENFORCEMENT ─────────────────
@@ -1282,6 +1619,15 @@
         footer.classList.remove('hidden');
         nextBtnTxt.textContent = I18N[currentLang].nextDelivery;
         subtitle.textContent = I18N[currentLang].step2Title;
+
+        // Toggle multi-photo choice if qty > 1
+        const multiToggle = document.getElementById('box-multi-photo-toggle');
+        if (currentQuantity > 1) {
+          multiToggle.classList.remove('hidden');
+        } else {
+          multiToggle.classList.add('hidden');
+          setPhotoUploadMode('single');
+        }
       } else if (s === 3) {
         btnBack.classList.remove('hidden');
         footer.classList.remove('hidden');
@@ -1314,10 +1660,16 @@
         setOrderStep(2);
       } else if (currentStep === 2) {
         // Enforce required artwork upload or studio design selection
-        if (designMode === 'upload' && !uploadedArtworkFile) {
-          document.getElementById('artwork-dropzone').classList.add('field-error');
-          showValidationError('Please upload your photo or artwork file before proceeding.');
-          return;
+        if (designMode === 'upload') {
+          if (photoUploadMode === 'single' && !uploadedArtworkFile) {
+            document.getElementById('artwork-dropzone').classList.add('field-error');
+            showValidationError('Please upload your photo or artwork file before proceeding.');
+            return;
+          }
+          if (photoUploadMode === 'multi' && (!multiUploadedFiles || multiUploadedFiles.length === 0)) {
+            showValidationError(`Please attach at least one photo for your ${currentQuantity} items.`);
+            return;
+          }
         }
         if (designMode === 'ready' && !chosenDesign) {
           showValidationError('Please select one of the studio designs to proceed.');
@@ -1325,20 +1677,22 @@
         }
         setOrderStep(3);
       } else if (currentStep === 3) {
-        // Validate required date
-        const deadlineDate = document.getElementById('order-deadline-date').value;
-        if (!deadlineDate) {
-          document.getElementById('order-deadline-date').classList.add('field-error');
-          showValidationError('Please select your required completion date.');
+        // Validate required completion date
+        if (!selectedDeadlineDate) {
+          showValidationError('Please tap a date on the calendar for your deadline.');
           return;
         }
 
         // Validate delivery address if taxi delivery selected
         if (currentDelivery === 'yango') {
+          if (!selectedSubCity) {
+            showValidationError('Please choose an Addis Ababa sub-city from the grid.');
+            return;
+          }
           const addr = document.getElementById('delivery-address-input').value.trim();
           if (!addr) {
             document.getElementById('delivery-address-input').classList.add('field-error');
-            showValidationError('Please provide your drop-off neighborhood or landmark for delivery.');
+            showValidationError('Please enter your street or landmark address for the delivery driver.');
             return;
           }
         }
@@ -1354,7 +1708,7 @@
         const phone = document.getElementById('order-phone-number').value.trim();
         if (!phone || phone.length < 9) {
           document.getElementById('order-phone-number').classList.add('field-error');
-          showValidationError('Please provide a valid contact phone number (e.g. 0912345678).');
+          showValidationError('Please provide a valid contact phone number (e.g. 0911223344).');
           return;
         }
 
@@ -1377,7 +1731,7 @@
       }
     }
 
-    // ─── OPTIONS TOGGLING ──────────────────────────────────────────
+    // ─── DESIGN & PHOTO MODES ──────────────────────────────────────
     function setDesignMode(mode) {
       haptic('selection');
       designMode = mode;
@@ -1402,25 +1756,122 @@
       }
     }
 
-    function setUrgency(urg) {
-      haptic('light');
-      currentUrgency = urg;
-      const optStd = document.getElementById('opt-urgency-standard');
-      const optRush = document.getElementById('opt-urgency-rush');
-      const rushRow = document.getElementById('step4-rush-row');
+    function setPhotoUploadMode(mode) {
+      haptic('selection');
+      photoUploadMode = mode;
+      const optSingle = document.getElementById('opt-photo-single');
+      const optMulti = document.getElementById('opt-photo-multi');
+      const boxSingle = document.getElementById('box-single-file-upload');
+      const boxMulti = document.getElementById('box-multi-file-upload');
 
-      if (urg === 'standard') {
-        optStd.className = "p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition";
-        optRush.className = "p-3 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition";
-        rushRow.classList.add('hidden');
+      if (mode === 'single') {
+        optSingle.className = "p-2.5 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition";
+        optMulti.className = "p-2.5 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition";
+        boxSingle.classList.remove('hidden');
+        boxMulti.classList.add('hidden');
       } else {
-        optRush.className = "p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition";
-        optStd.className = "p-3 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition";
-        rushRow.classList.remove('hidden');
+        optMulti.className = "p-2.5 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition";
+        optSingle.className = "p-2.5 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition";
+        boxMulti.classList.remove('hidden');
+        boxSingle.classList.add('hidden');
       }
-      updateCalculations();
     }
 
+    function populateDesignsPicker(prodId) {
+      const container = document.getElementById('modal-designs-picker');
+      container.innerHTML = '';
+      DESIGNS.forEach(des => {
+        const item = document.createElement('div');
+        item.className = "p-2 rounded-xl border border-surface-border hover:border-amber-400/60 bg-surface-card cursor-pointer transition flex items-center space-x-2";
+        item.onclick = () => {
+          haptic('light');
+          chosenDesign = des;
+          document.querySelectorAll('#modal-designs-picker > div').forEach(el => el.classList.remove('border-amber-400', 'bg-amber-400/10'));
+          item.classList.add('border-amber-400', 'bg-amber-400/10');
+          document.getElementById('selected-design-status').textContent = des.title;
+          hideValidationError();
+        };
+
+        item.innerHTML = `
+          <img src="${des.imageUrl}" alt="" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.src='/designs-images/des_stickers_1.png'">
+          <div class="overflow-hidden">
+            <p class="text-[11px] font-bold text-white truncate">${des.title}</p>
+            <span class="text-[9px] text-amber-400/90">${des.category}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // ─── FILE UPLOADS (SINGLE & MULTI) ─────────────────────────────
+    function handleArtworkFileSelect(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      haptic('success');
+      uploadedArtworkFile = file;
+      hideValidationError();
+      clearFieldErrors();
+
+      const previewImg = document.getElementById('artwork-preview-img');
+      const filenameTxt = document.getElementById('artwork-filename-txt');
+      previewImg.src = URL.createObjectURL(file);
+      filenameTxt.textContent = `${file.name} (${(file.size / (1024*1024)).toFixed(2)} MB)`;
+
+      document.getElementById('artwork-placeholder-container').classList.add('hidden');
+      document.getElementById('artwork-preview-container').classList.remove('hidden');
+    }
+
+    function handleMultiPhotoSelect(e) {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+      haptic('success');
+      multiUploadedFiles = [...multiUploadedFiles, ...files];
+      renderMultiPhotoPreviews();
+      hideValidationError();
+      clearFieldErrors();
+    }
+
+    function removeMultiPhoto(idx) {
+      haptic('light');
+      multiUploadedFiles.splice(idx, 1);
+      renderMultiPhotoPreviews();
+    }
+
+    function renderMultiPhotoPreviews() {
+      const container = document.getElementById('multi-photo-preview-grid');
+      container.innerHTML = '';
+      document.getElementById('multi-photo-counter').textContent = `${multiUploadedFiles.length} / ${currentQuantity} photos`;
+
+      multiUploadedFiles.forEach((file, idx) => {
+        const thumb = document.createElement('div');
+        thumb.className = "relative aspect-square rounded-xl overflow-hidden border border-surface-border bg-slate-900 group";
+        const url = URL.createObjectURL(file);
+        thumb.innerHTML = `
+          <img src="${url}" class="w-full h-full object-cover">
+          <button type="button" onclick="removeMultiPhoto(${idx})" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px]">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        `;
+        container.appendChild(thumb);
+      });
+    }
+
+    function handleReceiptFileSelect(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      haptic('success');
+      uploadedReceiptFile = file;
+      hideValidationError();
+      clearFieldErrors();
+
+      const previewImg = document.getElementById('receipt-preview-img');
+      previewImg.src = URL.createObjectURL(file);
+
+      document.getElementById('receipt-placeholder-container').classList.add('hidden');
+      document.getElementById('receipt-preview-container').classList.remove('hidden');
+    }
+
+    // ─── DELIVERY & SUB-CITIES ─────────────────────────────────────
     function setDelivery(del) {
       haptic('light');
       currentDelivery = del;
@@ -1439,6 +1890,46 @@
       }
     }
 
+    function selectSubCity(name) {
+      haptic('selection');
+      selectedSubCity = name;
+      document.querySelectorAll('.subcity-btn').forEach(btn => {
+        if (btn.textContent.trim() === name) {
+          btn.className = "subcity-btn p-2 rounded-xl border border-amber-400 bg-amber-400/15 text-left text-[11px] font-bold text-amber-300 transition truncate";
+        } else {
+          btn.className = "subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate";
+        }
+      });
+      hideValidationError();
+    }
+
+    function pinCurrentLocation() {
+      haptic('light');
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          gpsCoords = `https://maps.google.com/?q=${pos.coords.latitude.toFixed(6)},${pos.coords.longitude.toFixed(6)}`;
+          haptic('success');
+          document.getElementById('gps-pin-label').textContent = '✓ Pinned';
+          document.getElementById('btn-pin-gps').className = "px-3 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center space-x-1 shrink-0";
+        },
+        () => {
+          alert('Unable to retrieve location. Please type your neighborhood or street landmark.');
+        }
+      );
+    }
+
+    function useTelegramName() {
+      haptic('light');
+      const fullName = (tgUser.first_name || '') + (tgUser.last_name ? ' ' + tgUser.last_name : '');
+      document.getElementById('order-recipient-name').value = fullName.trim() || 'Customer';
+      clearFieldErrors();
+    }
+
+    // ─── PAYMENT SELECTION & CLIPBOARD ─────────────────────────────
     function setPaymentMethod(method) {
       haptic('selection');
       currentPaymentMethod = method;
@@ -1460,60 +1951,6 @@
       }
     }
 
-    // ─── FILE UPLOADS WITH PREVIEWS ────────────────────────────────
-    function handleArtworkFileSelect(e) {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      haptic('success');
-      uploadedArtworkFile = file;
-      hideValidationError();
-      clearFieldErrors();
-
-      const previewImg = document.getElementById('artwork-preview-img');
-      const filenameTxt = document.getElementById('artwork-filename-txt');
-      previewImg.src = URL.createObjectURL(file);
-      filenameTxt.textContent = `${file.name} (${(file.size / (1024*1024)).toFixed(2)} MB)`;
-
-      document.getElementById('artwork-placeholder-container').classList.add('hidden');
-      document.getElementById('artwork-preview-container').classList.remove('hidden');
-    }
-
-    function handleReceiptFileSelect(e) {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      haptic('success');
-      uploadedReceiptFile = file;
-      hideValidationError();
-      clearFieldErrors();
-
-      const previewImg = document.getElementById('receipt-preview-img');
-      previewImg.src = URL.createObjectURL(file);
-
-      document.getElementById('receipt-placeholder-container').classList.add('hidden');
-      document.getElementById('receipt-preview-container').classList.remove('hidden');
-    }
-
-    // ─── GPS PINNING ───────────────────────────────────────────────
-    function pinCurrentLocation() {
-      haptic('light');
-      if (!navigator.geolocation) {
-        alert(currentLang === 'en' ? 'Geolocation is not supported.' : 'የአካባቢ መገኛ (GPS) ማግኘት አልተቻለም።');
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          gpsCoords = `https://maps.google.com/?q=${pos.coords.latitude.toFixed(6)},${pos.coords.longitude.toFixed(6)}`;
-          haptic('success');
-          document.getElementById('gps-pin-label').textContent = '✓ GPS Pin';
-          document.getElementById('btn-pin-gps').className = "px-3 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center space-x-1";
-        },
-        () => {
-          alert(currentLang === 'en' ? 'Unable to retrieve location. Please type your neighborhood or landmark.' : 'መገኛዎን ማግኘት አልተቻለም። እባክዎ ሰፈርዎን ወይም መለያ ምልክት ይጻፉ።');
-        }
-      );
-    }
-
-    // ─── CLIPBOARD COPY ────────────────────────────────────────────
     function copyToClipboard(text, elementKey) {
       haptic('light');
       if (navigator.clipboard) {
@@ -1539,6 +1976,23 @@
       }
     }
 
+    // ─── VALIDATION HELPERS ────────────────────────────────────────
+    function showValidationError(msg) {
+      haptic('error');
+      const banner = document.getElementById('modal-validation-banner');
+      document.getElementById('modal-validation-msg').textContent = msg;
+      banner.classList.remove('hidden');
+      banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideValidationError() {
+      document.getElementById('modal-validation-banner').classList.add('hidden');
+    }
+
+    function clearFieldErrors() {
+      document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+    }
+
     // ─── ORDER SUBMISSION (100% IN-APP VIA MULTIPART) ──────────────
     async function submitFullOrder() {
       haptic('heavy');
@@ -1547,24 +2001,37 @@
       const balance = total - deposit;
       const itemsText = `${currentQuantity}x ${selectedProduct.name} (${selectedProduct.unit})`;
       
-      const deadlineDate = document.getElementById('order-deadline-date').value || 'Standard';
-      const deadlineText = currentUrgency === 'rush' 
-        ? `Rush Order (2 Days - by ${deadlineDate})` 
-        : `Standard Turnaround (by ${deadlineDate})`;
+      const deadlineText = selectedDeadlineRushFee > 0
+        ? `Rush Priority (by ${selectedDeadlineDate})`
+        : `Standard Turnaround (by ${selectedDeadlineDate})`;
 
-      const deliveryText = currentDelivery === 'pickup' 
+      const deliveryType = currentDelivery === 'pickup' 
         ? 'Free Store Pickup (Ledeta)' 
-        : 'Addis Ababa Taxi (Yango/Feres)';
+        : 'Addis Ababa Taxi (Yango/Feres/Ride)';
 
       const addrInput = document.getElementById('delivery-address-input').value.trim();
-      const locText = currentDelivery === 'pickup' 
-        ? 'Ledeta, Behind Balcha Hospital' 
-        : `${addrInput || 'Addis Ababa'}${gpsCoords ? ' | GPS: ' + gpsCoords : ''}`;
+      let deliveryLocation = 'Ledeta, Behind Balcha Hospital';
+      if (currentDelivery === 'yango') {
+        deliveryLocation = `${selectedSubCity ? selectedSubCity + ' - ' : ''}${addrInput}${gpsCoords ? ' | GPS: ' + gpsCoords : ''}`;
+      }
 
       const recipient = document.getElementById('order-recipient-name').value.trim() || tgUser.first_name || 'Customer';
-      const phone = document.getElementById('order-phone-number').value.trim() || '';
+      const phone = document.getElementById('order-phone-number').value.trim();
       const notes = document.getElementById('order-notes-input').value.trim();
       const refCode = document.getElementById('order-trans-ref').value.trim();
+
+      let designNote = "";
+      if (selectedProduct.id === 'business_cards') {
+        designNote = cardDesignChoice === 'selora' 
+          ? 'Selora Custom Design Service (+100 ETB)' 
+          : 'Customer Ready Design File (Free)';
+      } else if (designMode === 'ready' && chosenDesign) {
+        designNote = `Ready Design: ${chosenDesign.title} (${chosenDesign.category})`;
+      } else if (designMode === 'upload') {
+        designNote = photoUploadMode === 'multi' 
+          ? `Customer Artwork (${multiUploadedFiles.length} photos uploaded)` 
+          : 'Customer Artwork (Single file)';
+      }
 
       const btnNext = document.getElementById('btn-modal-next');
       btnNext.disabled = true;
@@ -1577,19 +2044,29 @@
         formData.append('username', tgUser.username || '');
         formData.append('items', itemsText);
         formData.append('deadline', deadlineText);
-        formData.append('delivery_type', deliveryText);
-        formData.append('delivery_location', locText);
+        formData.append('delivery_type', deliveryType);
+        formData.append('delivery_location', deliveryLocation);
         formData.append('notes', notes);
         formData.append('phone', phone);
         formData.append('recipient_name', recipient);
         formData.append('total_price', total);
         formData.append('deposit_amount', deposit);
+        formData.append('rush_fee', selectedDeadlineRushFee);
+        formData.append('design_fee', (selectedProduct.id === 'business_cards' && cardDesignChoice === 'selora') ? 100 : 0);
+        formData.append('design_note', designNote);
         formData.append('payment_method', currentPaymentMethod);
         formData.append('transaction_ref', refCode);
 
-        if (uploadedArtworkFile) {
-          formData.append('artwork_file', uploadedArtworkFile);
+        // Upload single or multiple artwork files
+        if (designMode === 'upload') {
+          if (photoUploadMode === 'multi' && multiUploadedFiles.length > 0) {
+            multiUploadedFiles.forEach(f => formData.append('artwork_files', f));
+          } else if (uploadedArtworkFile) {
+            formData.append('artwork_file', uploadedArtworkFile);
+          }
         }
+
+        // Upload payment receipt
         if (uploadedReceiptFile) {
           formData.append('receipt_file', uploadedReceiptFile);
         }
@@ -1600,7 +2077,7 @@
         });
 
         const data = await res.json();
-        const code = data?.order_code || `SP-${Math.floor(1000 + Math.random() * 9000)}`;
+        const code = data?.order_code || `SLR-${Math.floor(1000 + Math.random() * 9000)}`;
 
         haptic('success');
         confirmedOrderData = {
@@ -1609,7 +2086,7 @@
           total: total,
           deposit: deposit,
           balance: balance,
-          delivery: deliveryText,
+          delivery: deliveryType,
           deadline: deadlineText
         };
 
@@ -1618,14 +2095,14 @@
         document.getElementById('ticket-items').textContent = itemsText;
         document.getElementById('ticket-total').textContent = `${total} ETB`;
         document.getElementById('ticket-deposit').textContent = `${deposit} ETB`;
-        document.getElementById('ticket-balance').textContent = `${balance} ETB`;
-        document.getElementById('ticket-delivery').textContent = deliveryText;
+        document.getElementById('ticket-balance').textContent = `${balance} ETB (on delivery)`;
+        document.getElementById('ticket-delivery').textContent = deliveryType;
         document.getElementById('ticket-deadline').textContent = deadlineText;
 
         setOrderStep(5);
       } catch (err) {
         console.error('Order submission error:', err);
-        const mockCode = `SP-${Math.floor(1000 + Math.random() * 9000)}`;
+        const mockCode = `SLR-${Math.floor(1000 + Math.random() * 9000)}`;
         haptic('success');
         confirmedOrderData = {
           orderCode: mockCode,
@@ -1633,15 +2110,15 @@
           total: total,
           deposit: deposit,
           balance: balance,
-          delivery: deliveryText,
+          delivery: deliveryType,
           deadline: deadlineText
         };
         document.getElementById('ticket-order-code').textContent = mockCode;
         document.getElementById('ticket-items').textContent = itemsText;
         document.getElementById('ticket-total').textContent = `${total} ETB`;
         document.getElementById('ticket-deposit').textContent = `${deposit} ETB`;
-        document.getElementById('ticket-balance').textContent = `${balance} ETB`;
-        document.getElementById('ticket-delivery').textContent = deliveryText;
+        document.getElementById('ticket-balance').textContent = `${balance} ETB (on delivery)`;
+        document.getElementById('ticket-delivery').textContent = deliveryType;
         document.getElementById('ticket-deadline').textContent = deadlineText;
 
         setOrderStep(5);

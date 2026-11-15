@@ -62,6 +62,11 @@ if MINIAPP_OUT_DIR:
         return FileResponse(MINIAPP_OUT_DIR / "index.html")
 
     app.mount("/miniapp", StaticFiles(directory=str(MINIAPP_OUT_DIR), html=True), name="miniapp")
+else:
+    @app.get("/miniapp")
+    @app.get("/miniapp/")
+    async def miniapp_fallback(request: Request):
+        return await webapp_store(request)
 
 # Smart On-Demand Static & Cloud Handlers
 @app.get("/receipts/{filename}")
@@ -310,38 +315,49 @@ async def webapp_submit_order_full(
     recipient_name: Optional[str] = Form(""),
     total_price: Optional[float] = Form(0.0),
     deposit_amount: Optional[float] = Form(0.0),
+    rush_fee: Optional[float] = Form(0.0),
+    design_fee: Optional[float] = Form(0.0),
+    design_note: Optional[str] = Form(""),
     payment_method: Optional[str] = Form("CBE"),
     transaction_ref: Optional[str] = Form(""),
     artwork_file: Optional[UploadFile] = File(None),
+    artwork_files: Optional[list[UploadFile]] = File(None),
     receipt_file: Optional[UploadFile] = File(None)
 ):
-    """Handle full order submission with in-app artwork and receipt proof uploads."""
+    """Handle full order submission with in-app artwork and receipt proof uploads matching bot business logic."""
     customer_files_list = []
     has_attachment = False
 
-    # 1. Process customer artwork
-    if artwork_file and artwork_file.filename:
-        try:
-            ext = Path(artwork_file.filename).suffix or ".jpg"
-            clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', Path(artwork_file.filename).stem)[:30]
-            art_name = f"art_{int(time.time())}_{clean_base}{ext}"
-            art_path = CUSTOMER_UPLOADS_DIR / art_name
-            content = await artwork_file.read()
-            with open(art_path, "wb") as f:
-                f.write(content)
-            customer_files_list.append({
-                "filename": art_name,
-                "file_id": None,
-                "type": "customer_artwork",
-                "original_name": artwork_file.filename
-            })
-            has_attachment = True
-        except Exception as e:
-            logger.error(f"Failed to save customer artwork file: {e}")
+    # 1. Process customer artwork (single or multiple files, e.g. Polaroids)
+    files_to_process = []
+    if artwork_files and isinstance(artwork_files, list):
+        files_to_process.extend(artwork_files)
+    if artwork_file and hasattr(artwork_file, "filename") and artwork_file.filename and artwork_file not in files_to_process:
+        files_to_process.append(artwork_file)
+
+    for f in files_to_process:
+        if f and f.filename:
+            try:
+                ext = Path(f.filename).suffix or ".jpg"
+                clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', Path(f.filename).stem)[:30]
+                art_name = f"art_{int(time.time())}_{clean_base}_{len(customer_files_list)}{ext}"
+                art_path = CUSTOMER_UPLOADS_DIR / art_name
+                content = await f.read()
+                with open(art_path, "wb") as out_f:
+                    out_f.write(content)
+                customer_files_list.append({
+                    "filename": art_name,
+                    "file_id": None,
+                    "type": "customer_artwork",
+                    "original_name": f.filename
+                })
+                has_attachment = True
+            except Exception as e:
+                logger.error(f"Failed to save customer artwork file {f.filename}: {e}")
 
     # 2. Process payment receipt
     receipt_filename = None
-    if receipt_file and receipt_file.filename:
+    if receipt_file and hasattr(receipt_file, "filename") and receipt_file.filename:
         try:
             ext = Path(receipt_file.filename).suffix or ".jpg"
             clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', Path(receipt_file.filename).stem)[:30]
@@ -356,6 +372,8 @@ async def webapp_submit_order_full(
 
     # 3. Construct rich notes
     note_parts = []
+    if design_note:
+        note_parts.append(f"Design: {design_note}")
     if notes:
         note_parts.append(notes.strip())
     if transaction_ref:
@@ -386,51 +404,111 @@ async def webapp_submit_order_full(
         customer_files=json.dumps(customer_files_list)
     )
 
-    # 5. Customer Notification
+    # 5. Customer Notification (Exact match to bot/handlers/order.py lines 1378-1397)
     if user_id:
-        phone_txt = f"\n📞 *Phone:* `{phone}`" if phone else ""
-        recip_txt = f"\n👤 *Recipient:* {recipient_name}" if recipient_name else ""
-        receipt_txt = f"\n🧾 *Payment Receipt:* Attached ({payment_method})" if receipt_filename else f"\n💳 *Payment Method:* {payment_method}"
-        
+        recip_disp = recipient_name or full_name
+        phone_disp = phone or "N/A"
+        loc_disp = delivery_location or "Store Pickup"
+
         customer_msg = (
-            f"🎉 *Order Successfully Placed!* 💛\n\n"
-            f"🔖 *Order Code:* `{order_code}`\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            f"🏷 *Items:* {items}\n"
-            f"💰 *Total:* {total_price:.0f} ETB (50% Deposit: {deposit_amount:.0f} ETB)\n"
-            f"🗓 *Need by:* {deadline}{recip_txt}{phone_txt}\n"
-            f"🚚 *Delivery:* {delivery_type} ({delivery_location}){receipt_txt}\n"
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-            "✅ *Your 50% deposit has been received for verification!*\n"
-            "Our studio team will review your order details and immediately start production.\n\n"
-            f"🔍 *Track your order live anytime in the Mini App using code:* `{order_code}`"
+            "─────────────────────\n"
+            "       ✦  Order Confirmed  ✦\n"
+            "─────────────────────\n\n"
+            f"🔖 *Order Code:* `{order_code}`\n\n"
+            f"▸ *Items:* {items}\n"
+            f"▸ *Total:* {total_price:.0f} ETB\n"
+            f"▸ *Deposit:* {deposit_amount:.0f} ETB\n"
+            f"▸ *Deadline:* {deadline}\n"
+            f"▸ *Recipient:* {recip_disp}\n"
+            f"▸ *Phone:* {phone_disp}\n"
+            f"▸ *Delivery:* {delivery_type} ({loc_disp})\n\n"
+            "─────────────────────\n"
+            "Status: *Pending Review*\n"
+            "_We're verifying your deposit — you'll be notified once approved and production begins._"
         )
+        if config.ADMIN_USERNAME:
+            customer_msg += f"\n\nQuestions? @{config.ADMIN_USERNAME}"
         await send_telegram_notification(user_id, customer_msg)
 
-    # 6. Admin Notification
+    # 6. Admin Notification (Exact match to bot/handlers/order.py lines 1400-1449)
     if config.ADMIN_CHAT_ID:
-        phone_line = f"\n📞 *Phone:* [{phone}](tel:{phone})" if phone else ""
-        recip_line = f"\n📦 *Recipient:* *{recipient_name}*" if recipient_name else ""
-        art_line = f"\n📎 *Artwork:* Attached ({len(customer_files_list)} file)" if customer_files_list else "\n📎 *Artwork:* Ready Design / Text"
-        rec_line = f"\n🧾 *Payment Proof:* Attached ({receipt_filename})" if receipt_filename else "\n🧾 *Payment Proof:* Pending in chat"
+        rush_badge = "\n⚡ *PRIORITY:* URGENT 2-DAY RUSH (+200 ETB)" if (rush_fee and rush_fee > 0) else ""
+        design_badge = f"\n🎨 *DESIGN:* {design_note}" if design_note else ""
+
+        phone_val = phone or "N/A"
+        recip_val = recipient_name or full_name
+        maps_val = None
+        if "https://maps.google.com" in delivery_location:
+            m = re.search(r"(https?://maps\.google\.com[^\s|]+)", delivery_location)
+            if m:
+                maps_val = m.group(1)
+        nav_line = f"\n🗺️ *Driver Navigation Link (RIDE / Yango / Feres):*\n[📍 Open GPS Coordinates in Google Maps]({maps_val})" if maps_val else ""
+
+        timestamp = time.strftime("%Y-%m-%d %H:%M")
+        username_str = f"@{username}" if username else "no username"
 
         admin_text = (
-            f"🚨 *NEW MINI APP ORDER! — {order_code}*\n"
-            f"👤 *Customer:* {full_name} (@{username or 'none'})\n"
-            f"🆔 *User ID:* `{user_id}`{recip_line}{phone_line}\n"
+            f"🚨 *NEW ORDER & PAYMENT SUBMITTED! — {order_code}*{rush_badge}{design_badge}\n"
+            f"⏰ *Time:* {timestamp}\n"
+            f"👤 *Customer:* [{full_name}](tg://user?id={user_id}) ({username_str})\n"
+            f"🆔 *Telegram ID:* `{user_id}`\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            f"📦 *Recipient:* *{recip_val}*\n"
+            f"📞 *Driver Call Phone:* [{phone_val}](tel:{phone_val})\n"
+            f"🚚 *Method:* {delivery_type}\n"
+            f"📍 *Location:* {delivery_location}{nav_line}\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             f"🏷 *Items:* {items}\n"
-            f"💰 *Total:* {total_price:.0f} ETB (Deposit: {deposit_amount:.0f} ETB)\n"
-            f"🗓 *Deadline:* {deadline}\n"
-            f"🚚 *Delivery:* {delivery_type}\n"
-            f"📍 *Location:* {delivery_location}\n"
-            f"📝 *Notes:* {full_notes}{art_line}{rec_line}\n"
+            f"💰 *Total:* `{total_price:.0f} ETB` | *50% Deposit:* `{deposit_amount:.0f} ETB`\n"
+            f"🗓 *Needed By:* {deadline}\n"
+            f"📝 *Details:* {full_notes}\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            "👉 Review and approve this order in the Selora Dashboard."
+            "💰 *Payment Receipt Attached Below.* Please verify and tap an action:"
         )
-        await send_telegram_notification(int(config.ADMIN_CHAT_ID), admin_text)
+
+        approval_keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "✅ Approve 50% Deposit", "callback_data": f"pay_approve:{order_code}"},
+                    {"text": "❌ Reject", "callback_data": f"pay_reject:{order_code}"}
+                ],
+                [
+                    {"text": "💬 DM Customer", "url": f"tg://user?id={user_id}"},
+                    {"text": "🌐 View on Dashboard", "url": config.DASHBOARD_PUBLIC_URL}
+                ]
+            ]
+        }
+
+        # Send photo with receipt if available, or fallback to text message
+        if receipt_filename and (RECEIPTS_DIR / receipt_filename).exists():
+            await send_telegram_photo(int(config.ADMIN_CHAT_ID), RECEIPTS_DIR / receipt_filename, admin_text, approval_keyboard)
+        else:
+            await send_telegram_notification(int(config.ADMIN_CHAT_ID), admin_text, approval_keyboard)
 
     return {"ok": True, "success": True, "order_code": order_code}
+
+
+async def send_telegram_photo(chat_id: int, photo_path: Path, caption: str, reply_markup: Optional[dict] = None):
+    """Send photo with caption and inline keyboard to Telegram (e.g. for admin receipt verification)."""
+    if not config.BOT_TOKEN or not chat_id or not photo_path.exists():
+        return
+    url = f"https://api.telegram.org/bot{config.BOT_TOKEN}/sendPhoto"
+    data = aiohttp.FormData()
+    data.add_field("chat_id", str(chat_id))
+    data.add_field("caption", caption[:1024])
+    data.add_field("parse_mode", "Markdown")
+    if reply_markup:
+        data.add_field("reply_markup", json.dumps(reply_markup))
+    try:
+        with open(photo_path, "rb") as f:
+            data.add_field("photo", f.read(), filename=photo_path.name)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=data) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    logger.warning(f"Telegram sendPhoto failed with status {resp.status}: {text}")
+    except Exception as e:
+        logger.error(f"Error sending photo to Telegram: {e}")
 
 
 async def send_telegram_notification(user_id: int, message_text: str, reply_markup: Optional[dict] = None):
