@@ -2,6 +2,8 @@ import os
 import json
 import logging
 import calendar
+import time
+import asyncio
 from pathlib import Path
 from datetime import datetime, timedelta, date
 from typing import Optional, List, Dict, Any
@@ -37,6 +39,57 @@ DESIGNS_IMAGES_DIR = Path(__file__).resolve().parent.parent / "data" / "designs_
 DESIGNS_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 CUSTOMER_UPLOADS_DIR = Path(__file__).resolve().parent.parent / "data" / "customer_uploads"
 CUSTOMER_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Upload synchronization & batch rejection protection
+_user_upload_locks: Dict[int, asyncio.Lock] = {}
+_rejected_media_groups: Dict[str, float] = {}
+
+def _get_upload_lock(user_id: int) -> asyncio.Lock:
+    if user_id not in _user_upload_locks:
+        _user_upload_locks[user_id] = asyncio.Lock()
+    return _user_upload_locks[user_id]
+
+async def check_and_reject_media_group(message: types.Message, purpose: str = "photos") -> bool:
+    """
+    Detects if the user sent multiple files/photos at once as an album or batch (media_group_id).
+    If detected, rejects all files in the batch, sends a single clear rejection warning,
+    and returns True so the caller drops the message without corrupting state or race conditions.
+    """
+    if not message.media_group_id:
+        return False
+
+    mgid = str(message.media_group_id)
+    now = time.time()
+
+    # Clean up entries older than 120 seconds
+    expired = [k for k, v in _rejected_media_groups.items() if now - v > 120]
+    for k in expired:
+        _rejected_media_groups.pop(k, None)
+
+    already_warned = mgid in _rejected_media_groups
+    _rejected_media_groups[mgid] = now
+
+    if not already_warned:
+        if purpose == "receipt":
+            await message.reply(
+                "❌ *Multiple files sent at once — REJECTED!* ⚠️\n\n"
+                "Please send only **ONE single screenshot** of your payment receipt.\n"
+                "Batch or album uploads cannot be verified.",
+                parse_mode="Markdown"
+            )
+        else:
+            await message.reply(
+                "❌ *Multiple photos sent at once — REJECTED!* ⚠️\n\n"
+                "To ensure maximum print sharpness and prevent upload corruption, please send your photos **ONE BY ONE**.\n\n"
+                "👉 *How to upload correctly:*\n"
+                "1. Tap 📎 (Paperclip)\n"
+                "2. Choose *'File' / 'Document'* (NOT Photo/Gallery)\n"
+                "3. Select **ONE single photo** and send it\n"
+                "4. Wait for the confirmation tick, then send the next\n\n"
+                "*(Sending albums or selecting multiple files at once is automatically rejected)*",
+                parse_mode="Markdown"
+            )
+    return True
 
 class OrderFSM(StatesGroup):
     waiting_for_product = State()
@@ -747,12 +800,16 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
         await callback.message.edit_text(
             _step_header(3, "Upload Photos", "📎") + "\n"
             "─────────────────────\n"
-            f"Send {qty} photos, one by one or as an album.\n\n"
-            "⚠️ *MAXIMUM PRINT RESOLUTION:*\n"
-            "👉 Tap 📎 (Paperclip) → select *'File' / 'Document'* (NOT Photo/Gallery) to send uncompressed originals.\n\n"
+            f"Please send *{qty} photos ONE BY ONE*.\n\n"
+            "⚠️ *CRITICAL: DO NOT SEND AS AN ALBUM!*\n"
+            "Telegram albums compress images and cause upload errors. Batch uploads are automatically rejected.\n\n"
+            "👉 *How to upload:*\n"
+            "   1. Tap 📎 (Paperclip) → select *'File' / 'Document'*\n"
+            "   2. Send **ONE photo** at a time\n"
+            "   3. Wait for the confirmation tick, then send the next\n\n"
             f"Progress: `0 / {qty}` photos received\n"
             "─────────────────────\n"
-            "Send your files now:",
+            "Send your first photo now:",
             parse_mode="Markdown",
             reply_markup=done_btn
         )
@@ -834,90 +891,96 @@ async def handle_text_during_photo_upload(message: types.Message, state: FSMCont
 
 @router.message(OrderFSM.waiting_for_photos, F.photo | F.document)
 async def process_photo_upload(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    mode = data.get("design_mode", "single")
-    qty = data.get("quantity", 1)
     user = message.from_user
 
-    customer_files = data.get("customer_files", [])
-    file_idx = len(customer_files) + 1
-
-    if message.document:
-        file_id = message.document.file_id
-        orig_name = message.document.file_name or f"document_{file_idx}.jpg"
-        ext = Path(orig_name).suffix.lower() or ".jpg"
-        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_{file_idx}{ext}"
-        file_type = "Document (Uncompressed)"
-    else:
-        best_photo = message.photo[-1]
-        file_id = best_photo.file_id
-        orig_name = f"photo_{best_photo.width}x{best_photo.height}.jpg"
-        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_{file_idx}.jpg"
-        file_type = f"Photo ({best_photo.width}x{best_photo.height})"
-
-    dest_path = CUSTOMER_UPLOADS_DIR / filename
-    try:
-        await message.bot.download(file_id, destination=dest_path)
-    except Exception as err:
-        logger.warning(f"Could not download artwork locally: {err}")
-
-    file_entry = {
-        "file_id": file_id,
-        "filename": filename,
-        "original_name": orig_name,
-        "file_type": file_type,
-        "url": f"/customer-uploads/{filename}"
-    }
-    customer_files.append(file_entry)
-
-    if mode == "single":
-        await state.update_data(
-            file_id=file_id,
-            file_type="document" if message.document else "photo",
-            customer_files=customer_files
-        )
-        await message.answer(f"✓ *Artwork received!* ({file_type})", parse_mode="Markdown")
-        if not message.document:
-            await message.answer(
-                "⚠️ *Print Quality Notice:*\n"
-                "_This was received as a standard compressed photo. For maximum print sharpness, you can tap 📎 and re-send as File/Document. Our team will review image resolution before printing._",
-                parse_mode="Markdown"
-            )
-        await advance_to_deadline_picker(message, state)
+    # 1. Reject multiple files sent at once (media_group / album)
+    if await check_and_reject_media_group(message, purpose="photos"):
         return
 
-    # Multi photo mode
-    photos = data.get("photos", [])
-    photos.append(file_id)
-    await state.update_data(photos=photos, file_id=photos[0], customer_files=customer_files)
+    async with _get_upload_lock(user.id):
+        data = await state.get_data()
+        mode = data.get("design_mode", "single")
+        qty = data.get("quantity", 1)
 
-    count = len(photos)
-    if count >= qty:
-        await message.answer(f"✓ *All {count}/{qty} photos received (1 print each)!*", parse_mode="Markdown")
-        await advance_to_deadline_picker(message, state)
-    else:
-        copies_each = qty // count
-        remainder = qty % count
-        dist_btn_label = f"➗ Distribute Evenly ({copies_each} ea → {qty} total)" if remainder == 0 else f"➗ Distribute Evenly ({qty} total)"
+        customer_files = data.get("customer_files", [])
+        file_idx = len(customer_files) + 1
 
-        markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=dist_btn_label, callback_data="distribute_photos:even")],
-            [InlineKeyboardButton(text=f"📷 Keep Adding Photos ({count}/{qty})", callback_data="distribute_photos:continue")],
-            [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
-        ])
+        if message.document:
+            file_id = message.document.file_id
+            orig_name = message.document.file_name or f"document_{file_idx}.jpg"
+            ext = Path(orig_name).suffix.lower() or ".jpg"
+            filename = f"art_{user.id}_{int(datetime.now().timestamp())}_{file_idx}{ext}"
+            file_type = "Document (Uncompressed)"
+        else:
+            best_photo = message.photo[-1]
+            file_id = best_photo.file_id
+            orig_name = f"photo_{best_photo.width}x{best_photo.height}.jpg"
+            filename = f"art_{user.id}_{int(datetime.now().timestamp())}_{file_idx}.jpg"
+            file_type = f"Photo ({best_photo.width}x{best_photo.height})"
 
-        pct = max(1, min(10, int((count / qty) * 10)))
-        progress_bar = "█" * pct + "░" * (10 - pct)
+        dest_path = CUSTOMER_UPLOADS_DIR / filename
+        try:
+            await message.bot.download(file_id, destination=dest_path)
+        except Exception as err:
+            logger.warning(f"Could not download artwork locally: {err}")
 
-        await message.answer(
-            f"📸 *Photo {count} of {qty} received*\n"
-            f"`[{progress_bar}]` *{count}/{qty}*\n\n"
-            f"• Total Order: *{qty} prints*\n"
-            f"• Received so far: *{count} unique photos*\n\n"
-            f"👉 Send your next photo (tap 📎 → File/Doc), or tap below to distribute {qty} prints evenly across your {count} photos:",
-            parse_mode="Markdown",
-            reply_markup=markup
-        )
+        file_entry = {
+            "file_id": file_id,
+            "filename": filename,
+            "original_name": orig_name,
+            "file_type": file_type,
+            "url": f"/customer-uploads/{filename}"
+        }
+        customer_files.append(file_entry)
+
+        if mode == "single":
+            await state.update_data(
+                file_id=file_id,
+                file_type="document" if message.document else "photo",
+                customer_files=customer_files
+            )
+            await message.answer(f"✓ *Artwork received!* ({file_type})", parse_mode="Markdown")
+            if not message.document:
+                await message.answer(
+                    "⚠️ *Print Quality Notice:*\n"
+                    "_This was received as a standard compressed photo. For maximum print sharpness, you can tap 📎 and re-send as File/Document. Our team will review image resolution before printing._",
+                    parse_mode="Markdown"
+                )
+            await advance_to_deadline_picker(message, state)
+            return
+
+        # Multi photo mode
+        photos = data.get("photos", [])
+        photos.append(file_id)
+        await state.update_data(photos=photos, file_id=photos[0], customer_files=customer_files)
+
+        count = len(photos)
+        if count >= qty:
+            await message.answer(f"✓ *All {count}/{qty} photos received (1 print each)!*", parse_mode="Markdown")
+            await advance_to_deadline_picker(message, state)
+        else:
+            copies_each = qty // count
+            remainder = qty % count
+            dist_btn_label = f"➗ Distribute Evenly ({copies_each} ea → {qty} total)" if remainder == 0 else f"➗ Distribute Evenly ({qty} total)"
+
+            markup = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=dist_btn_label, callback_data="distribute_photos:even")],
+                [InlineKeyboardButton(text=f"📷 Keep Adding Photos ({count}/{qty})", callback_data="distribute_photos:continue")],
+                [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
+            ])
+
+            pct = max(1, min(10, int((count / qty) * 10)))
+            progress_bar = "█" * pct + "░" * (10 - pct)
+
+            await message.answer(
+                f"📸 *Photo {count} of {qty} received!*\n"
+                f"`[{progress_bar}]` *{count}/{qty}*\n\n"
+                f"• Total Order: *{qty} prints*\n"
+                f"• Received so far: *{count} unique photos*\n\n"
+                f"👉 Send your next photo **ONE BY ONE** (tap 📎 → File/Doc), or tap below to distribute {qty} prints evenly across your {count} photos:",
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
 
 @router.callback_query(OrderFSM.waiting_for_photos, F.data.in_(["done_photos", "distribute_photos:even"]))
 async def callback_distribute_even(callback: types.CallbackQuery, state: FSMContext):
@@ -1245,6 +1308,10 @@ async def show_payment_summary(message: types.Message, state: FSMContext):
 async def process_payment_receipt(message: types.Message, state: FSMContext):
     if message.text in ["❌ Cancel", "❌ Cancel Order"]:
         await cancel_order(message, state)
+        return
+
+    # Reject multiple files / albums sent at once
+    if await check_and_reject_media_group(message, purpose="receipt"):
         return
 
     screenshot_file_id = None
@@ -1832,11 +1899,12 @@ async def callback_reupload_mode(callback: types.CallbackQuery, state: FSMContex
     else:
         text = (
             f"📸 *Upload Replacement Photos ({qty} Prints Total)*\n\n"
-            f"Send {qty} photos, one by one or as an album.\n\n"
-            "⚠️ *CRITICAL FOR PRINT QUALITY:*\n"
-            "👉 Tap 📎 (Paperclip) → select *'File' / 'Document'* (NOT Photo) to send uncompressed originals.\n\n"
+            f"Please send *{qty} replacement photos ONE BY ONE*.\n\n"
+            "⚠️ *CRITICAL: DO NOT SEND AS AN ALBUM / BATCH!*\n"
+            "Telegram albums compress images and are automatically rejected.\n\n"
+            "👉 Tap 📎 (Paperclip) → select *'File' / 'Document'* → send **ONE photo at a time**.\n\n"
             f"Progress: `0 / {qty}` photos received\n\n"
-            "Send your replacement files now:"
+            "Send your first replacement file now:"
         )
 
     await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=inline_cancel)
@@ -1844,129 +1912,135 @@ async def callback_reupload_mode(callback: types.CallbackQuery, state: FSMContex
 
 @router.message(ReuploadFSM.waiting_for_artwork, F.document | F.photo)
 async def process_reupload_artwork(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    order_code = data.get("reupload_order_code")
-    mode = data.get("reupload_mode", "single")
-    qty = data.get("reupload_qty", 1)
     user = message.from_user
 
-    reupload_files = data.get("reupload_customer_files", [])
-    reupload_photos = data.get("reupload_photos", [])
-    file_idx = len(reupload_files) + 1
-
-    if message.document:
-        file_id = message.document.file_id
-        orig_name = message.document.file_name or f"document_{file_idx}.jpg"
-        ext = Path(orig_name).suffix.lower() or ".jpg"
-        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_reup_{file_idx}{ext}"
-        file_type = "Document (Uncompressed)"
-    else:
-        best_photo = message.photo[-1]
-        file_id = best_photo.file_id
-        orig_name = f"photo_{best_photo.width}x{best_photo.height}.jpg"
-        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_reup_{file_idx}.jpg"
-        file_type = f"Photo ({best_photo.width}x{best_photo.height})"
-
-    dest_path = CUSTOMER_UPLOADS_DIR / filename
-    try:
-        await message.bot.download(file_id, destination=dest_path)
-    except Exception as err:
-        logger.warning(f"Could not download re-uploaded artwork: {err}")
-
-    file_entry = {
-        "file_id": file_id,
-        "filename": filename,
-        "original_name": orig_name,
-        "file_type": file_type,
-        "url": f"/customer-uploads/{filename}"
-    }
-    reupload_files.append(file_entry)
-    reupload_photos.append(file_id)
-
-    # 1. Single Mode: First photo completes intake
-    if mode == "single":
-        database.update_order_artwork(order_code, json.dumps(reupload_files))
-        await state.clear()
-
-        await message.answer(
-            f"✅ *New Artwork Successfully Received for Order #{order_code}!* 💛\n\n"
-            f"Format: `{file_type}`\n"
-            f"This replacement artwork will print on all *{qty}* copies.\n"
-            "Our production team has been notified and will review your file right away. Thank you!",
-            parse_mode="Markdown",
-            reply_markup=get_main_menu_keyboard()
-        )
-        if config.ADMIN_CHAT_ID:
-            try:
-                await message.bot.send_message(
-                    chat_id=config.ADMIN_CHAT_ID,
-                    text=(
-                        f"🔄 *ARTWORK RE-UPLOADED (Single Design for {qty} copies) — {order_code}*\n"
-                        f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
-                        f"📁 Format: {file_type}\n"
-                        "Order status updated to 🔄 Re-uploaded on the dashboard!"
-                    ),
-                    parse_mode="Markdown"
-                )
-            except Exception:
-                pass
+    # 1. Reject multiple files sent at once (media_group / album)
+    if await check_and_reject_media_group(message, purpose="photos"):
         return
 
-    # 2. Multi Mode: Track photos and allow smart distribution
-    await state.update_data(
-        reupload_customer_files=reupload_files,
-        reupload_photos=reupload_photos
-    )
-    count = len(reupload_photos)
+    async with _get_upload_lock(user.id):
+        data = await state.get_data()
+        order_code = data.get("reupload_order_code")
+        mode = data.get("reupload_mode", "single")
+        qty = data.get("reupload_qty", 1)
 
-    if count >= qty:
-        database.update_order_artwork(order_code, json.dumps(reupload_files))
-        await state.clear()
+        reupload_files = data.get("reupload_customer_files", [])
+        reupload_photos = data.get("reupload_photos", [])
+        file_idx = len(reupload_files) + 1
 
-        await message.answer(
-            f"✅ *All {count}/{qty} Replacement Photos Received for #{order_code}!* 💛\n\n"
-            f"1 print will be made for each of your {count} unique photos.\n"
-            "Our production team has been notified to inspect them on the dashboard!",
-            parse_mode="Markdown",
-            reply_markup=get_main_menu_keyboard()
+        if message.document:
+            file_id = message.document.file_id
+            orig_name = message.document.file_name or f"document_{file_idx}.jpg"
+            ext = Path(orig_name).suffix.lower() or ".jpg"
+            filename = f"art_{user.id}_{int(datetime.now().timestamp())}_reup_{file_idx}{ext}"
+            file_type = "Document (Uncompressed)"
+        else:
+            best_photo = message.photo[-1]
+            file_id = best_photo.file_id
+            orig_name = f"photo_{best_photo.width}x{best_photo.height}.jpg"
+            filename = f"art_{user.id}_{int(datetime.now().timestamp())}_reup_{file_idx}.jpg"
+            file_type = f"Photo ({best_photo.width}x{best_photo.height})"
+
+        dest_path = CUSTOMER_UPLOADS_DIR / filename
+        try:
+            await message.bot.download(file_id, destination=dest_path)
+        except Exception as err:
+            logger.warning(f"Could not download re-uploaded artwork: {err}")
+
+        file_entry = {
+            "file_id": file_id,
+            "filename": filename,
+            "original_name": orig_name,
+            "file_type": file_type,
+            "url": f"/customer-uploads/{filename}"
+        }
+        reupload_files.append(file_entry)
+        reupload_photos.append(file_id)
+
+        # 1. Single Mode: First photo completes intake
+        if mode == "single":
+            database.update_order_artwork(order_code, json.dumps(reupload_files))
+            await state.clear()
+
+            await message.answer(
+                f"✅ *New Artwork Successfully Received for Order #{order_code}!* 💛\n\n"
+                f"Format: `{file_type}`\n"
+                f"This replacement artwork will print on all *{qty}* copies.\n"
+                "Our production team has been notified and will review your file right away. Thank you!",
+                parse_mode="Markdown",
+                reply_markup=get_main_menu_keyboard()
+            )
+            if config.ADMIN_CHAT_ID:
+                try:
+                    await message.bot.send_message(
+                        chat_id=config.ADMIN_CHAT_ID,
+                        text=(
+                            f"🔄 *ARTWORK RE-UPLOADED (Single Design for {qty} copies) — {order_code}*\n"
+                            f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
+                            f"📁 Format: {file_type}\n"
+                            "Order status updated to 🔄 Re-uploaded on the dashboard!"
+                        ),
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    pass
+            return
+
+        # 2. Multi Mode: Track photos and allow smart distribution
+        await state.update_data(
+            reupload_customer_files=reupload_files,
+            reupload_photos=reupload_photos
         )
-        if config.ADMIN_CHAT_ID:
-            try:
-                await message.bot.send_message(
-                    chat_id=config.ADMIN_CHAT_ID,
-                    text=(
-                        f"🔄 *ALL {count}/{qty} ARTWORK RE-UPLOADED — {order_code}*\n"
-                        f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
-                        f"📁 Total: {count} unique photos (1 print each)\n"
-                        "Order status updated to 🔄 Re-uploaded on the dashboard!"
-                    ),
-                    parse_mode="Markdown"
-                )
-            except Exception:
-                pass
-    else:
-        copies_each = qty // count
-        remainder = qty % count
-        dist_btn_label = f"➗ Done: Distribute Evenly ({copies_each} ea → {qty} total)" if remainder == 0 else f"➗ Done: Distribute Evenly ({qty} total)"
+        count = len(reupload_photos)
 
-        markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=dist_btn_label, callback_data=f"reup_dist:{order_code}:even")],
-            [InlineKeyboardButton(text=f"📷 Keep Adding Photos ({count}/{qty})", callback_data=f"reup_dist:{order_code}:continue")],
-            [InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")]
-        ])
+        if count >= qty:
+            database.update_order_artwork(order_code, json.dumps(reupload_files))
+            await state.clear()
 
-        pct = max(1, min(10, int((count / qty) * 10)))
-        progress_bar = "█" * pct + "░" * (10 - pct)
+            await message.answer(
+                f"✅ *All {count}/{qty} Replacement Photos Received for #{order_code}!* 💛\n\n"
+                f"1 print will be made for each of your {count} unique photos.\n"
+                "Our production team has been notified to inspect them on the dashboard!",
+                parse_mode="Markdown",
+                reply_markup=get_main_menu_keyboard()
+            )
+            if config.ADMIN_CHAT_ID:
+                try:
+                    await message.bot.send_message(
+                        chat_id=config.ADMIN_CHAT_ID,
+                        text=(
+                            f"🔄 *ALL {count}/{qty} ARTWORK RE-UPLOADED — {order_code}*\n"
+                            f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
+                            f"📁 Total: {count} unique photos (1 print each)\n"
+                            "Order status updated to 🔄 Re-uploaded on the dashboard!"
+                        ),
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    pass
+        else:
+            copies_each = qty // count
+            remainder = qty % count
+            dist_btn_label = f"➗ Done: Distribute Evenly ({copies_each} ea → {qty} total)" if remainder == 0 else f"➗ Done: Distribute Evenly ({qty} total)"
 
-        await message.answer(
-            f"📸 *Photo {count} of {qty} received for #{order_code}*\n"
-            f"`[{progress_bar}]` *{count}/{qty}*\n\n"
-            f"• Required Order: *{qty} total prints*\n"
-            f"• Received: *{count} replacement photos*\n\n"
-            f"👉 Send your next photo (tap 📎 → File/Doc), or tap below to distribute {qty} prints evenly across your {count} photos:",
-            parse_mode="Markdown",
-            reply_markup=markup
-        )
+            markup = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=dist_btn_label, callback_data=f"reup_dist:{order_code}:even")],
+                [InlineKeyboardButton(text=f"📷 Keep Adding Photos ({count}/{qty})", callback_data=f"reup_dist:{order_code}:continue")],
+                [InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")]
+            ])
+
+            pct = max(1, min(10, int((count / qty) * 10)))
+            progress_bar = "█" * pct + "░" * (10 - pct)
+
+            await message.answer(
+                f"📸 *Photo {count} of {qty} received for #{order_code}*\n"
+                f"`[{progress_bar}]` *{count}/{qty}*\n\n"
+                f"• Required Order: *{qty} total prints*\n"
+                f"• Received: *{count} replacement photos*\n\n"
+                f"👉 Send your next photo **ONE BY ONE** (tap 📎 → File/Doc), or tap below to distribute {qty} prints evenly across your {count} photos:",
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
 
 @router.callback_query(F.data.startswith("reup_dist:"))
 async def callback_reupload_distribute(callback: types.CallbackQuery, state: FSMContext):
@@ -2051,6 +2125,10 @@ async def start_reupload_receipt(callback: types.CallbackQuery, state: FSMContex
 
 @router.message(ReuploadFSM.waiting_for_receipt, F.photo | F.document)
 async def process_reupload_receipt(message: types.Message, state: FSMContext):
+    # Reject multiple files / albums sent at once
+    if await check_and_reject_media_group(message, purpose="receipt"):
+        return
+
     data = await state.get_data()
     order_code = data.get("reupload_order_code")
     user = message.from_user
