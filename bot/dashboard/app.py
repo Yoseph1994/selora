@@ -177,15 +177,15 @@ class WebappOrderRequest(BaseModel):
 
 @app.get("/app")
 async def webapp_store(request: Request):
-    """Telegram Mini App visual storefront (serves Next.js Mini App)."""
-    if MINIAPP_OUT_DIR.exists():
-        return RedirectResponse(url="/miniapp/", status_code=303)
+    """Telegram Mini App visual storefront."""
     products_data = database.get_products_data()
+    designs_data = database.get_designs_data()
     return templates.TemplateResponse(
         request=request,
         name="webapp.html",
         context={
             "products": products_data.get("products", []),
+            "designs": designs_data.get("designs", []),
             "store_name": config.STORE_NAME,
             "cbe_account": config.PAYMENT_CBE_ACCOUNT,
             "cbe_name": config.PAYMENT_CBE_NAME,
