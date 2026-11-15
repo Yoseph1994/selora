@@ -1,6 +1,7 @@
 import logging
 from aiogram import Router, types
 from services.gemini_service import gemini_service
+from data import database
 import config
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,13 @@ async def on_business_connection_update(connection: types.BusinessConnection):
     logger.info(
         f"Business connection update: user_id={connection.user.id}, "
         f"status={status}, can_reply={connection.can_reply}"
+    )
+
+    # Persist the connection ID for business DMs
+    database.save_business_connection(
+        conn_id=connection.id,
+        user_id=connection.user.id,
+        is_enabled=connection.is_enabled
     )
 
     if connection.is_enabled and config.ADMIN_CHAT_ID:

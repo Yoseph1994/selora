@@ -217,7 +217,7 @@ async def webapp_submit_order(payload: WebappOrderRequest):
     return {"success": True, "order_code": order_code}
 
 async def send_telegram_notification(user_id: int, message_text: str, reply_markup: Optional[dict] = None):
-    """Send Telegram message to customer when action is taken from the dashboard."""
+    """Send Telegram message to customer via bot DM and additionally via Telegram Business account."""
     if not config.BOT_TOKEN or not user_id:
         return
     url = f"https://api.telegram.org/bot{config.BOT_TOKEN}/sendMessage"
@@ -233,6 +233,26 @@ async def send_telegram_notification(user_id: int, message_text: str, reply_mark
             async with session.post(url, json=payload) as resp:
                 if resp.status != 200:
                     logger.warning(f"Telegram notification returned status {resp.status}")
+
+            # Additionally send via connected Telegram Business Account
+            b_conn = database.get_business_connection()
+            if b_conn and b_conn.get("connection_id"):
+                b_payload = {
+                    "chat_id": user_id,
+                    "business_connection_id": b_conn["connection_id"],
+                    "text": message_text,
+                    "parse_mode": "Markdown"
+                }
+                if reply_markup:
+                    b_payload["reply_markup"] = reply_markup
+                try:
+                    async with session.post(url, json=b_payload) as b_resp:
+                        if b_resp.status == 200:
+                            logger.info(f"Notification also delivered via Telegram Business connection to {user_id}")
+                        else:
+                            logger.warning(f"Telegram Business notification returned status {b_resp.status}")
+                except Exception as be:
+                    logger.warning(f"Could not send via Telegram Business connection: {be}")
     except Exception as e:
         logger.error(f"Failed to send Telegram notification to {user_id}: {e}")
 

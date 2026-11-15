@@ -138,6 +138,9 @@
           <button onclick="filterByStatus('pending_review')" data-status="pending_review" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs transition whitespace-nowrap">
             ⏳ Review Pending
           </button>
+          <button onclick="filterByStatus('reuploaded')" data-status="reuploaded" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 shadow-xs transition whitespace-nowrap">
+            🔄 Re-uploaded
+          </button>
           <button onclick="filterByStatus('in_production')" data-status="in_production" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs transition whitespace-nowrap">
             🎨 In Production
           </button>
@@ -193,7 +196,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100" id="orders-tbody">
               {% for o in orders %}
-              {% set row_status = 'pending_review' if o.payment_status == 'pending_review' else ('ready_for_delivery' if o.status == 'ready_for_delivery' else ('completed' if o.status == 'completed' else 'in_production')) %}
+              {% set row_status = 'reuploaded' if (o.status == 'reuploaded' or o.payment_status == 'reuploaded') else ('pending_review' if o.payment_status == 'pending_review' else ('ready_for_delivery' if o.status == 'ready_for_delivery' else ('completed' if o.status == 'completed' else 'in_production'))) %}
               <tr class="hover:bg-slate-50/80 transition group" id="row-{{ o.order_code }}" data-status="{{ row_status }}">
                 <td class="py-4 px-4 font-bold text-slate-900 whitespace-nowrap">
                   <span class="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 text-xs font-mono select-all">
@@ -266,7 +269,12 @@
                   {% endif %}
                 </td>
                 <td class="py-4 px-4 whitespace-nowrap">
-                  {% if o.payment_status == 'pending_review' %}
+                  {% if o.status == 'reuploaded' or o.payment_status == 'reuploaded' %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-xs animate-pulse">
+                      <i class="fa-solid fa-arrows-rotate mr-1.5 text-amber-600"></i>
+                      Re-uploaded (Review)
+                    </span>
+                  {% elif o.payment_status == 'pending_review' %}
                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
                       <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>
                       Review Pending
@@ -305,8 +313,8 @@
                       <i class="fa-solid fa-print"></i>
                     </button>
 
-                    {% if o.payment_status == 'pending_review' %}
-                    <button onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-xs flex items-center space-x-1" title="Approve 50% Deposit">
+                    {% if o.status == 'reuploaded' or o.payment_status == 'reuploaded' or o.payment_status == 'pending_review' %}
+                    <button onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-xs flex items-center space-x-1" title="Approve Order / Deposit">
                       <i class="fa-solid fa-check"></i>
                       <span>Approve</span>
                     </button>

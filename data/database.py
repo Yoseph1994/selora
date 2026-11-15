@@ -718,13 +718,13 @@ def delete_portfolio_item(item_id: str) -> bool:
     return False
 
 def update_order_artwork(order_code: str, customer_files: str) -> bool:
-    """Update customer artwork files after re-upload and reset status to pending."""
+    """Update customer artwork files after re-upload and mark status as reuploaded."""
     conn, is_pg = get_connection()
     cursor = conn.cursor()
     updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute(q("""
         UPDATE orders
-        SET customer_files = ?, status = 'pending', updated_at = ?
+        SET customer_files = ?, status = 'reuploaded', updated_at = ?
         WHERE order_code = ?
     """, is_pg), (customer_files, updated_at, order_code))
     success = cursor.rowcount > 0
@@ -733,20 +733,48 @@ def update_order_artwork(order_code: str, customer_files: str) -> bool:
     return success
 
 def update_order_receipt(order_code: str, file_id: str, filename: str) -> bool:
-    """Update customer deposit receipt after re-upload and reset payment_status to pending_review."""
+    """Update customer deposit receipt after re-upload and mark payment_status as reuploaded."""
     conn, is_pg = get_connection()
     cursor = conn.cursor()
     updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute(q("""
         UPDATE orders
         SET payment_screenshot_file_id = ?, payment_screenshot_filename = ?,
-            payment_status = 'pending_review', updated_at = ?
+            payment_status = 'reuploaded', updated_at = ?
         WHERE order_code = ?
     """, is_pg), (file_id, filename, updated_at, order_code))
     success = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return success
+
+# ─── TELEGRAM BUSINESS CONNECTION STORAGE ─────────────────────
+
+BUSINESS_CONN_FILE = DATA_DIR / "business_connection.json"
+
+def save_business_connection(conn_id: str, user_id: int, is_enabled: bool = True):
+    try:
+        with open(BUSINESS_CONN_FILE, "w", encoding="utf-8") as f:
+            json.dump({
+                "connection_id": conn_id,
+                "user_id": user_id,
+                "is_enabled": is_enabled,
+                "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }, f, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to save business connection: {e}")
+
+def get_business_connection() -> Optional[Dict[str, Any]]:
+    if not BUSINESS_CONN_FILE.exists():
+        return None
+    try:
+        with open(BUSINESS_CONN_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if data.get("is_enabled") and data.get("connection_id"):
+                return data
+            return None
+    except Exception:
+        return None
 
 # ─── ORDER REJECTION WITH REASON ──────────────────────────────
 

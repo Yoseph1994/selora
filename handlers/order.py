@@ -893,31 +893,79 @@ async def process_photo_upload(message: types.Message, state: FSMContext):
 
     count = len(photos)
     if count >= qty:
-        await message.answer(f"✓ *All {count}/{qty} photos received!*", parse_mode="Markdown")
+        await message.answer(f"✓ *All {count}/{qty} photos received (1 print each)!*", parse_mode="Markdown")
         await advance_to_deadline_picker(message, state)
     else:
-        done_btn = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=f"✓ Done Uploading ({count}/{qty})", callback_data="done_photos")],
+        copies_each = qty // count
+        remainder = qty % count
+        dist_btn_label = f"➗ Distribute Evenly ({copies_each} ea → {qty} total)" if remainder == 0 else f"➗ Distribute Evenly ({qty} total)"
+
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=dist_btn_label, callback_data="distribute_photos:even")],
+            [InlineKeyboardButton(text=f"📷 Keep Adding Photos ({count}/{qty})", callback_data="distribute_photos:continue")],
             [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
         ])
+
+        pct = max(1, min(10, int((count / qty) * 10)))
+        progress_bar = "█" * pct + "░" * (10 - pct)
+
         await message.answer(
-            f"📸 *Photo {count} of {qty} received*\n\n"
-            f"Send more photos or tap *Done Uploading*:",
+            f"📸 *Photo {count} of {qty} received*\n"
+            f"`[{progress_bar}]` *{count}/{qty}*\n\n"
+            f"• Total Order: *{qty} prints*\n"
+            f"• Received so far: *{count} unique photos*\n\n"
+            f"👉 Send your next photo (tap 📎 → File/Doc), or tap below to distribute {qty} prints evenly across your {count} photos:",
             parse_mode="Markdown",
-            reply_markup=done_btn
+            reply_markup=markup
         )
 
-@router.callback_query(OrderFSM.waiting_for_photos, F.data == "done_photos")
-async def callback_done_photos(callback: types.CallbackQuery, state: FSMContext):
+@router.callback_query(OrderFSM.waiting_for_photos, F.data.in_(["done_photos", "distribute_photos:even"]))
+async def callback_distribute_even(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     photos = data.get("photos", [])
+    qty = data.get("quantity", 1)
+    prod_name = data.get("product_name", "items")
+    count = len(photos)
+
     if not photos:
         await callback.answer("Please send at least 1 photo first!", show_alert=True)
         return
 
-    await callback.message.answer(f"✓ *{len(photos)} photos uploaded*", parse_mode="Markdown")
+    copies_each = qty // count
+    remainder = qty % count
+
+    if count == 1:
+        dist_note = f"{qty} copies of 1 photo"
+    elif remainder == 0:
+        dist_note = f"{count} photos × {copies_each} copies each"
+    else:
+        dist_note = f"{count} photos distributed evenly ({qty} total)"
+
+    new_items_desc = f"{qty}x {prod_name} ({dist_note})"
+    await state.update_data(
+        items=new_items_desc,
+        photo_distribution=dist_note
+    )
+
+    try:
+        await callback.message.edit_text(
+            f"✓ *Photo Distribution Confirmed!*\n\n"
+            f"📦 *{new_items_desc}*\n"
+            f"Total Prints: *{qty} copies*",
+            parse_mode="Markdown"
+        )
+    except Exception:
+        pass
     await advance_to_deadline_picker(callback.message, state)
     await callback.answer()
+
+@router.callback_query(OrderFSM.waiting_for_photos, F.data == "distribute_photos:continue")
+async def callback_distribute_continue(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    photos = data.get("photos", [])
+    qty = data.get("quantity", 1)
+    count = len(photos)
+    await callback.answer(f"Send photo {count + 1} of {qty} via 📎 -> File/Document", show_alert=False)
 
 # ─── INTERACTIVE CALENDAR DATE PICKER ─────────────────────────
 
