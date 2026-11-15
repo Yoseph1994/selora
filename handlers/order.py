@@ -1,7 +1,9 @@
 import os
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict, Any
+
 from aiogram import Router, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -23,40 +25,169 @@ RECEIPTS_DIR = Path(__file__).resolve().parent.parent / "data" / "receipts"
 RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)
 
 class OrderFSM(StatesGroup):
-    waiting_for_items = State()
+    waiting_for_product = State()
+    waiting_for_quantity = State()
+    waiting_for_card_design = State()
+    waiting_for_design_mode = State()
+    waiting_for_photos = State()
     waiting_for_deadline = State()
     waiting_for_delivery_type = State()
     waiting_for_location = State()
-    waiting_for_files_or_notes = State()
     waiting_for_payment_receipt = State()
+
+# -------------------------------------------------------------
+# KEYBOARDS FOR DETERMINISTIC APP-LIKE INTERACTION
+# -------------------------------------------------------------
+
+def get_product_picker_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🏷 Stickers (Min 15)", callback_data="sel_prod:stickers"),
+            InlineKeyboardButton(text="🔖 Bookmarks (Min 2)", callback_data="sel_prod:bookmarks")
+        ],
+        [
+            InlineKeyboardButton(text="💼 Business Cards (Min 50)", callback_data="sel_prod:business_cards"),
+            InlineKeyboardButton(text="📸 Polaroids (Min 10)", callback_data="sel_prod:polaroid")
+        ],
+        [
+            InlineKeyboardButton(text="📖 Photo Books & Minibooks ▾", callback_data="sel_cat:books")
+        ],
+        [
+            InlineKeyboardButton(text="📓 Mini Notebook (200 ETB)", callback_data="sel_prod:mini_notebook"),
+            InlineKeyboardButton(text="📔 Notebook (500 ETB)", callback_data="sel_prod:notebook")
+        ],
+        [
+            InlineKeyboardButton(text="☕ Custom Mug (1,500 ETB)", callback_data="sel_prod:mug"),
+            InlineKeyboardButton(text="🧩 Photo Puzzle (1,500 ETB)", callback_data="sel_prod:puzzle")
+        ],
+        [
+            InlineKeyboardButton(text="🟢 Poster A5 (Min 10)", callback_data="sel_prod:sticker_poster_a5"),
+            InlineKeyboardButton(text="🟢 Poster A4 (Min 10)", callback_data="sel_prod:sticker_poster_a4")
+        ],
+        [
+            InlineKeyboardButton(
+                text="🤝 Bulk Order (>100 pcs) — Talk to Owner",
+                url=f"https://t.me/{config.ADMIN_USERNAME}?text=Hi%2C%20I%20am%20interested%20in%20a%20bulk%20order%20from%20Selora%20Prints"
+            )
+        ],
+        [
+            InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")
+        ]
+    ])
+
+def get_books_picker_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📖 Mini White Cover — 600 ETB", callback_data="sel_prod:minibook_white")],
+        [InlineKeyboardButton(text="📖 Mini Black Cover — 700 ETB", callback_data="sel_prod:minibook_black")],
+        [InlineKeyboardButton(text="📖 Medium Photo Book — 800 ETB", callback_data="sel_prod:book_medium")],
+        [InlineKeyboardButton(text="📖 A5 Photo Book — 1,000 ETB", callback_data="sel_prod:book_a5")],
+        [InlineKeyboardButton(text="📖 A4 Luxury Photo Book — 1,500 ETB", callback_data="sel_prod:book_a4")],
+        [InlineKeyboardButton(text="◀ Back to All Products", callback_data="sel_cat:all")]
+    ])
+
+def get_stepper_keyboard(prod_id: str, qty: int, min_order: int) -> InlineKeyboardMarkup:
+    step_large = 10 if min_order >= 50 else (5 if min_order >= 10 else 2)
+    step_small = 5 if min_order >= 50 else 1
+
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=f"-{step_large}", callback_data=f"qstep:{prod_id}:-{step_large}"),
+            InlineKeyboardButton(text=f"-{step_small}", callback_data=f"qstep:{prod_id}:-{step_small}"),
+            InlineKeyboardButton(text=f"🔢 {qty}", callback_data="noop"),
+            InlineKeyboardButton(text=f"+{step_small}", callback_data=f"qstep:{prod_id}:+{step_small}"),
+            InlineKeyboardButton(text=f"+{step_large}", callback_data=f"qstep:{prod_id}:+{step_large}")
+        ],
+        [
+            InlineKeyboardButton(text=f"✅ Confirm: {qty} pieces", callback_data=f"qconfirm:{prod_id}:{qty}")
+        ],
+        [
+            InlineKeyboardButton(
+                text="🤝 Need Bulk (>100 pcs)? Negotiate Price",
+                url=f"https://t.me/{config.ADMIN_USERNAME}?text=Hi%2C%20I%20am%20interested%20in%20a%20bulk%20order%20for%20{prod_id}%20with%20custom%20pricing"
+            )
+        ],
+        [
+            InlineKeyboardButton(text="◀ Change Item", callback_data="sel_cat:all"),
+            InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_order")
+        ]
+    ])
+
+def get_card_design_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📁 I have ready design file (Free)", callback_data="card_design:ready")],
+        [InlineKeyboardButton(text="🎨 Selora Custom Design Service (+100 ETB)", callback_data="card_design:selora")],
+        [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
+    ])
+
+def get_design_mode_keyboard(qty: int, prod_name: str) -> InlineKeyboardMarkup:
+    buttons = []
+    if qty > 1:
+        buttons.append([InlineKeyboardButton(text=f"🖼️ 1 Design for all {qty} copies", callback_data="dmode:single")])
+        buttons.append([InlineKeyboardButton(text=f"📸 Different photo for each item ({qty} photos)", callback_data="dmode:multi")])
+    else:
+        buttons.append([InlineKeyboardButton(text="📸 Upload My Photo / Artwork", callback_data="dmode:single")])
+
+    buttons.append([InlineKeyboardButton(text="🎨 Choose from Selora Ready Designs", callback_data="dmode:templates")])
+    buttons.append([InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_template_gallery_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✨ Minimalist Aesthetic", callback_data="tmpl:Minimalist Aesthetic"),
+            InlineKeyboardButton(text="🎞 Retro Vintage Film", callback_data="tmpl:Retro Vintage Film")
+        ],
+        [
+            InlineKeyboardButton(text="🌿 Floral & Nature", callback_data="tmpl:Floral & Nature"),
+            InlineKeyboardButton(text="💬 Typographic Quotes", callback_data="tmpl:Typographic Quotes")
+        ],
+        [
+            InlineKeyboardButton(text="🔤 Custom Monogram", callback_data="tmpl:Custom Monogram")
+        ],
+        [
+            InlineKeyboardButton(text="◀ Back to Photo Upload", callback_data="dmode:back")
+        ]
+    ])
+
+def get_date_picker_keyboard() -> InlineKeyboardMarkup:
+    now = datetime.now()
+    d2 = now + timedelta(days=2)
+    d3 = now + timedelta(days=3)
+    d4 = now + timedelta(days=4)
+    d5 = now + timedelta(days=5)
+    d7 = now + timedelta(days=7)
+
+    d2_label = f"⚡ {d2.strftime('%a, %b %d')} (Urgent: +200 ETB)"
+    d3_label = f"🗓 {d3.strftime('%a, %b %d')} (Standard)"
+    d4_label = f"🗓 {d4.strftime('%a, %b %d')} (Standard)"
+    d5_label = f"🗓 {d5.strftime('%a, %b %d')} (Standard)"
+    d7_label = f"📅 Next Week ({d7.strftime('%b %d')}+)"
+
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=d2_label, callback_data=f"pick_date:{d2.strftime('%a, %b %d')}:200")],
+        [
+            InlineKeyboardButton(text=d3_label, callback_data=f"pick_date:{d3.strftime('%a, %b %d')}:0"),
+            InlineKeyboardButton(text=d4_label, callback_data=f"pick_date:{d4.strftime('%a, %b %d')}:0")
+        ],
+        [
+            InlineKeyboardButton(text=d5_label, callback_data=f"pick_date:{d5.strftime('%a, %b %d')}:0"),
+            InlineKeyboardButton(text=d7_label, callback_data=f"pick_date:{d7_label}:0")
+        ],
+        [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
+    ])
+
+# -------------------------------------------------------------
+# START ORDER & PRODUCT PICKER
+# -------------------------------------------------------------
 
 @router.message(Command("cancel"))
 @router.message(F.text == "❌ Cancel")
 async def cancel_order(message: types.Message, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state is None:
-        await message.answer(
-            "There is no active order in progress.",
-            reply_markup=get_main_menu_keyboard()
-        )
-        return
-
     await state.clear()
     await message.answer(
         "❌ Order process cancelled. You can start anytime with the menu below!",
         reply_markup=get_main_menu_keyboard()
     )
-
-def get_deadline_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="⚡ Urgent: in 2 days (+200 ETB)", callback_data="dl_choice:urgent_2_days")
-        ],
-        [
-            InlineKeyboardButton(text="🗓 Standard: in 3-4 days", callback_data="dl_choice:standard_3_days"),
-            InlineKeyboardButton(text="📅 Next Week", callback_data="dl_choice:next_week")
-        ]
-    ])
 
 @router.callback_query(F.data == "cancel_order")
 async def callback_cancel_order(callback: types.CallbackQuery, state: FSMContext):
@@ -72,136 +203,387 @@ async def callback_cancel_order(callback: types.CallbackQuery, state: FSMContext
 @router.message(F.text == "📝 Place an Order")
 async def start_order(message: types.Message, state: FSMContext):
     await state.clear()
-    await state.set_state(OrderFSM.waiting_for_items)
+    await state.set_state(OrderFSM.waiting_for_product)
     await message.answer(
         "📱 *SELORA ORDER ASSISTANT*\n"
-        "`[ 🟡 ⚪ ⚪ ⚪ ] Step 1 of 4: Select Items`\n"
+        "`[ 🟡 ⚪ ⚪ ⚪ ] Step 1 of 4: Select Your Product`\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "1️⃣ *What items would you like to order and how many?*\n\n"
-        "⚠️ *Minimum Order Quantities:*\n"
-        "• Stickers: Min 15 pcs\n"
-        "• Bookmarks: Min 2 pcs\n"
-        "• Business Cards: Min 50 pcs\n"
-        "• Polaroid Prints: Min 10 pcs\n"
-        "• Sticker Posters: Min 10 pcs\n"
-        "• Minibooks & Other Items: 1 pc\n\n"
-        "_(e.g., 20 Stickers, 1 Mini Book (White), and 2 Bookmarks)_\n\n"
-        "Type your items below (or tap *❌ Cancel* anytime):",
+        "Tap the item you'd like to order below:",
         parse_mode="Markdown",
-        reply_markup=get_cancel_keyboard()
+        reply_markup=get_product_picker_keyboard()
     )
 
 @router.callback_query(F.data == "start_order")
 async def callback_start_order(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
-    await state.set_state(OrderFSM.waiting_for_items)
+    await state.set_state(OrderFSM.waiting_for_product)
     await callback.message.answer(
         "📱 *SELORA ORDER ASSISTANT*\n"
-        "`[ 🟡 ⚪ ⚪ ⚪ ] Step 1 of 4: Select Items`\n"
+        "`[ 🟡 ⚪ ⚪ ⚪ ] Step 1 of 4: Select Your Product`\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "1️⃣ *What items would you like to order and how many?*\n\n"
-        "⚠️ *Minimum Order Quantities:*\n"
-        "• Stickers: Min 15 pcs\n"
-        "• Bookmarks: Min 2 pcs\n"
-        "• Business Cards: Min 50 pcs\n"
-        "• Polaroid Prints: Min 10 pcs\n"
-        "• Sticker Posters: Min 10 pcs\n"
-        "• Minibooks & Other Items: 1 pc\n\n"
-        "_(e.g., 20 Stickers, 1 Mini Book (White), and 2 Bookmarks)_\n\n"
-        "Type your items below:",
+        "Tap the item you'd like to order below:",
         parse_mode="Markdown",
-        reply_markup=get_cancel_keyboard()
+        reply_markup=get_product_picker_keyboard()
     )
     await callback.answer()
 
-@router.message(OrderFSM.waiting_for_items)
-async def process_items(message: types.Message, state: FSMContext):
-    if not message.text or message.text == "❌ Cancel":
-        return
-    await state.update_data(items=message.text.strip())
-    await state.set_state(OrderFSM.waiting_for_deadline)
-    await message.answer(
-        "📱 *SELORA ORDER ASSISTANT*\n"
-        "`[ 🟢 🟡 ⚪ ⚪ ] Step 2 of 4: Timing & Deadline`\n"
+@router.callback_query(F.data == "sel_cat:books")
+async def callback_show_books_menu(callback: types.CallbackQuery):
+    await callback.message.edit_text(
+        "📖 *SELECT PHOTO BOOK / MINIBOOK SIZE:*\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "2️⃣ *When do you need your order by?* 🗓\n\n"
-        "⏱ *Turnaround Policy:*\n"
-        "• 🟢 *Standard:* 3+ days (regular price)\n"
-        "• ⚡ *Urgent Rush:* In 2 days (*+200 ETB rush fee*)\n"
-        "• ⛔ *Next-day (tomorrow):* Cannot be accepted due to drying & binding time.\n\n"
-        "Tap an option below or type your deadline:",
+        "Choose your preferred cover and size:",
         parse_mode="Markdown",
-        reply_markup=get_deadline_keyboard()
-    )
-
-@router.callback_query(OrderFSM.waiting_for_deadline, F.data.startswith("dl_choice:"))
-async def process_deadline_callback(callback: types.CallbackQuery, state: FSMContext):
-    choice = callback.data.split(":")[1]
-    if choice == "urgent_2_days":
-        deadline = "⚡ Urgent Rush (in 2 days) [+200 ETB]"
-        rush_fee = 200
-    elif choice == "standard_3_days":
-        deadline = "Standard (in 3-4 days)"
-        rush_fee = 0
-    else:
-        deadline = "Next Week"
-        rush_fee = 0
-
-    await state.update_data(deadline=deadline, rush_fee=rush_fee)
-    await state.set_state(OrderFSM.waiting_for_delivery_type)
-
-    rush_note = " _(+200 ETB rush fee)_" if rush_fee > 0 else ""
-    await callback.message.edit_text(f"✅ Selected Timing: *{deadline}*{rush_note}", parse_mode="Markdown")
-    await callback.message.answer(
-        "📱 *SELORA ORDER ASSISTANT*\n"
-        "`[ 🟢 🟢 🟡 ⚪ ] Step 3 of 4: Delivery Method`\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "3️⃣ *How would you like to receive your order?*\n\n"
-        "• 🏪 *Free Store Pickup:* Ledeta Store\n"
-        "• 🚚 *Yango Delivery:* Delivered across Addis Ababa (fee paid by you upon receipt)",
-        parse_mode="Markdown",
-        reply_markup=get_delivery_choice_keyboard()
+        reply_markup=get_books_picker_keyboard()
     )
     await callback.answer()
 
-@router.message(OrderFSM.waiting_for_deadline)
-async def process_deadline(message: types.Message, state: FSMContext):
-    if not message.text or message.text == "❌ Cancel":
+@router.callback_query(F.data == "sel_cat:all")
+async def callback_show_all_prods(callback: types.CallbackQuery):
+    await callback.message.edit_text(
+        "📱 *SELORA ORDER ASSISTANT*\n"
+        "`[ 🟡 ⚪ ⚪ ⚪ ] Step 1 of 4: Select Your Product`\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Tap the item you'd like to order below:",
+        parse_mode="Markdown",
+        reply_markup=get_product_picker_keyboard()
+    )
+    await callback.answer()
+
+# -------------------------------------------------------------
+# QUANTITY STEPPER (DETERMINISTIC INTERACTION)
+# -------------------------------------------------------------
+
+async def show_quantity_stepper(message: types.Message, prod_id: str, state: FSMContext, initial_qty: Optional[int] = None):
+    products = database.get_products_data().get("products", [])
+    prod = next((p for p in products if p["id"] == prod_id), None)
+    if not prod:
+        await message.answer("Product not found. Please choose from catalog.", reply_markup=get_product_picker_keyboard())
         return
 
-    text_lower = message.text.lower().strip()
-    tomorrow_words = ["tomorrow", "tomorow", "nege", "ነገ", "today", "tonight", "ዛሬ", "1 day", "1day", "one day"]
-    if any(w in text_lower for w in tomorrow_words):
-        await message.answer(
-            "⚠️ *Orders cannot be accepted for tomorrow!*\n\n"
-            "Custom printing, binding, and drying require at least 48 hours.\n\n"
-            "• Earliest possible: **In 2 days** (Urgent Rush, *+200 ETB fee*)\n"
-            "• Standard turnaround: **3+ days** (regular pricing)\n\n"
-            "Please select an option below or type a date at least 2 days away:",
+    min_ord = prod.get("min_order", 1)
+    qty = initial_qty if initial_qty is not None else min_ord
+    price = prod.get("price") or 0
+    subtotal = price * qty if price else 0
+
+    await state.update_data(
+        product_id=prod["id"],
+        product_name=prod["name"],
+        unit_price=price,
+        min_order=min_ord,
+        quantity=qty
+    )
+    await state.set_state(OrderFSM.waiting_for_quantity)
+
+    min_note = f"\n⚠️ *Minimum Order:* `{min_ord} pieces`" if min_ord > 1 else ""
+    price_info = f"`{price} ETB` each" if price else "Custom Quote"
+    sub_line = f"\n💰 *Subtotal:* `{subtotal} ETB`" if price else ""
+
+    text = (
+        f"💛 *Select Quantity for {prod['name']}*\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"🏷 *Unit Price:* {price_info}{min_note}\n"
+        f"🔢 *Current Quantity:* `{qty} pieces`{sub_line}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Use buttons below to adjust quantity:"
+    )
+
+    keyboard = get_stepper_keyboard(prod_id, qty, min_ord)
+    await message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
+
+@router.callback_query(F.data.startswith("sel_prod:"))
+async def callback_select_product(callback: types.CallbackQuery, state: FSMContext):
+    prod_id = callback.data.split(":")[1]
+    await show_quantity_stepper(callback.message, prod_id, state)
+    await callback.answer()
+
+@router.callback_query(OrderFSM.waiting_for_quantity, F.data.startswith("qstep:"))
+async def callback_quantity_step(callback: types.CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    prod_id = parts[1]
+    delta = int(parts[2])
+
+    data = await state.get_data()
+    current_qty = data.get("quantity", 1)
+    min_ord = data.get("min_order", 1)
+    price = data.get("unit_price", 0)
+
+    new_qty = current_qty + delta
+    if new_qty < min_ord:
+        await callback.answer(f"⚠️ Minimum order is {min_ord} pieces!", show_alert=True)
+        return
+
+    await state.update_data(quantity=new_qty)
+    subtotal = price * new_qty if price else 0
+
+    min_note = f"\n⚠️ *Minimum Order:* `{min_ord} pieces`" if min_ord > 1 else ""
+    price_info = f"`{price} ETB` each" if price else "Custom Quote"
+    sub_line = f"\n💰 *Subtotal:* `{subtotal} ETB`" if price else ""
+
+    text = (
+        f"💛 *Select Quantity for {data.get('product_name', prod_id)}*\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"🏷 *Unit Price:* {price_info}{min_note}\n"
+        f"🔢 *Current Quantity:* `{new_qty} pieces`{sub_line}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Use buttons below to adjust quantity:"
+    )
+
+    keyboard = get_stepper_keyboard(prod_id, new_qty, min_ord)
+    try:
+        await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    except Exception:
+        pass
+    await callback.answer()
+
+# -------------------------------------------------------------
+# CONFIRM QUANTITY -> BUSINESS CARD DESIGN OPTION OR DESIGN MODE
+# -------------------------------------------------------------
+
+@router.callback_query(OrderFSM.waiting_for_quantity, F.data.startswith("qconfirm:"))
+async def callback_quantity_confirm(callback: types.CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    prod_id = parts[1]
+    qty = int(parts[2])
+
+    data = await state.get_data()
+    prod_name = data.get("product_name", prod_id)
+    unit_price = data.get("unit_price", 0)
+    subtotal = unit_price * qty
+
+    await state.update_data(
+        quantity=qty,
+        items=f"{qty}x {prod_name}",
+        subtotal=subtotal
+    )
+
+    # Special flow for Business Cards (+100 ETB design fee)
+    if prod_id == "business_cards":
+        await state.set_state(OrderFSM.waiting_for_card_design)
+        await callback.message.edit_text(
+            f"💼 *BUSINESS CARD DESIGN OPTION*\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"Ordering: *{qty} Business Cards*\n\n"
+            "Do you have a print-ready design file, or would you like Selora to create a custom design for you?\n\n"
+            "• 📁 *My Own Ready Design:* Free (upload below)\n"
+            "• 🎨 *Selora Custom Design Service:* +100 ETB",
             parse_mode="Markdown",
-            reply_markup=get_deadline_keyboard()
+            reply_markup=get_card_design_keyboard()
         )
+        await callback.answer()
         return
 
-    urgent_words = ["urgent", "rush", "2 days", "2days", "in 2 days", "2 ቀን", "ሁለት ቀን"]
-    is_urgent = any(w in text_lower for w in urgent_words)
-    rush_fee = 200 if is_urgent else 0
-    deadline = message.text.strip()
-    if is_urgent and "(+200 ETB)" not in deadline:
-        deadline += " (⚡ Urgent: +200 ETB rush fee)"
+    # Normal products -> Design mode selection
+    await advance_to_design_mode(callback.message, state)
+    await callback.answer()
 
-    await state.update_data(deadline=deadline, rush_fee=rush_fee)
-    await state.set_state(OrderFSM.waiting_for_delivery_type)
-    await message.answer(
-        "📱 *SELORA ORDER ASSISTANT*\n"
-        "`[ 🟢 🟢 🟡 ⚪ ] Step 3 of 4: Delivery Method`\n"
+# -------------------------------------------------------------
+# BUSINESS CARD DESIGN HANDLER
+# -------------------------------------------------------------
+
+@router.callback_query(OrderFSM.waiting_for_card_design, F.data.startswith("card_design:"))
+async def callback_card_design(callback: types.CallbackQuery, state: FSMContext):
+    choice = callback.data.split(":")[1]
+    if choice == "selora":
+        design_fee = 100
+        design_note = "Selora Custom Design Service (+100 ETB)"
+        await callback.message.answer("🎨 Selected: *Selora Custom Design Service (+100 ETB)*", parse_mode="Markdown")
+    else:
+        design_fee = 0
+        design_note = "Customer Ready Design File"
+        await callback.message.answer("📁 Selected: *Customer Ready Design File (Free)*", parse_mode="Markdown")
+
+    await state.update_data(design_fee=design_fee, design_note=design_note)
+    await advance_to_design_mode(callback.message, state)
+    await callback.answer()
+
+# -------------------------------------------------------------
+# DESIGN & ARTWORK SELECTION MODE
+# -------------------------------------------------------------
+
+async def advance_to_design_mode(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    qty = data.get("quantity", 1)
+    prod_name = data.get("product_name", "Items")
+
+    await state.set_state(OrderFSM.waiting_for_design_mode)
+    text = (
+        f"🎨 *ARTWORK & DESIGN SELECTION*\n"
+        f"`[ 🟢 🟡 ⚪ ⚪ ] Step 2 of 4: Design Source`\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"Item: *{qty}x {prod_name}*\n\n"
+        "How would you like to provide the designs/photos for this order?"
+    )
+    await message.edit_text(text, parse_mode="Markdown", reply_markup=get_design_mode_keyboard(qty, prod_name))
+
+@router.callback_query(OrderFSM.waiting_for_design_mode, F.data.startswith("dmode:"))
+async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext):
+    mode = callback.data.split(":")[1]
+    data = await state.get_data()
+    qty = data.get("quantity", 1)
+    prod_name = data.get("product_name", "items")
+
+    if mode == "templates":
+        await callback.message.edit_text(
+            "🎨 *SELORA READY DESIGN TEMPLATES*\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "Choose a template style for your prints:",
+            parse_mode="Markdown",
+            reply_markup=get_template_gallery_keyboard()
+        )
+        await callback.answer()
+        return
+
+    if mode == "back":
+        await advance_to_design_mode(callback.message, state)
+        await callback.answer()
+        return
+
+    if mode == "single":
+        await state.update_data(design_mode="single", photos=[])
+        await state.set_state(OrderFSM.waiting_for_photos)
+        await callback.message.edit_text(
+            f"📸 *UPLOAD DESIGN / ARTWORK*\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"This design will be printed on all *{qty} copies* of {prod_name}.\n\n"
+            "👉 *Please send your photo or artwork file now:*",
+            parse_mode="Markdown",
+            reply_markup=get_cancel_keyboard()
+        )
+        await callback.answer()
+        return
+
+    if mode == "multi":
+        await state.update_data(design_mode="multi", photos=[])
+        await state.set_state(OrderFSM.waiting_for_photos)
+
+        done_btn = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Done Uploading", callback_data="done_photos")],
+            [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
+        ])
+
+        await callback.message.edit_text(
+            f"📸 *UPLOAD {qty} PHOTOS*\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"Send your photos one by one or as an album.\n\n"
+            f"• *Progress:* `0 / {qty} photos received`\n\n"
+            "Send your photos now (or tap *Done Uploading* when finished):",
+            parse_mode="Markdown",
+            reply_markup=done_btn
+        )
+        await callback.answer()
+
+@router.callback_query(OrderFSM.waiting_for_design_mode, F.data.startswith("tmpl:"))
+async def callback_template_chosen(callback: types.CallbackQuery, state: FSMContext):
+    tmpl_name = callback.data.split(":", 1)[1]
+    await state.update_data(
+        design_mode="template",
+        design_note=f"Selora Template: {tmpl_name}",
+        file_id=None
+    )
+    await callback.message.answer(f"✅ Selected Template: *{tmpl_name}*", parse_mode="Markdown")
+    await advance_to_deadline_picker(callback.message, state)
+    await callback.answer()
+
+# -------------------------------------------------------------
+# PHOTO UPLOADER (SINGLE OR MULTI MATCHING MINIMUM ORDERS)
+# -------------------------------------------------------------
+
+@router.message(OrderFSM.waiting_for_photos, F.photo | F.document)
+async def process_photo_upload(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    mode = data.get("design_mode", "single")
+    qty = data.get("quantity", 1)
+
+    file_id = message.photo[-1].file_id if message.photo else message.document.file_id
+
+    if mode == "single":
+        await state.update_data(file_id=file_id, file_type="photo" if message.photo else "document")
+        await message.answer("✅ Artwork received successfully! 🎨")
+        await advance_to_deadline_picker(message, state)
+        return
+
+    # Multi photo mode
+    photos = data.get("photos", [])
+    photos.append(file_id)
+    await state.update_data(photos=photos, file_id=photos[0])
+
+    count = len(photos)
+    if count >= qty:
+        await message.answer(f"🎉 *All {count}/{qty} photos received successfully!* 💛", parse_mode="Markdown")
+        await advance_to_deadline_picker(message, state)
+    else:
+        done_btn = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=f"✅ Done Uploading ({count}/{qty})", callback_data="done_photos")],
+            [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
+        ])
+        await message.answer(
+            f"📸 *Received photo {count} of {qty}!*\n\n"
+            f"Send more photos or tap *Done Uploading* when you're finished:",
+            parse_mode="Markdown",
+            reply_markup=done_btn
+        )
+
+@router.callback_query(OrderFSM.waiting_for_photos, F.data == "done_photos")
+async def callback_done_photos(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    photos = data.get("photos", [])
+    if not photos:
+        await callback.answer("Please send at least 1 photo first!", show_alert=True)
+        return
+
+    await callback.message.answer(f"✅ Finished photo upload with *{len(photos)} photos*! 💛", parse_mode="Markdown")
+    await advance_to_deadline_picker(callback.message, state)
+    await callback.answer()
+
+# -------------------------------------------------------------
+# INTERACTIVE DATE PICKER (DETERMINISTIC DEADLINES)
+# -------------------------------------------------------------
+
+async def advance_to_deadline_picker(message: types.Message, state: FSMContext):
+    await state.set_state(OrderFSM.waiting_for_deadline)
+    text = (
+        "🗓 *TIMING & DELIVERY DEADLINE*\n"
+        "`[ 🟢 🟢 🟡 ⚪ ] Step 3 of 4: Select Completion Date`\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "3️⃣ *How would you like to receive your order?*\n\n"
-        "• 🏪 *Free Store Pickup:* Ledeta Store\n"
-        "• 🚚 *Yango Delivery:* Delivered across Addis Ababa (fee paid by you upon receipt)",
+        "⏱ *Turnaround Policy:*\n"
+        "• 🟢 *Standard:* 3+ days (normal pricing)\n"
+        "• ⚡ *Urgent Rush (in 2 days):* +200 ETB rush fee\n"
+        "• ⛔ *Next-day (tomorrow):* Cannot be accepted due to drying & binding time.\n\n"
+        "👉 *Tap your desired completion date below:*"
+    )
+    if isinstance(message, types.CallbackQuery):
+        await message.message.edit_text(text, parse_mode="Markdown", reply_markup=get_date_picker_keyboard())
+    else:
+        await message.answer(text, parse_mode="Markdown", reply_markup=get_date_picker_keyboard())
+
+@router.callback_query(OrderFSM.waiting_for_deadline, F.data.startswith("pick_date:"))
+async def callback_date_picked(callback: types.CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    date_label = parts[1]
+    rush_fee = int(parts[2])
+
+    await state.update_data(deadline=date_label, rush_fee=rush_fee)
+    await state.set_state(OrderFSM.waiting_for_delivery_type)
+
+    rush_note = " _(+200 ETB urgent rush fee)_" if rush_fee > 0 else ""
+    await callback.message.edit_text(f"✅ Completion Date: *{date_label}*{rush_note}", parse_mode="Markdown")
+
+    await callback.message.answer(
+        "📱 *SELORA ORDER ASSISTANT*\n"
+        "`[ 🟢 🟢 🟢 ⚪ ] Step 4 of 4: Delivery Method`\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "How would you like to receive your prints?\n\n"
+        "• 🏪 *Store Pickup:* Free directly at our Ledeta store\n"
+        "• 🚚 *Yango Delivery:* Delivered across Addis Ababa (fee paid upon receipt)",
         parse_mode="Markdown",
         reply_markup=get_delivery_choice_keyboard()
     )
+    await callback.answer()
+
+# -------------------------------------------------------------
+# DELIVERY SELECTION
+# -------------------------------------------------------------
 
 @router.callback_query(OrderFSM.waiting_for_delivery_type, F.data.startswith("delivery_choice:"))
 async def process_delivery_choice(callback: types.CallbackQuery, state: FSMContext):
@@ -211,22 +593,14 @@ async def process_delivery_choice(callback: types.CallbackQuery, state: FSMConte
             delivery_type="Store Pickup (Ledeta - Free)",
             delivery_location="Ledeta Store"
         )
-        await state.set_state(OrderFSM.waiting_for_files_or_notes)
         await callback.message.edit_text("✅ Selected: *Store Pickup (Ledeta - Free)*", parse_mode="Markdown")
-        await callback.message.answer(
-            "4️⃣ *Custom Files or Special Notes:*\n\n"
-            "If your order requires custom photos/designs (e.g. Polaroid photos, custom Mug print, Sticker artwork), "
-            "you can send the photo/document now, or type any special instructions.\n\n"
-            "If you don't have custom files, just reply with *None* or *Skip*.",
-            parse_mode="Markdown",
-            reply_markup=get_cancel_keyboard()
-        )
+        await show_payment_summary(callback.message, state)
     else:
         await state.update_data(delivery_type="Yango Delivery")
         await state.set_state(OrderFSM.waiting_for_location)
         await callback.message.edit_text("✅ Selected: *Yango Delivery*", parse_mode="Markdown")
         await callback.message.answer(
-            "📍 *Please provide your delivery location & contact phone number:*\n\n"
+            "📍 *Please provide your delivery address & contact phone number:*\n\n"
             "_(e.g., Bole Medhanialem next to Edna Mall, Phone: 0911XXXXXX)_",
             parse_mode="Markdown",
             reply_markup=get_cancel_keyboard()
@@ -238,69 +612,62 @@ async def process_location(message: types.Message, state: FSMContext):
     if not message.text or message.text == "❌ Cancel":
         return
     await state.update_data(delivery_location=message.text.strip())
-    await state.set_state(OrderFSM.waiting_for_files_or_notes)
-    await message.answer(
-        "4️⃣ *Custom Files or Special Notes:*\n\n"
-        "If your order requires custom photos/designs (e.g. Polaroid photos, custom Mug print, Sticker artwork), "
-        "you can send the photo/document now, or type any special instructions.\n\n"
-        "If you don't have custom files, just reply with *None* or *Skip*.",
-        parse_mode="Markdown",
-        reply_markup=get_cancel_keyboard()
-    )
+    await show_payment_summary(message, state)
 
-@router.message(OrderFSM.waiting_for_files_or_notes)
-async def process_files_or_notes(message: types.Message, state: FSMContext):
-    if message.text == "❌ Cancel":
-        return
+# -------------------------------------------------------------
+# STEP 4: 50% PRE-PAYMENT SUMMARY & VERIFICATION
+# -------------------------------------------------------------
 
-    file_id = None
-    file_type = None
-    notes = "None"
-
-    if message.photo:
-        file_id = message.photo[-1].file_id
-        file_type = "photo"
-        notes = message.caption or "Photo attached"
-    elif message.document:
-        file_id = message.document.file_id
-        file_type = "document"
-        notes = message.caption or f"Document attached: {message.document.file_name}"
-    elif message.text:
-        notes = message.text.strip()
-
-    await state.update_data(
-        file_id=file_id,
-        file_type=file_type,
-        notes=notes
-    )
-
+async def show_payment_summary(message: types.Message, state: FSMContext):
     data = await state.get_data()
+    subtotal = data.get("subtotal", 0)
+    design_fee = data.get("design_fee", 0)
     rush_fee = data.get("rush_fee", 0)
-    rush_line = "\n• ⚡ *Urgent Rush Fee:* `+200 ETB` (2-day turnaround)" if rush_fee > 0 else ""
 
-    # Step 4: Pre-payment deposit instructions
-    payment_prompt = (
-        "📱 *SELORA ORDER ASSISTANT*\n"
-        "`[ 🟢 🟢 🟢 🟡 ] Step 4 of 4: 50% Pre-Payment Deposit`\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "📋 *Order Summary:*\n"
-        f"• *Items:* {data.get('items')}\n"
-        f"• *Need by:* {data.get('deadline')}{rush_line}\n"
-        f"• *Delivery:* {data.get('delivery_type')} ({data.get('delivery_location')})\n"
-        f"• *Notes/Files:* {data.get('notes')}\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "💳 *50% Advance Pre-Payment Required:*\n"
-        f"• *CBE:* `{config.PAYMENT_CBE_ACCOUNT}` ({config.PAYMENT_CBE_NAME})\n"
-        f"• *Telebirr:* `{config.PAYMENT_TELEBIRR}` ({config.PAYMENT_TELEBIRR_NAME})\n\n"
-        "📸 *Please transfer the 50% deposit and upload your payment screenshot / transaction SMS receipt below:*"
-    )
+    total = subtotal + design_fee + rush_fee
+    deposit = round(total * 0.5) if total > 0 else 0
+    remaining = total - deposit
 
+    await state.update_data(total_price=total, deposit_amount=deposit)
     await state.set_state(OrderFSM.waiting_for_payment_receipt)
-    await message.answer(
-        text=payment_prompt,
-        parse_mode="Markdown",
-        reply_markup=get_cancel_keyboard()
+
+    fee_lines = ""
+    if design_fee > 0:
+        fee_lines += f"• Selora Custom Design: `+{design_fee} ETB`\n"
+    if rush_fee > 0:
+        fee_lines += f"• ⚡ Urgent Rush Fee (2-day): `+{rush_fee} ETB`\n"
+
+    payment_prompt = (
+        "📱 *SELORA ORDER SUMMARY & 50% DEPOSIT*\n"
+        "`[ 🟢 🟢 🟢 🟡 ] Final Step: Advance Pre-Payment`\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"🏷 *Order:* {data.get('items')}\n"
+        f"🎨 *Design:* {data.get('design_note', 'Custom artwork attached')}\n"
+        f"🗓 *Needed By:* {data.get('deadline')}\n"
+        f"🚚 *Delivery:* {data.get('delivery_type')} ({data.get('delivery_location')})\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "💰 *Cost Breakdown:*\n"
+        f"• Items Subtotal: `{subtotal} ETB`\n"
+        f"{fee_lines}"
+        f"• *Total Order Price:* `{total} ETB`\n\n"
+        f"✨ *Required 50% Advance Deposit:* 👉 *`{deposit} ETB`*\n"
+        f"_(Remaining `{remaining} ETB` paid upon completion/pickup)_\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "💳 *Transfer 50% Deposit to either account:*\n\n"
+        f"🏦 *CBE (Commercial Bank of Ethiopia):*\n"
+        f"`{config.PAYMENT_CBE_ACCOUNT}`\n"
+        f"Account Name: *{config.PAYMENT_CBE_NAME}*\n\n"
+        f"📱 *Telebirr:*\n"
+        f"`{config.PAYMENT_TELEBIRR}`\n"
+        f"Account Name: *{config.PAYMENT_TELEBIRR_NAME}*\n\n"
+        "📸 *Please transfer the deposit and upload your screenshot or transaction receipt photo below:*"
     )
+
+    await message.answer(payment_prompt, parse_mode="Markdown", reply_markup=get_cancel_keyboard())
+
+# -------------------------------------------------------------
+# PAYMENT RECEIPT HANDLER & OWNER NOTIFICATION
+# -------------------------------------------------------------
 
 @router.message(OrderFSM.waiting_for_payment_receipt)
 async def process_payment_receipt(message: types.Message, state: FSMContext):
@@ -308,7 +675,6 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         await cancel_order(message, state)
         return
 
-    # Check for photo or document screenshot
     screenshot_file_id = None
     if message.photo:
         screenshot_file_id = message.photo[-1].file_id
@@ -327,17 +693,16 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
     username_str = f"@{user.username}" if user.username else "No username"
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    # Generate placeholder order code to save receipt image
     temp_filename = f"receipt_{user.id}_{int(datetime.now().timestamp())}.jpg"
     receipt_local_path = RECEIPTS_DIR / temp_filename
 
-    # Download receipt to local disk for web dashboard
     try:
         await message.bot.download(screenshot_file_id, destination=receipt_local_path)
     except Exception as e:
-        logger.warning(f"Could not download receipt image locally: {e}")
+        logger.warning(f"Could not download receipt locally: {e}")
 
-    # Save to persistent database
+    # Save to cloud PostgreSQL or SQLite database
+    notes_combined = f"{data.get('design_note', '')} | Deposit: {data.get('deposit_amount', 0)} ETB (Total: {data.get('total_price', 0)} ETB)"
     order_code = database.save_order(
         user_id=user.id,
         full_name=user.full_name,
@@ -346,7 +711,7 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         deadline=data.get('deadline', ''),
         delivery_type=data.get('delivery_type', ''),
         delivery_location=data.get('delivery_location', ''),
-        notes=data.get('notes', 'None'),
+        notes=notes_combined,
         has_attachment=bool(data.get('file_id')),
         payment_screenshot_file_id=screenshot_file_id,
         payment_screenshot_filename=temp_filename,
@@ -354,44 +719,49 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         status="pending"
     )
 
-    # 1. Notify Customer
+    # 1. Customer confirmation
     customer_msg = (
         "🎉 *Thank you! Your order & deposit receipt have been received!* 💛\n\n"
         f"🔖 *Order Code:* `{order_code}`\n\n"
         "📋 *Summary:*\n"
         f"• *Items:* {data.get('items')}\n"
+        f"• *Total Price:* `{data.get('total_price', 0)} ETB`\n"
+        f"• *50% Deposit Submitted:* `{data.get('deposit_amount', 0)} ETB`\n"
         f"• *Deadline:* {data.get('deadline')}\n"
         f"• *Delivery:* {data.get('delivery_type')} ({data.get('delivery_location')})\n\n"
-        "🔍 *Status:* `Pending Approval` (We are verifying your 50% deposit receipt).\n"
-        "Once verified, we will notify you immediately and begin production! ✨"
+        "🔍 *Status:* `Pending Review` (Verifying deposit receipt).\n"
+        "Once approved by the owner, we will notify you immediately and begin production! ✨"
     )
     if config.ADMIN_USERNAME:
-        customer_msg += f"\n\nNeed urgent assistance? Chat with owner: @{config.ADMIN_USERNAME}"
+        customer_msg += f"\n\nQuestions? Chat with owner: @{config.ADMIN_USERNAME}"
 
     await message.answer(customer_msg, parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
 
-    # 2. Notify Store Owner / Admin with Approval Buttons
+    # 2. Notify Owner / Admin with inline approval buttons
     if config.ADMIN_CHAT_ID:
         try:
-            rush_badge = "\n⚡ *PRIORITY:* URGENT 2-DAY RUSH (+200 ETB fee included)" if data.get("rush_fee", 0) > 0 else ""
+            rush_badge = "\n⚡ *PRIORITY:* URGENT 2-DAY RUSH (+200 ETB)" if data.get("rush_fee", 0) > 0 else ""
+            design_badge = "\n🎨 *INCLUDES SELORA DESIGN SERVICE (+100 ETB)*" if data.get("design_fee", 0) > 0 else ""
+
             admin_text = (
-                f"🚨 *NEW ORDER & PAYMENT SUBMITTED! — {order_code}*{rush_badge}\n"
+                f"🚨 *NEW ORDER & PAYMENT SUBMITTED! — {order_code}*{rush_badge}{design_badge}\n"
                 f"⏰ *Time:* {timestamp}\n"
                 f"👤 *Customer:* [{user.full_name}](tg://user?id={user.id}) ({username_str})\n"
                 f"🆔 *Telegram ID:* `{user.id}`\n"
                 "━━━━━━━━━━━━━━━━━━━━\n"
                 f"🏷 *Items:* {data.get('items')}\n"
+                f"💰 *Total:* `{data.get('total_price', 0)} ETB` | *50% Deposit:* `{data.get('deposit_amount', 0)} ETB`\n"
                 f"🗓 *Needed By:* {data.get('deadline')}\n"
                 f"🚚 *Method:* {data.get('delivery_type')}\n"
                 f"📍 *Location:* {data.get('delivery_location')}\n"
-                f"📝 *Notes:* {data.get('notes')}\n"
+                f"📝 *Details:* {notes_combined}\n"
                 "━━━━━━━━━━━━━━━━━━━━\n"
                 "💰 *Payment Receipt Attached Below.* Please verify and tap an action:"
             )
 
             approval_keyboard = InlineKeyboardMarkup(inline_keyboard=[
                 [
-                    InlineKeyboardButton(text="✅ Approve Payment", callback_data=f"pay_approve:{order_code}"),
+                    InlineKeyboardButton(text="✅ Approve 50% Deposit", callback_data=f"pay_approve:{order_code}"),
                     InlineKeyboardButton(text="❌ Reject", callback_data=f"pay_reject:{order_code}")
                 ],
                 [
@@ -399,7 +769,6 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
                 ]
             ])
 
-            # Send photo receipt to admin with buttons
             await message.bot.send_photo(
                 chat_id=config.ADMIN_CHAT_ID,
                 photo=screenshot_file_id,
@@ -407,22 +776,7 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
                 parse_mode="Markdown",
                 reply_markup=approval_keyboard
             )
-
-            # If customer also attached custom artwork/photos, forward that too
-            if data.get("file_id"):
-                if data.get("file_type") == "photo":
-                    await message.bot.send_photo(
-                        chat_id=config.ADMIN_CHAT_ID,
-                        photo=data.get("file_id"),
-                        caption=f"🎨 Custom artwork/photo for {order_code}"
-                    )
-                elif data.get("file_type") == "document":
-                    await message.bot.send_document(
-                        chat_id=config.ADMIN_CHAT_ID,
-                        document=data.get("file_id"),
-                        caption=f"🎨 Custom artwork document for {order_code}"
-                    )
         except Exception as e:
-            logger.error(f"Failed to forward payment alert to ADMIN_CHAT_ID: {e}")
+            logger.error(f"Failed to alert admin of new order: {e}")
 
     await state.clear()

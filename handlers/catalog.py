@@ -167,24 +167,11 @@ async def callback_show_catalog_list(callback: types.CallbackQuery):
 @router.callback_query(F.data.startswith("order_this:"))
 async def callback_order_specific_item(callback: types.CallbackQuery, state: FSMContext):
     """Customer clicked 'Order This Item' directly on the product card."""
+    from handlers.order import show_quantity_stepper
     prod_id = callback.data.split(":")[1]
-    products = database.get_products_data().get("products", [])
-    prod = next((p for p in products if p["id"] == prod_id), None)
-
-    item_name = prod["name"] if prod else "Custom item"
-    min_ord = prod.get("min_order", 1) if prod else 1
-
     await state.clear()
-    await state.set_state(OrderFSM.waiting_for_items)
-
-    prompt = (
-        f"💛 *Ordering {item_name}*\n\n"
-        f"1️⃣ *How many would you like to order?*\n"
-        f"_(e.g., {min_ord} or more)_\n\n"
-        "Type your quantity below:"
-    )
-
-    await callback.message.answer(prompt, parse_mode="Markdown", reply_markup=get_cancel_keyboard())
+    sent = await callback.message.answer("💛 *Preparing your order...*", parse_mode="Markdown")
+    await show_quantity_stepper(sent, prod_id, state)
     await callback.answer()
 
 @router.callback_query(F.data == "noop")
