@@ -8,10 +8,10 @@
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
-  <!-- Professional Fonts: Plus Jakarta Sans & Inter -->
+  <!-- High-End Typography: Plus Jakarta Sans, Noto Sans Ethiopic & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Ethiopic:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS & FontAwesome Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -22,13 +22,13 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'Inter', '-apple-system', 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', '"Noto Sans Ethiopic"', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
           },
           colors: {
             surface: {
-              base: '#090d16',
-              card: '#111726',
-              elevated: '#171f32',
+              base: '#080c14',
+              card: '#101726',
+              elevated: '#172033',
               border: 'rgba(255, 255, 255, 0.08)'
             },
             brand: {
@@ -47,9 +47,18 @@
       -webkit-tap-highlight-color: transparent;
       user-select: none;
       -webkit-user-select: none;
-      background-color: #090d16;
+      background-color: #080c14;
       color: #f8fafc;
-      font-family: "Plus Jakarta Sans", Inter, -apple-system, sans-serif;
+      font-family: "Plus Jakarta Sans", "Noto Sans Ethiopic", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      letter-spacing: -0.012em;
+      line-height: 1.5;
+    }
+    input, textarea, select, button {
+      font-family: inherit;
+    }
+    ::placeholder {
+      color: #64748b !important;
+      opacity: 0.9;
     }
     .hide-scrollbar::-webkit-scrollbar {
       display: none;
@@ -63,36 +72,36 @@
       box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.3) !important;
     }
     .cal-cell {
-      height: 38px;
+      height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
-      border-radius: 8px;
+      border-radius: 10px;
       transition: all 0.15s ease;
     }
     .cal-cell.disabled {
-      color: #475569;
+      color: #334155;
       cursor: not-allowed;
       pointer-events: none;
     }
     .cal-cell.selectable {
       cursor: pointer;
-      color: #f8fafc;
+      color: #f1f5f9;
       background: rgba(255, 255, 255, 0.03);
     }
     .cal-cell.selectable:hover {
-      background: rgba(245, 158, 11, 0.15);
+      background: rgba(245, 158, 11, 0.18);
       color: #fbbf24;
     }
     .cal-cell.selected {
       background: #f59e0b !important;
-      color: #090d16 !important;
+      color: #080c14 !important;
       font-weight: 800 !important;
     }
     .cal-cell.rush {
-      border: 1px dashed rgba(245, 158, 11, 0.6);
+      border: 1px dashed rgba(245, 158, 11, 0.7);
       color: #fbbf24;
     }
   </style>
@@ -100,14 +109,14 @@
 <body class="min-h-screen flex flex-col antialiased pb-24 overflow-x-hidden">
 
   <!-- TOP APP HEADER -->
-  <header class="sticky top-0 z-30 bg-[#090d16]/90 backdrop-blur-xl border-b border-surface-border px-4 py-3 flex items-center justify-between">
+  <header class="sticky top-0 z-30 bg-[#080c14]/92 backdrop-blur-xl border-b border-surface-border px-4 py-3.5 flex items-center justify-between">
     <div class="flex items-center space-x-3">
-      <div class="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-extrabold text-sm tracking-tight shadow-md">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center font-extrabold text-base tracking-tight shadow-md shadow-amber-500/10">
         S
       </div>
       <div>
-        <h1 class="font-bold text-sm tracking-tight text-white leading-none">Selora Prints</h1>
-        <p class="text-[11px] text-slate-400 mt-0.5">Custom Printing • Addis Ababa, Ledeta</p>
+        <h1 class="font-bold text-[15px] tracking-tight text-white leading-tight">Selora Prints</h1>
+        <p class="text-xs text-slate-400 mt-0.5">Custom Printing • Addis Ababa, Ledeta</p>
       </div>
     </div>
 
@@ -117,73 +126,77 @@
         type="button"
         onclick="toggleLanguage()" 
         id="lang-btn"
-        class="px-2.5 py-1 rounded-lg border border-surface-border bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold text-slate-200 transition active:scale-95"
+        class="px-3 py-1.5 rounded-xl border border-surface-border bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold text-slate-200 transition active:scale-95 flex items-center space-x-1.5"
       >
+        <i class="fa-solid fa-globe text-[11px] text-amber-400"></i>
         <span id="lang-label">አማርኛ</span>
       </button>
 
       <!-- Customer Badge -->
-      <div class="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-surface-border text-slate-300 text-xs font-medium flex items-center space-x-1.5">
+      <div class="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-surface-border text-slate-300 text-xs font-medium flex items-center space-x-1.5">
         <i class="fa-solid fa-user text-slate-400 text-[11px]"></i>
-        <span id="user-display-name" class="truncate max-w-[80px]">Customer</span>
+        <span id="user-display-name" class="truncate max-w-[85px]">Customer</span>
       </div>
     </div>
   </header>
 
   <!-- 50% DEPOSIT POLICY NOTIFICATION -->
-  <div class="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between text-xs">
-    <span class="text-amber-200/90 text-[11px] font-medium" id="deposit-banner-text">
-      50% advance deposit required to start production. Remaining 50% paid upon pickup or delivery.
-    </span>
-    <span class="text-[10px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 shrink-0 ml-2">
+  <div class="bg-amber-500/[0.08] border-b border-amber-500/20 px-4 py-2.5 flex items-center justify-between text-xs">
+    <div class="flex items-center space-x-2 mr-2">
+      <i class="fa-solid fa-shield-halved text-amber-400 text-xs shrink-0"></i>
+      <span class="text-amber-200/90 text-xs font-medium leading-relaxed" id="deposit-banner-text">
+        50% advance deposit required to start production. Remaining 50% paid upon pickup or delivery.
+      </span>
+    </div>
+    <span class="text-[11px] font-bold text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-500/30 shrink-0">
       50% ETB
     </span>
   </div>
 
   <!-- MAIN APP TABS -->
-  <main class="flex-1 max-w-lg mx-auto w-full px-4 pt-3 space-y-4">
+  <main class="flex-1 max-w-lg mx-auto w-full px-4 pt-4 pb-6 space-y-5">
 
     <!-- TAB 1: SHOP / CATALOG -->
     <section id="tab-catalog" class="space-y-4">
       <!-- Search Input -->
       <div class="relative">
-        <i class="fa-solid fa-magnifying-glass text-slate-500 absolute left-3.5 top-3 text-xs"></i>
+        <i class="fa-solid fa-magnifying-glass text-slate-400 absolute left-4 top-3.5 text-xs"></i>
         <input 
           type="text" 
           id="product-search-input"
           oninput="handleSearch(this.value)"
           placeholder="Search stickers, business cards, photo books, mugs..." 
-          class="w-full bg-surface-card border border-surface-border rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60 transition"
+          class="w-full bg-surface-card border border-surface-border rounded-2xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/20 transition shadow-inner"
         />
       </div>
 
       <!-- Category Filter Pills (Mirrors Bot Catalog Exactly) -->
-      <div class="flex items-center space-x-1.5 overflow-x-auto hide-scrollbar text-xs pb-1">
-        <button onclick="setCategory('all')" id="cat-all" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-bold bg-white text-slate-950">
+      <div class="flex items-center space-x-2 overflow-x-auto hide-scrollbar text-xs pb-1.5 pt-0.5">
+        <button onclick="setCategory('all')" id="cat-all" class="cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-bold bg-amber-400 text-slate-950 shadow-sm text-xs">
           All Products
         </button>
-        <button onclick="setCategory('books')" id="cat-books" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+        <button onclick="setCategory('books')" id="cat-books" class="cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs">
           Photo Books & Minibooks
         </button>
-        <button onclick="setCategory('stickers')" id="cat-stickers" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+        <button onclick="setCategory('stickers')" id="cat-stickers" class="cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs">
           Stickers & Posters
         </button>
-        <button onclick="setCategory('cards')" id="cat-cards" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+        <button onclick="setCategory('cards')" id="cat-cards" class="cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs">
           Business Cards & Bookmarks
         </button>
-        <button onclick="setCategory('polaroid')" id="cat-polaroid" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+        <button onclick="setCategory('polaroid')" id="cat-polaroid" class="cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs">
           Polaroids
         </button>
-        <button onclick="setCategory('notebooks')" id="cat-notebooks" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+        <button onclick="setCategory('notebooks')" id="cat-notebooks" class="cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs">
           Notebooks
         </button>
-        <button onclick="setCategory('merch')" id="cat-merch" class="cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+        <button onclick="setCategory('merch')" id="cat-merch" class="cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs">
           Mugs & Puzzles
         </button>
       </div>
 
       <!-- Products Grid -->
-      <div id="products-grid" class="grid grid-cols-2 gap-3 pt-1">
+      <div id="products-grid" class="grid grid-cols-2 gap-3.5 pt-1">
         <!-- Injected dynamically via JS from products.json -->
       </div>
     </section>
@@ -191,33 +204,33 @@
     <!-- TAB: WORKS & PORTFOLIO -->
     <section id="tab-portfolio" class="space-y-4 hidden">
       <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-sm font-bold text-white" id="portfolio-title">Past Works & Portfolio</h2>
-          <p class="text-xs text-slate-400 mt-0.5" id="portfolio-desc">Real print creations handcrafted by Selora Studio</p>
+        <div class="space-y-1">
+          <h2 class="text-base font-bold text-white tracking-tight" id="portfolio-title">Past Works & Portfolio</h2>
+          <p class="text-xs text-slate-400 leading-relaxed" id="portfolio-desc">Real print creations handcrafted by Selora Studio</p>
         </div>
       </div>
 
       <!-- Portfolio Category Filter Pills -->
-      <div class="flex items-center space-x-1.5 overflow-x-auto hide-scrollbar text-xs pb-1">
-        <button onclick="setPortfolioCategory('all')" id="port-cat-all" class="port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-bold bg-white text-slate-950">
+      <div class="flex items-center space-x-2 overflow-x-auto hide-scrollbar text-xs pb-1.5 pt-0.5">
+        <button onclick="setPortfolioCategory('all')" id="port-cat-all" class="port-cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-bold bg-amber-400 text-slate-950 shadow-sm text-xs">
           All Works
         </button>
-        <button onclick="setPortfolioCategory('stickers')" id="port-cat-stickers" class="port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+        <button onclick="setPortfolioCategory('stickers')" id="port-cat-stickers" class="port-cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs">
           Stickers & Decals
         </button>
-        <button onclick="setPortfolioCategory('books')" id="port-cat-books" class="port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+        <button onclick="setPortfolioCategory('books')" id="port-cat-books" class="port-cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs">
           Photo Books
         </button>
-        <button onclick="setPortfolioCategory('cards')" id="port-cat-cards" class="port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+        <button onclick="setPortfolioCategory('cards')" id="port-cat-cards" class="port-cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs">
           Business Cards
         </button>
-        <button onclick="setPortfolioCategory('merch')" id="port-cat-merch" class="port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300">
+        <button onclick="setPortfolioCategory('merch')" id="port-cat-merch" class="port-cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs">
           Mugs & Gifts
         </button>
       </div>
 
       <!-- Portfolio Grid -->
-      <div id="portfolio-grid" class="grid grid-cols-2 gap-3 pt-1">
+      <div id="portfolio-grid" class="grid grid-cols-2 gap-3.5 pt-1">
         <!-- Injected dynamically via JS from SQL portfolio database -->
       </div>
     </section>
@@ -225,116 +238,116 @@
     <!-- TAB 2: READY DESIGNS GALLERY -->
     <section id="tab-designs" class="space-y-4 hidden">
       <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-sm font-bold text-white" id="designs-title">Studio Ready Designs</h2>
-          <p class="text-xs text-slate-400 mt-0.5" id="designs-desc">Select any design to print with your order</p>
+        <div class="space-y-1">
+          <h2 class="text-base font-bold text-white tracking-tight" id="designs-title">Studio Ready Designs</h2>
+          <p class="text-xs text-slate-400 leading-relaxed" id="designs-desc">Select any curated design to print with your order</p>
         </div>
       </div>
-      <div id="designs-grid" class="grid grid-cols-2 gap-3">
+      <div id="designs-grid" class="grid grid-cols-2 gap-3.5 pt-1">
         <!-- Injected dynamically via JS from designs.json -->
       </div>
     </section>
 
     <!-- TAB 3: LIVE TRACKING -->
     <section id="tab-track" class="space-y-4 hidden">
-      <div>
-        <h2 class="text-sm font-bold text-white" id="track-title">Live Order Status Tracker</h2>
-        <p class="text-xs text-slate-400 mt-0.5" id="track-desc">Enter your order code (e.g. SLR-1004) to view live progress.</p>
+      <div class="space-y-1">
+        <h2 class="text-base font-bold text-white tracking-tight" id="track-title">Live Order Status Tracker</h2>
+        <p class="text-xs text-slate-400 leading-relaxed" id="track-desc">Enter your order code (e.g. SLR-1004) to view live progress.</p>
       </div>
 
-      <form onsubmit="handleTrackQuery(event)" class="flex space-x-2">
+      <form onsubmit="handleTrackQuery(event)" class="flex space-x-2.5">
         <input 
           type="text" 
           id="track-code-input"
           placeholder="SLR-1004" 
-          class="flex-1 bg-surface-card border border-surface-border rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 uppercase tracking-wider focus:outline-none focus:border-amber-400/60"
+          class="flex-1 bg-surface-card border border-surface-border rounded-xl px-4 py-3 text-xs sm:text-sm text-white placeholder:text-slate-500 uppercase tracking-widest font-semibold focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/20 transition"
         />
         <button 
           type="submit" 
           id="btn-track-submit"
-          class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition active:scale-95"
+          class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition active:scale-95 shadow-md"
         >
           Track
         </button>
       </form>
 
-      <div id="track-error-box" class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs hidden items-center space-x-2">
-        <i class="fa-solid fa-circle-exclamation text-rose-400 text-xs"></i>
-        <span id="track-error-msg"></span>
+      <div id="track-error-box" class="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs hidden items-center space-x-2">
+        <i class="fa-solid fa-circle-exclamation text-rose-400 text-xs shrink-0"></i>
+        <span id="track-error-msg" class="leading-relaxed"></span>
       </div>
 
-      <div id="track-result-card" class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-4 hidden">
+      <div id="track-result-card" class="bg-surface-card border border-surface-border rounded-2xl p-4 sm:p-5 space-y-4 hidden shadow-xl">
         <!-- Populated via JavaScript -->
       </div>
     </section>
 
     <!-- TAB 4: STUDIO & OFFICIAL ACCOUNTS -->
     <section id="tab-info" class="space-y-4 hidden">
-      <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-3">
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-base shadow-md">
+      <div class="bg-surface-card border border-surface-border rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
+        <div class="flex items-center space-x-3.5">
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center font-bold text-lg shadow-md shadow-amber-500/10">
             S
           </div>
           <div>
-            <h3 class="font-bold text-sm text-white">Selora Prints Studio</h3>
-            <p class="text-xs text-slate-400">Custom Merchandise & Photo Studio • Addis Ababa</p>
+            <h3 class="font-bold text-sm sm:text-base text-white tracking-tight">Selora Prints Studio</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Custom Merchandise & Photo Studio • Addis Ababa</p>
           </div>
         </div>
 
-        <div class="space-y-2 pt-2 border-t border-surface-border text-xs text-slate-300">
-          <div class="flex items-start space-x-2.5">
-            <i class="fa-solid fa-location-dot text-amber-400 mt-1"></i>
+        <div class="space-y-3 pt-3 border-t border-surface-border text-xs sm:text-[13px] text-slate-300">
+          <div class="flex items-start space-x-3">
+            <i class="fa-solid fa-location-dot text-amber-400 text-sm mt-0.5 shrink-0"></i>
             <div>
               <span class="font-semibold text-white">Ledeta Office (Behind Balcha Hospital)</span>
-              <p class="text-[11px] text-slate-400">Free Customer Pickup • Monday to Saturday: 8:30 AM to 6:30 PM</p>
+              <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">Free Customer Pickup • Monday to Saturday: 8:30 AM to 6:30 PM</p>
             </div>
           </div>
-          <div class="flex items-start space-x-2.5">
-            <i class="fa-solid fa-clock text-amber-400 mt-1"></i>
+          <div class="flex items-start space-x-3">
+            <i class="fa-solid fa-clock text-amber-400 text-sm mt-0.5 shrink-0"></i>
             <div>
               <span class="font-semibold text-white">Production Turnaround</span>
-              <p class="text-[11px] text-slate-400">Standard: 3 to 4 business days. Urgent 2-day priority rush: +200 ETB.</p>
+              <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">Standard: 3 to 4 business days. Urgent 2-day priority rush: +200 ETB.</p>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Payment Accounts -->
-      <div class="space-y-2.5">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider" id="accounts-header">
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1" id="accounts-header">
           Official Payment Accounts (50% Deposit)
         </h3>
 
         <!-- CBE -->
-        <div class="bg-surface-card border border-surface-border rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-purple-500"></span>
-              <span class="text-xs font-bold text-white">Commercial Bank of Ethiopia (CBE)</span>
+        <div class="bg-surface-card border border-surface-border rounded-xl p-3.5 flex items-center justify-between">
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+              <span class="text-xs sm:text-[13px] font-bold text-white">Commercial Bank of Ethiopia (CBE)</span>
             </div>
-            <div class="mt-1 font-mono text-sm font-semibold text-amber-300 tracking-wider">
+            <div class="font-mono text-sm sm:text-base font-bold text-amber-300 tracking-wider">
               1000492813589
             </div>
-            <div class="text-[10px] text-slate-400">KEBROM HAILU</div>
+            <div class="text-[11px] text-slate-400">KEBROM HAILU</div>
           </div>
-          <button onclick="copyToClipboard('1000492813589', 'cbe')" id="btn-copy-cbe" class="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-surface-border text-slate-300 active:scale-95 transition">
+          <button onclick="copyToClipboard('1000492813589', 'cbe')" id="btn-copy-cbe" class="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-slate-300 active:scale-95 transition">
             <i class="fa-regular fa-copy text-sm"></i>
           </button>
         </div>
 
         <!-- Telebirr -->
-        <div class="bg-surface-card border border-surface-border rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <div class="flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-sky-500"></span>
-              <span class="text-xs font-bold text-white">Telebirr</span>
+        <div class="bg-surface-card border border-surface-border rounded-xl p-3.5 flex items-center justify-between">
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+              <span class="text-xs sm:text-[13px] font-bold text-white">Telebirr</span>
             </div>
-            <div class="mt-1 font-mono text-sm font-semibold text-amber-300 tracking-wider">
+            <div class="font-mono text-sm sm:text-base font-bold text-amber-300 tracking-wider">
               0947702896
             </div>
-            <div class="text-[10px] text-slate-400">KEBROM HAILU</div>
+            <div class="text-[11px] text-slate-400">KEBROM HAILU</div>
           </div>
-          <button onclick="copyToClipboard('0947702896', 'telebirr')" id="btn-copy-telebirr" class="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-surface-border text-slate-300 active:scale-95 transition">
+          <button onclick="copyToClipboard('0947702896', 'telebirr')" id="btn-copy-telebirr" class="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-slate-300 active:scale-95 transition">
             <i class="fa-regular fa-copy text-sm"></i>
           </button>
         </div>
@@ -344,26 +357,26 @@
   </main>
 
   <!-- BOTTOM NAVIGATION BAR -->
-  <nav class="fixed bottom-0 left-0 right-0 z-30 bg-[#090d16]/95 backdrop-blur-xl border-t border-surface-border max-w-lg mx-auto px-2 py-2 flex items-center justify-around">
-    <button onclick="switchTab('catalog')" id="nav-catalog" class="nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-amber-400 font-bold">
-      <i class="fa-solid fa-bag-shopping text-sm"></i>
-      <span class="text-[10px] mt-0.5" id="nav-label-shop">Shop</span>
+  <nav class="fixed bottom-0 left-0 right-0 z-30 bg-[#080c14]/96 backdrop-blur-xl border-t border-surface-border max-w-lg mx-auto px-2 py-2 flex items-center justify-around shadow-2xl">
+    <button onclick="switchTab('catalog')" id="nav-catalog" class="nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-amber-400 font-bold">
+      <i class="fa-solid fa-bag-shopping text-sm sm:text-base"></i>
+      <span class="text-[11px] mt-1 font-semibold tracking-tight" id="nav-label-shop">Shop</span>
     </button>
-    <button onclick="switchTab('portfolio')" id="nav-portfolio" class="nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
-      <i class="fa-solid fa-images text-sm"></i>
-      <span class="text-[10px] mt-0.5" id="nav-label-works">Works</span>
+    <button onclick="switchTab('portfolio')" id="nav-portfolio" class="nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
+      <i class="fa-solid fa-images text-sm sm:text-base"></i>
+      <span class="text-[11px] mt-1 font-semibold tracking-tight" id="nav-label-works">Works</span>
     </button>
-    <button onclick="switchTab('designs')" id="nav-designs" class="nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
-      <i class="fa-solid fa-layer-group text-sm"></i>
-      <span class="text-[10px] mt-0.5" id="nav-label-designs">Designs</span>
+    <button onclick="switchTab('designs')" id="nav-designs" class="nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
+      <i class="fa-solid fa-layer-group text-sm sm:text-base"></i>
+      <span class="text-[11px] mt-1 font-semibold tracking-tight" id="nav-label-designs">Designs</span>
     </button>
-    <button onclick="switchTab('track')" id="nav-track" class="nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
-      <i class="fa-solid fa-magnifying-glass text-sm"></i>
-      <span class="text-[10px] mt-0.5" id="nav-label-track">Track</span>
+    <button onclick="switchTab('track')" id="nav-track" class="nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
+      <i class="fa-solid fa-magnifying-glass text-sm sm:text-base"></i>
+      <span class="text-[11px] mt-1 font-semibold tracking-tight" id="nav-label-track">Track</span>
     </button>
-    <button onclick="switchTab('info')" id="nav-info" class="nav-btn flex flex-col items-center py-1 px-2.5 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
-      <i class="fa-solid fa-circle-info text-sm"></i>
-      <span class="text-[10px] mt-0.5" id="nav-label-studio">Studio</span>
+    <button onclick="switchTab('info')" id="nav-info" class="nav-btn flex flex-col items-center py-1 px-3 rounded-xl transition active:scale-95 text-slate-400 hover:text-slate-200">
+      <i class="fa-solid fa-circle-info text-sm sm:text-base"></i>
+      <span class="text-[11px] mt-1 font-semibold tracking-tight" id="nav-label-studio">Studio</span>
     </button>
   </nav>
 
@@ -372,75 +385,75 @@
     <div class="bg-[#0f1422] border-t border-surface-border rounded-t-3xl max-h-[94vh] flex flex-col shadow-2xl max-w-lg mx-auto w-full overflow-hidden">
       
       <!-- Modal Header -->
-      <div class="px-4 py-3 border-b border-surface-border flex items-center justify-between">
-        <div class="flex items-center space-x-2">
-          <button onclick="prevOrderStep()" id="btn-modal-back" class="p-1.5 rounded-lg text-slate-400 hover:text-white hidden">
-            <i class="fa-solid fa-arrow-left text-sm"></i>
+      <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <button onclick="prevOrderStep()" id="btn-modal-back" class="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white hidden transition">
+            <i class="fa-solid fa-arrow-left text-xs"></i>
           </button>
           <div>
-            <h3 id="modal-product-title" class="text-sm font-bold text-white">Custom Print</h3>
-            <p id="modal-step-subtitle" class="text-[10px] text-slate-400">Step 1/4: Quantity & Specs</p>
+            <h3 id="modal-product-title" class="text-sm sm:text-base font-bold text-white tracking-tight">Custom Print</h3>
+            <p id="modal-step-subtitle" class="text-xs text-slate-400 mt-0.5">Step 1/4: Quantity & Specs</p>
           </div>
         </div>
-        <button onclick="closeOrderModal()" class="p-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white">
+        <button onclick="closeOrderModal()" class="p-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white transition">
           <i class="fa-solid fa-xmark text-sm"></i>
         </button>
       </div>
 
       <!-- Modal Error Notification Banner -->
-      <div id="modal-validation-banner" class="mx-4 mt-3 p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs hidden items-center space-x-2">
-        <i class="fa-solid fa-circle-exclamation text-rose-400 text-xs shrink-0"></i>
-        <span id="modal-validation-msg" class="leading-tight">Please complete all required fields marked with a red *.</span>
+      <div id="modal-validation-banner" class="mx-5 mt-4 p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs hidden items-center space-x-2.5">
+        <i class="fa-solid fa-circle-exclamation text-rose-400 text-sm shrink-0"></i>
+        <span id="modal-validation-msg" class="leading-relaxed">Please complete all required fields marked with a red *.</span>
       </div>
 
       <!-- Modal Stepper Body -->
-      <div class="p-4 overflow-y-auto space-y-4 flex-1">
+      <div class="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
 
         <!-- STEP 1: QUANTITY & SPECS -->
         <div id="order-step-1" class="space-y-4">
-          <div class="flex space-x-3.5 bg-surface-card border border-surface-border rounded-2xl p-3">
+          <div class="flex space-x-3.5 bg-surface-card border border-surface-border rounded-2xl p-3.5 shadow-sm">
             <img id="modal-prod-img" src="" alt="" class="w-20 h-20 rounded-xl object-cover shrink-0 bg-slate-900 border border-surface-border">
-            <div class="flex flex-col justify-between">
+            <div class="flex flex-col justify-between py-0.5">
               <div>
                 <span id="modal-prod-category" class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Prints</span>
-                <h4 id="modal-prod-name" class="text-xs font-bold text-white leading-tight">Product Name</h4>
-                <p id="modal-prod-desc" class="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">Description...</p>
+                <h4 id="modal-prod-name" class="text-xs sm:text-sm font-bold text-white leading-tight mt-0.5">Product Name</h4>
+                <p id="modal-prod-desc" class="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">Description...</p>
               </div>
-              <div id="modal-prod-price-tag" class="text-xs font-bold text-amber-300">
+              <div id="modal-prod-price-tag" class="text-xs sm:text-sm font-bold text-amber-300 mt-1">
                 0 ETB
               </div>
             </div>
           </div>
 
           <!-- Quantity Stepper with Large & Small Steps -->
-          <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-3">
+          <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-3.5 shadow-sm">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-semibold text-white" id="lbl-select-qty">
+              <label class="text-xs font-semibold text-slate-200" id="lbl-select-qty">
                 Quantity <span class="text-rose-500 font-bold">*</span>:
               </label>
-              <span id="modal-min-order-pill" class="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
+              <span id="modal-min-order-pill" class="text-[11px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/25 px-2.5 py-0.5 rounded-full">
                 Min: 1
               </span>
             </div>
 
             <!-- Stepper Controls (Mirrors get_stepper_keyboard) -->
             <div class="flex items-center space-x-2">
-              <button type="button" onclick="adjustQuantityWithStep('large', -1)" id="btn-step-large-minus" class="px-2.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-bold text-slate-300 active:scale-95 transition">
+              <button type="button" onclick="adjustQuantityWithStep('large', -1)" id="btn-step-large-minus" class="px-3 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-xs font-bold text-slate-300 active:scale-95 transition">
                 -10
               </button>
-              <button type="button" onclick="adjustQuantityWithStep('small', -1)" id="btn-step-small-minus" class="w-9 h-9 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] flex items-center justify-center font-bold text-sm text-white active:scale-95 transition">
+              <button type="button" onclick="adjustQuantityWithStep('small', -1)" id="btn-step-small-minus" class="w-10 h-10 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] flex items-center justify-center font-bold text-sm text-white active:scale-95 transition">
                 -
               </button>
               <input 
                 type="number" 
                 id="order-qty-input"
                 onchange="handleManualQtyChange(this.value)"
-                class="flex-1 bg-surface-elevated border border-surface-border rounded-xl py-2 text-center text-sm font-bold text-white focus:outline-none focus:border-amber-400/60" 
+                class="flex-1 bg-surface-elevated border border-surface-border rounded-xl py-2.5 text-center text-sm sm:text-base font-bold text-white focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/20" 
               />
-              <button type="button" onclick="adjustQuantityWithStep('small', 1)" id="btn-step-small-plus" class="w-9 h-9 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] flex items-center justify-center font-bold text-sm text-white active:scale-95 transition">
+              <button type="button" onclick="adjustQuantityWithStep('small', 1)" id="btn-step-small-plus" class="w-10 h-10 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] flex items-center justify-center font-bold text-sm text-white active:scale-95 transition">
                 +
               </button>
-              <button type="button" onclick="adjustQuantityWithStep('large', 1)" id="btn-step-large-plus" class="px-2.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-bold text-slate-950 active:scale-95 transition">
+              <button type="button" onclick="adjustQuantityWithStep('large', 1)" id="btn-step-large-plus" class="px-3 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-bold text-slate-950 active:scale-95 transition">
                 +10
               </button>
             </div>
@@ -452,46 +465,46 @@
           </div>
 
           <!-- Business Card Special Option (Exact Bot Feature: Ready vs Selora Custom +100 ETB) -->
-          <div id="box-card-design-option" class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-2 hidden">
-            <label class="text-xs font-semibold text-white">
+          <div id="box-card-design-option" class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-2.5 hidden">
+            <label class="text-xs font-semibold text-slate-200">
               Business Card Design Service <span class="text-rose-500 font-bold">*</span>:
             </label>
-            <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="grid grid-cols-2 gap-2.5 text-xs">
               <div 
                 onclick="setCardDesignOption('ready')" 
                 id="opt-card-ready"
-                class="p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition"
+                class="p-3.5 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition"
               >
                 <div class="flex items-center justify-between">
-                  <span class="font-bold text-white">Ready Design</span>
-                  <span class="text-[10px] font-bold text-emerald-400">Free</span>
+                  <span class="font-bold text-white text-xs sm:text-[13px]">Ready Design</span>
+                  <span class="text-[11px] font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md">Free</span>
                 </div>
-                <p class="text-[10px] text-slate-400 mt-1">I will upload my ready print file</p>
+                <p class="text-xs text-slate-400 mt-1 leading-relaxed">I will upload my ready print file</p>
               </div>
 
               <div 
                 onclick="setCardDesignOption('selora')" 
                 id="opt-card-selora"
-                class="p-3 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition"
+                class="p-3.5 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition"
               >
                 <div class="flex items-center justify-between">
-                  <span class="font-bold text-amber-300">Selora Design</span>
-                  <span class="text-[10px] font-bold text-amber-400">+100 ETB</span>
+                  <span class="font-bold text-amber-300 text-xs sm:text-[13px]">Selora Design</span>
+                  <span class="text-[11px] font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-md">+100 ETB</span>
                 </div>
-                <p class="text-[10px] text-slate-400 mt-1">Our designer creates your card</p>
+                <p class="text-xs text-slate-400 mt-1 leading-relaxed">Our designer creates your card</p>
               </div>
             </div>
           </div>
 
           <!-- Total Calculation Card -->
-          <div class="bg-surface-card border border-surface-border rounded-2xl p-4 flex items-center justify-between">
+          <div class="bg-surface-card border border-surface-border rounded-2xl p-4 flex items-center justify-between shadow-sm">
             <div>
-              <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Subtotal</span>
-              <h4 id="step1-subtotal" class="text-lg font-bold text-amber-300">0 ETB</h4>
+              <span class="text-[11px] text-slate-400 uppercase font-semibold tracking-wider">Estimated Subtotal</span>
+              <h4 id="step1-subtotal" class="text-base sm:text-lg font-bold text-amber-300 mt-0.5">0 ETB</h4>
             </div>
             <div class="text-right">
-              <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">50% Advance Due</span>
-              <p id="step1-deposit" class="text-sm font-bold text-white">0 ETB</p>
+              <span class="text-[11px] text-slate-400 uppercase font-semibold tracking-wider">50% Advance Due</span>
+              <p id="step1-deposit" class="text-sm sm:text-base font-bold text-white mt-0.5">0 ETB</p>
             </div>
           </div>
         </div>
@@ -499,78 +512,80 @@
         <!-- STEP 2: ARTWORK / IMAGES & CUSTOM NOTES -->
         <div id="order-step-2" class="space-y-4 hidden">
           <!-- Ready vs Upload Mode Toggle -->
-          <div id="box-design-mode-toggle" class="flex bg-surface-card p-1 rounded-xl border border-surface-border text-xs">
-            <button type="button" onclick="setDesignMode('ready')" id="btn-mode-ready" class="flex-1 py-2 rounded-lg font-bold bg-amber-500 text-slate-950 transition">
+          <div id="box-design-mode-toggle" class="flex bg-surface-card p-1.5 rounded-xl border border-surface-border text-xs sm:text-[13px]">
+            <button type="button" onclick="setDesignMode('ready')" id="btn-mode-ready" class="flex-1 py-2.5 rounded-lg font-bold bg-amber-500 text-slate-950 transition shadow-sm">
               Ready Designs
             </button>
-            <button type="button" onclick="setDesignMode('upload')" id="btn-mode-upload" class="flex-1 py-2 rounded-lg font-bold text-slate-400 hover:text-white transition">
-              Upload Photos / Artwork <span class="text-rose-500 font-bold">*</span>
+            <button type="button" onclick="setDesignMode('upload')" id="btn-mode-upload" class="flex-1 py-2.5 rounded-lg font-bold text-slate-300 hover:text-white transition">
+              Upload Artwork <span class="text-rose-500 font-bold">*</span>
             </button>
           </div>
 
           <!-- Curated Ready Designs Grid -->
-          <div id="box-mode-ready" class="space-y-2">
-            <label class="text-xs font-semibold text-slate-300 flex items-center justify-between" id="lbl-choose-pattern">
-              <span>Choose a curated design <span class="text-rose-500 font-bold">*</span>:</span>
-              <span id="selected-design-status" class="text-[10px] text-amber-400 font-medium">None selected</span>
-            </label>
-            <div id="modal-designs-picker" class="grid grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
+          <div id="box-mode-ready" class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-slate-200" id="lbl-choose-pattern">
+                Choose a curated design <span class="text-rose-500 font-bold">*</span>:
+              </label>
+              <span id="selected-design-status" class="text-[11px] text-amber-400 font-semibold">None selected</span>
+            </div>
+            <div id="modal-designs-picker" class="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
               <!-- Populated via JS -->
             </div>
           </div>
 
           <!-- Upload Photos / Artwork Direct File Dropzone -->
-          <div id="box-mode-upload" class="space-y-3 hidden">
+          <div id="box-mode-upload" class="space-y-3.5 hidden">
             <!-- Upload Multi vs Single Mode (Exact Bot Feature: dmode:single vs dmode:multi) -->
-            <div id="box-multi-photo-toggle" class="space-y-1.5 hidden">
-              <label class="text-xs font-semibold text-slate-300">
+            <div id="box-multi-photo-toggle" class="space-y-2 hidden">
+              <label class="text-xs font-semibold text-slate-200">
                 Photo Selection Mode <span class="text-rose-500 font-bold">*</span>:
               </label>
-              <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="grid grid-cols-2 gap-2.5 text-xs">
                 <div 
                   onclick="setPhotoUploadMode('single')" 
                   id="opt-photo-single"
-                  class="p-2.5 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition"
+                  class="p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition"
                 >
-                  <span class="font-bold text-white text-[11px] block">1 photo for all copies</span>
-                  <span class="text-[10px] text-slate-400">Same photo on all items</span>
+                  <span class="font-bold text-white text-xs block">1 photo for all copies</span>
+                  <span class="text-[11px] text-slate-400 mt-0.5 block">Same photo on all items</span>
                 </div>
                 <div 
                   onclick="setPhotoUploadMode('multi')" 
                   id="opt-photo-multi"
-                  class="p-2.5 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition"
+                  class="p-3 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition"
                 >
-                  <span class="font-bold text-amber-300 text-[11px] block" id="lbl-multi-photo-title">Different photos</span>
-                  <span class="text-[10px] text-slate-400" id="lbl-multi-photo-desc">Upload individual photos</span>
+                  <span class="font-bold text-amber-300 text-xs block" id="lbl-multi-photo-title">Different photos</span>
+                  <span class="text-[11px] text-slate-400 mt-0.5 block" id="lbl-multi-photo-desc">Upload individual photos</span>
                 </div>
               </div>
             </div>
 
             <!-- Single File Dropzone -->
             <div id="box-single-file-upload" class="space-y-2">
-              <label class="text-xs font-semibold text-slate-300">
+              <label class="text-xs font-semibold text-slate-200">
                 Attach Artwork or Photo <span class="text-rose-500 font-bold">*</span>:
               </label>
               <input type="file" id="artwork-file-input" accept="image/*,application/pdf" onchange="handleArtworkFileSelect(event)" class="hidden">
               <div 
                 id="artwork-dropzone"
                 onclick="document.getElementById('artwork-file-input').click()"
-                class="border border-dashed border-surface-border hover:border-amber-400/60 bg-surface-card rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition text-center group"
+                class="border-2 border-dashed border-surface-border hover:border-amber-400/60 bg-surface-card rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition text-center group"
               >
-                <div id="artwork-preview-container" class="hidden flex flex-col items-center space-y-2">
-                  <img id="artwork-preview-img" src="" alt="Artwork Preview" class="w-24 h-24 rounded-xl object-cover border border-surface-border shadow-md">
-                  <div class="text-xs font-semibold text-emerald-400 flex items-center space-x-1">
+                <div id="artwork-preview-container" class="hidden flex flex-col items-center space-y-2.5">
+                  <img id="artwork-preview-img" src="" alt="Artwork Preview" class="w-28 h-28 rounded-xl object-cover border border-surface-border shadow-md">
+                  <div class="text-xs font-bold text-emerald-400 flex items-center space-x-1.5">
                     <i class="fa-solid fa-circle-check"></i>
                     <span id="artwork-filename-txt">File ready</span>
                   </div>
-                  <span class="text-[10px] text-slate-400">Tap to replace file</span>
+                  <span class="text-[11px] text-slate-400">Tap to replace file</span>
                 </div>
-                <div id="artwork-placeholder-container" class="flex flex-col items-center">
-                  <div class="w-10 h-10 rounded-full bg-white/[0.04] text-slate-300 flex items-center justify-center mb-2">
-                    <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+                <div id="artwork-placeholder-container" class="flex flex-col items-center space-y-1.5">
+                  <div class="w-12 h-12 rounded-2xl bg-white/[0.04] text-amber-400 flex items-center justify-center mb-1">
+                    <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
                   </div>
-                  <h4 class="text-xs font-bold text-white">Tap to select photo or artwork file</h4>
-                  <p class="text-[10px] text-slate-400 mt-1">High-res JPG, PNG, or PDF <span class="text-rose-400 font-medium">(Required)</span></p>
+                  <h4 class="text-xs sm:text-sm font-bold text-white">Tap to select photo or artwork file</h4>
+                  <p class="text-xs text-slate-400">High-res JPG, PNG, or PDF <span class="text-rose-400 font-medium">(Required)</span></p>
                 </div>
               </div>
             </div>
@@ -578,39 +593,39 @@
             <!-- Multi-File Dropzone (For Polaroids / Multi-photo orders) -->
             <div id="box-multi-file-upload" class="space-y-2 hidden">
               <div class="flex items-center justify-between">
-                <label class="text-xs font-semibold text-slate-300">
+                <label class="text-xs font-semibold text-slate-200">
                   Upload Photos <span class="text-rose-500 font-bold">*</span>:
                 </label>
-                <span id="multi-photo-counter" class="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                <span id="multi-photo-counter" class="text-[11px] font-bold text-amber-400 bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/25">
                   0 / 0 photos
                 </span>
               </div>
               <input type="file" id="multi-artwork-input" accept="image/*" multiple onchange="handleMultiPhotoSelect(event)" class="hidden">
               <div 
                 onclick="document.getElementById('multi-artwork-input').click()"
-                class="border border-dashed border-surface-border hover:border-amber-400/60 bg-surface-card rounded-2xl p-4 flex items-center justify-center cursor-pointer transition text-center space-x-2"
+                class="border-2 border-dashed border-surface-border hover:border-amber-400/60 bg-surface-card rounded-2xl p-5 flex items-center justify-center cursor-pointer transition text-center space-x-2.5"
               >
-                <i class="fa-solid fa-images text-amber-400 text-sm"></i>
-                <span class="text-xs font-bold text-white">Tap to add photos</span>
-                <span class="text-[10px] text-slate-400">(Select multiple at once)</span>
+                <i class="fa-solid fa-images text-amber-400 text-base"></i>
+                <span class="text-xs sm:text-[13px] font-bold text-white">Tap to select photos</span>
+                <span class="text-xs text-slate-400">(Multiple allowed)</span>
               </div>
               <!-- Multi-photo Thumbnails Grid -->
-              <div id="multi-photo-preview-grid" class="grid grid-cols-4 gap-2 pt-1 max-h-44 overflow-y-auto hide-scrollbar">
+              <div id="multi-photo-preview-grid" class="grid grid-cols-4 gap-2.5 pt-2 max-h-48 overflow-y-auto hide-scrollbar">
                 <!-- Injected via JS -->
               </div>
             </div>
           </div>
 
           <!-- Special Custom Notes / Instructions -->
-          <div class="space-y-1.5 pt-1">
-            <label class="text-xs font-semibold text-slate-300" id="lbl-custom-notes">
+          <div class="space-y-2 pt-1">
+            <label class="text-xs font-semibold text-slate-200" id="lbl-custom-notes">
               Custom Instructions / Text (Optional):
             </label>
             <textarea 
               id="order-notes-input"
-              rows="2" 
-              placeholder='e.g. Matte finish, text: "Happy 25th Birthday Abebe", logo in top right...'
-              class="w-full bg-surface-card border border-surface-border rounded-xl p-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60"
+              rows="3" 
+              placeholder='e.g. Matte finish, text: "Happy 25th Birthday Abebe", logo in top right corner...'
+              class="w-full bg-surface-card border border-surface-border rounded-xl p-3.5 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/20 leading-relaxed"
             ></textarea>
           </div>
         </div>
@@ -618,150 +633,150 @@
         <!-- STEP 3: PICK DATE & DELIVERY -->
         <div id="order-step-3" class="space-y-4 hidden">
           <!-- Calendar Date Picker (Exact Mirror of Bot build_calendar_keyboard) -->
-          <div class="space-y-2">
+          <div class="space-y-2.5">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-semibold text-white">
+              <label class="text-xs font-semibold text-slate-200">
                 Completion Deadline <span class="text-rose-500 font-bold">*</span>:
               </label>
-              <span id="selected-deadline-badge" class="text-[10px] font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+              <span id="selected-deadline-badge" class="text-[11px] font-semibold text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/25">
                 Select a date
               </span>
             </div>
 
             <!-- Month View Calendar -->
-            <div class="bg-surface-card border border-surface-border rounded-2xl p-3 space-y-2">
+            <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-2.5 shadow-sm">
               <!-- Calendar Navigation -->
               <div class="flex items-center justify-between px-1">
-                <button type="button" onclick="navigateCalendar(-1)" id="cal-btn-prev" class="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-xs text-slate-300">
-                  <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                <button type="button" onclick="navigateCalendar(-1)" id="cal-btn-prev" class="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-xs text-slate-300 transition">
+                  <i class="fa-solid fa-chevron-left text-[11px]"></i>
                 </button>
-                <span id="cal-month-title" class="text-xs font-bold text-white tracking-wide">November 2026</span>
-                <button type="button" onclick="navigateCalendar(1)" id="cal-btn-next" class="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-xs text-slate-300">
-                  <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                <span id="cal-month-title" class="text-xs sm:text-sm font-bold text-white tracking-wide">November 2026</span>
+                <button type="button" onclick="navigateCalendar(1)" id="cal-btn-next" class="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-xs text-slate-300 transition">
+                  <i class="fa-solid fa-chevron-right text-[11px]"></i>
                 </button>
               </div>
 
               <!-- Day of week headers -->
-              <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 pb-1 border-b border-surface-border">
+              <div class="grid grid-cols-7 gap-1.5 text-center text-[11px] font-bold text-slate-400 pb-2 border-b border-surface-border">
                 <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
               </div>
 
               <!-- Calendar Day Grid -->
-              <div id="cal-days-grid" class="grid grid-cols-7 gap-1">
+              <div id="cal-days-grid" class="grid grid-cols-7 gap-1.5 pt-1">
                 <!-- Injected via JavaScript -->
               </div>
             </div>
 
-            <div class="flex items-center justify-between text-[10px] text-slate-400 px-1 pt-0.5">
-              <span class="flex items-center space-x-1">
-                <span class="w-2 h-2 rounded-full border border-dashed border-amber-400"></span>
+            <div class="flex items-center justify-between text-[11px] text-slate-400 px-1 pt-0.5">
+              <span class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full border border-dashed border-amber-400"></span>
                 <span>⚡ Rush Day (+200 ETB)</span>
               </span>
-              <span class="flex items-center space-x-1">
-                <span class="w-2 h-2 rounded-full bg-white/20"></span>
+              <span class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-white/20"></span>
                 <span>Standard (Included)</span>
               </span>
             </div>
           </div>
 
           <!-- Delivery Method Selection -->
-          <div class="space-y-2 pt-1">
-            <label class="text-xs font-semibold text-white" id="lbl-delivery-method">
+          <div class="space-y-2.5 pt-1">
+            <label class="text-xs font-semibold text-slate-200" id="lbl-delivery-method">
               Delivery Method <span class="text-rose-500 font-bold">*</span>:
             </label>
-            <div class="space-y-2">
+            <div class="space-y-2.5">
               <div 
                 onclick="setDelivery('pickup')" 
                 id="opt-del-pickup"
-                class="p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition flex items-start space-x-2.5"
+                class="p-3.5 rounded-2xl border border-amber-500 bg-amber-500/10 cursor-pointer transition flex items-start space-x-3"
               >
-                <i class="fa-solid fa-store text-amber-400 mt-0.5"></i>
-                <div>
+                <i class="fa-solid fa-store text-amber-400 text-sm mt-0.5 shrink-0"></i>
+                <div class="space-y-0.5">
                   <div class="flex items-center space-x-2">
-                    <span class="text-xs font-bold text-white">Free Store Pickup (Ledeta)</span>
-                    <span class="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded">FREE</span>
+                    <span class="text-xs sm:text-[13px] font-bold text-white">Free Store Pickup (Ledeta)</span>
+                    <span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.2 rounded-full">FREE</span>
                   </div>
-                  <p class="text-[11px] text-slate-400 mt-0.5">Behind Balcha Hospital, Addis Ababa</p>
+                  <p class="text-xs text-slate-400 leading-relaxed">Behind Balcha Hospital, Addis Ababa</p>
                 </div>
               </div>
 
               <div 
                 onclick="setDelivery('yango')" 
                 id="opt-del-yango"
-                class="p-3 rounded-xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition flex items-start space-x-2.5"
+                class="p-3.5 rounded-2xl border border-surface-border bg-surface-card hover:border-white/20 cursor-pointer transition flex items-start space-x-3"
               >
-                <i class="fa-solid fa-taxi text-amber-400 mt-0.5"></i>
-                <div>
-                  <span class="text-xs font-bold text-white">Addis Ababa Delivery (Yango / Feres / Ride)</span>
-                  <p class="text-[11px] text-slate-400 mt-0.5">Taxi driver fee (~300 to 1,000 ETB) paid directly to driver upon receipt.</p>
+                <i class="fa-solid fa-taxi text-amber-400 text-sm mt-0.5 shrink-0"></i>
+                <div class="space-y-0.5">
+                  <span class="text-xs sm:text-[13px] font-bold text-white">Addis Ababa Delivery (Yango / Feres / Ride)</span>
+                  <p class="text-xs text-slate-400 leading-relaxed">Taxi driver fee (~300 to 1,000 ETB) paid directly to driver upon receipt.</p>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Addis Ababa Sub-Cities Picker (Exact Bot Feature: get_subcities_keyboard) -->
-          <div id="box-yango-location" class="space-y-2 pt-1 hidden">
-            <label class="text-xs font-semibold text-slate-300">
+          <div id="box-yango-location" class="space-y-2.5 pt-1 hidden">
+            <label class="text-xs font-semibold text-slate-200">
               Select Addis Ababa Sub-City / Area <span class="text-rose-500 font-bold">*</span>:
             </label>
             
-            <div class="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1" id="subcities-grid">
+            <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1" id="subcities-grid">
               <!-- 12 Subcities from bot/handlers/order.py -->
-              <button type="button" onclick="selectSubCity('Bole / Medhanialem')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('Bole / Medhanialem')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 Bole / Medhanialem
               </button>
-              <button type="button" onclick="selectSubCity('Kazanchis / Bambis')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('Kazanchis / Bambis')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 Kazanchis / Bambis
               </button>
-              <button type="button" onclick="selectSubCity('CMC / Ayat / Summit')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('CMC / Ayat / Summit')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 CMC / Ayat / Summit
               </button>
-              <button type="button" onclick="selectSubCity('Piassa / Arat Kilo')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('Piassa / Arat Kilo')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 Piassa / Arat Kilo
               </button>
-              <button type="button" onclick="selectSubCity('Sarbet / Bisrate Gabriel')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('Sarbet / Bisrate Gabriel')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 Sarbet / Bisrate Gabriel
               </button>
-              <button type="button" onclick="selectSubCity('Megenagna / 22')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('Megenagna / 22')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 Megenagna / 22
               </button>
-              <button type="button" onclick="selectSubCity('Gerji / Imperial')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('Gerji / Imperial')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 Gerji / Imperial
               </button>
-              <button type="button" onclick="selectSubCity('Lebu / Jemo')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('Lebu / Jemo')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 Lebu / Jemo
               </button>
-              <button type="button" onclick="selectSubCity('Mexico / Ledeta')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('Mexico / Ledeta')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 Mexico / Ledeta
               </button>
-              <button type="button" onclick="selectSubCity('4 Kilo / 6 Kilo')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('4 Kilo / 6 Kilo')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 4 Kilo / 6 Kilo
               </button>
-              <button type="button" onclick="selectSubCity('Gotera / Saris')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('Gotera / Saris')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 Gotera / Saris
               </button>
-              <button type="button" onclick="selectSubCity('Kera / Bulgaria')" class="subcity-btn p-2 rounded-xl border border-surface-border bg-surface-card text-left text-[11px] text-slate-300 hover:border-amber-400/60 transition truncate">
+              <button type="button" onclick="selectSubCity('Kera / Bulgaria')" class="subcity-btn py-2.5 px-3 rounded-xl border border-surface-border bg-surface-card text-left text-xs text-slate-300 hover:border-amber-400/60 transition truncate">
                 Kera / Bulgaria
               </button>
             </div>
 
             <!-- Specific Landmark & GPS Button -->
-            <div class="space-y-1.5 pt-1">
-              <label class="text-xs font-semibold text-slate-300">
+            <div class="space-y-2 pt-1">
+              <label class="text-xs font-semibold text-slate-200">
                 Landmark / Street Address <span class="text-rose-500 font-bold">*</span>:
               </label>
-              <div class="flex space-x-2">
+              <div class="flex space-x-2.5">
                 <input 
                   type="text" 
                   id="delivery-address-input" 
                   placeholder="e.g. Near Edna Mall, Building #4"
-                  class="flex-1 bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60" 
+                  class="flex-1 bg-surface-card border border-surface-border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/20" 
                 />
                 <button 
                   type="button" 
                   onclick="pinCurrentLocation()" 
                   id="btn-pin-gps"
-                  class="px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-surface-border text-xs font-semibold text-amber-300 flex items-center space-x-1 shrink-0"
+                  class="px-3.5 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-xs font-semibold text-amber-300 flex items-center space-x-1.5 shrink-0 transition active:scale-95"
                 >
                   <i class="fa-solid fa-location-crosshairs text-xs"></i>
                   <span id="gps-pin-label">GPS Pin</span>
@@ -771,12 +786,12 @@
           </div>
 
           <!-- Contact Fields (Mirrors Bot Recipient & Phone Step) -->
-          <div class="space-y-2 pt-1 border-t border-surface-border">
+          <div class="space-y-3 pt-3 border-t border-surface-border">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-semibold text-white">
+              <label class="text-xs font-semibold text-slate-200">
                 Recipient Name <span class="text-rose-500 font-bold">*</span>:
               </label>
-              <button type="button" onclick="useTelegramName()" id="btn-use-tg-name" class="text-[10px] text-amber-400 hover:underline font-medium">
+              <button type="button" onclick="useTelegramName()" id="btn-use-tg-name" class="text-[11px] text-amber-400 hover:underline font-semibold">
                 Use My Telegram Name
               </button>
             </div>
@@ -784,20 +799,20 @@
               type="text" 
               id="order-recipient-name" 
               placeholder="e.g. Kebron Girma"
-              class="w-full bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400/60" 
+              class="w-full bg-surface-card border border-surface-border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/20" 
             />
 
             <div>
-              <label class="text-xs font-semibold text-white block mt-2">
+              <label class="text-xs font-semibold text-slate-200 block mb-1">
                 Contact Phone <span class="text-rose-500 font-bold">*</span>:
               </label>
               <input 
                 type="tel" 
                 id="order-phone-number" 
                 placeholder="0911223344 or 07..." 
-                class="w-full bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60 mt-1" 
+                class="w-full bg-surface-card border border-surface-border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/20" 
               />
-              <p class="text-[10px] text-slate-400 mt-1">Required for driver coordination and delivery status updates.</p>
+              <p class="text-xs text-slate-400 mt-1">Required for driver coordination and delivery status updates.</p>
             </div>
           </div>
         </div>
@@ -805,68 +820,68 @@
         <!-- STEP 4: 50% DEPOSIT & RECEIPT PROOF UPLOAD -->
         <div id="order-step-4" class="space-y-4 hidden">
           <!-- Financial Cost Breakdown Card -->
-          <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-2">
-            <div class="flex justify-between text-xs text-slate-300">
+          <div class="bg-surface-card border border-surface-border rounded-2xl p-4 sm:p-5 space-y-2.5 shadow-sm">
+            <div class="flex justify-between text-xs sm:text-[13px] text-slate-300">
               <span>Items Subtotal:</span>
               <span id="step4-items-subtotal" class="font-bold text-white">0 ETB</span>
             </div>
-            <div id="step4-design-row" class="flex justify-between text-[11px] text-amber-300 hidden">
+            <div id="step4-design-row" class="flex justify-between text-xs sm:text-[13px] text-amber-300 hidden">
               <span>Selora Custom Design Service:</span>
               <span>+100 ETB</span>
             </div>
-            <div id="step4-rush-row" class="flex justify-between text-[11px] text-amber-300 hidden">
+            <div id="step4-rush-row" class="flex justify-between text-xs sm:text-[13px] text-amber-300 hidden">
               <span>⚡ Priority 2-Day Rush Fee:</span>
               <span>+200 ETB</span>
             </div>
-            <div class="flex justify-between text-xs text-slate-300 pt-1 border-t border-surface-border">
+            <div class="flex justify-between text-xs sm:text-[13px] text-slate-300 pt-2 border-t border-surface-border">
               <span>Total Order Value:</span>
               <span id="step4-total-val" class="font-bold text-white">0 ETB</span>
             </div>
-            <div class="pt-2 border-t border-surface-border flex justify-between items-baseline">
+            <div class="pt-3 border-t border-surface-border flex justify-between items-baseline">
               <div>
-                <span class="text-xs font-bold text-amber-300">Required 50% Advance Deposit:</span>
-                <p class="text-[10px] text-slate-400">Balance paid upon pickup or delivery</p>
+                <span class="text-xs sm:text-[13px] font-bold text-amber-300">Required 50% Advance Deposit:</span>
+                <p class="text-[11px] text-slate-400 mt-0.5">Balance paid upon pickup or delivery</p>
               </div>
-              <span id="step4-deposit-val" class="text-xl font-extrabold text-amber-400">0 ETB</span>
+              <span id="step4-deposit-val" class="text-xl sm:text-2xl font-extrabold text-amber-400">0 ETB</span>
             </div>
           </div>
 
           <!-- Official Payment Accounts with 1-Tap Copy -->
-          <div class="space-y-2">
-            <label class="text-xs font-semibold text-white">
+          <div class="space-y-2.5">
+            <label class="text-xs font-semibold text-slate-200">
               Transfer Deposit To <span class="text-rose-500 font-bold">*</span>:
             </label>
             
-            <div class="flex bg-surface-card p-1 rounded-xl border border-surface-border text-xs">
-              <button type="button" onclick="setPaymentMethod('CBE')" id="btn-pay-cbe" class="flex-1 py-1.5 rounded-lg font-bold bg-purple-600 text-white transition">
+            <div class="flex bg-surface-card p-1.5 rounded-xl border border-surface-border text-xs sm:text-[13px]">
+              <button type="button" onclick="setPaymentMethod('CBE')" id="btn-pay-cbe" class="flex-1 py-2 rounded-lg font-bold bg-purple-600 text-white transition shadow-sm">
                 CBE Bank
               </button>
-              <button type="button" onclick="setPaymentMethod('Telebirr')" id="btn-pay-telebirr" class="flex-1 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition">
+              <button type="button" onclick="setPaymentMethod('Telebirr')" id="btn-pay-telebirr" class="flex-1 py-2 rounded-lg font-bold text-slate-300 hover:text-white transition">
                 Telebirr
               </button>
             </div>
 
             <!-- CBE Box -->
-            <div id="box-cbe-details" class="bg-surface-card border border-surface-border rounded-xl p-3 flex items-center justify-between">
-              <div>
-                <span class="text-[10px] text-slate-400">CBE Account Number</span>
-                <div class="font-mono text-sm font-bold text-amber-300">1000492813589</div>
-                <span class="text-[10px] text-slate-300">KEBROM HAILU</span>
+            <div id="box-cbe-details" class="bg-surface-card border border-surface-border rounded-xl p-3.5 flex items-center justify-between shadow-sm">
+              <div class="space-y-1">
+                <span class="text-[11px] text-slate-400">CBE Account Number</span>
+                <div class="font-mono text-sm sm:text-base font-bold text-amber-300">1000492813589</div>
+                <span class="text-xs text-slate-300">KEBROM HAILU</span>
               </div>
-              <button type="button" onclick="copyToClipboard('1000492813589', 'cbe-step4')" id="btn-copy-cbe-step4" class="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center space-x-1 active:scale-95 transition">
+              <button type="button" onclick="copyToClipboard('1000492813589', 'cbe-step4')" id="btn-copy-cbe-step4" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 active:scale-95 transition shadow-sm">
                 <i class="fa-regular fa-copy text-xs"></i>
                 <span>Copy</span>
               </button>
             </div>
 
             <!-- Telebirr Box -->
-            <div id="box-telebirr-details" class="bg-surface-card border border-surface-border rounded-xl p-3 flex items-center justify-between hidden">
-              <div>
-                <span class="text-[10px] text-slate-400">Telebirr Mobile Number</span>
-                <div class="font-mono text-sm font-bold text-amber-300">0947702896</div>
-                <span class="text-[10px] text-slate-300">KEBROM HAILU</span>
+            <div id="box-telebirr-details" class="bg-surface-card border border-surface-border rounded-xl p-3.5 flex items-center justify-between shadow-sm hidden">
+              <div class="space-y-1">
+                <span class="text-[11px] text-slate-400">Telebirr Mobile Number</span>
+                <div class="font-mono text-sm sm:text-base font-bold text-amber-300">0947702896</div>
+                <span class="text-xs text-slate-300">KEBROM HAILU</span>
               </div>
-              <button type="button" onclick="copyToClipboard('0947702896', 'telebirr-step4')" id="btn-copy-telebirr-step4" class="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center space-x-1 active:scale-95 transition">
+              <button type="button" onclick="copyToClipboard('0947702896', 'telebirr-step4')" id="btn-copy-telebirr-step4" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 active:scale-95 transition shadow-sm">
                 <i class="fa-regular fa-copy text-xs"></i>
                 <span>Copy</span>
               </button>
@@ -874,8 +889,8 @@
           </div>
 
           <!-- Receipt Screenshot Upload (STRICTLY REQUIRED WITH *) -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-white">
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-200">
               Upload Payment Screenshot / Receipt <span class="text-rose-500 font-bold">*</span>:
             </label>
             <input type="file" id="receipt-file-input" accept="image/*" onchange="handleReceiptFileSelect(event)" class="hidden">
@@ -883,22 +898,22 @@
             <div 
               id="receipt-dropzone"
               onclick="document.getElementById('receipt-file-input').click()"
-              class="border border-dashed border-surface-border hover:border-amber-400/60 bg-surface-card rounded-xl p-4 flex items-center justify-center cursor-pointer transition"
+              class="border-2 border-dashed border-surface-border hover:border-amber-400/60 bg-surface-card rounded-2xl p-5 flex items-center justify-center cursor-pointer transition text-center"
             >
-              <div id="receipt-preview-container" class="hidden flex items-center space-x-3">
-                <img id="receipt-preview-img" src="" alt="Receipt" class="w-12 h-12 rounded-lg object-cover border border-surface-border">
-                <div>
-                  <div class="text-xs font-bold text-emerald-400 flex items-center space-x-1">
+              <div id="receipt-preview-container" class="hidden flex items-center space-x-3.5">
+                <img id="receipt-preview-img" src="" alt="Receipt" class="w-14 h-14 rounded-xl object-cover border border-surface-border shadow-md">
+                <div class="text-left space-y-0.5">
+                  <div class="text-xs sm:text-[13px] font-bold text-emerald-400 flex items-center space-x-1.5">
                     <i class="fa-solid fa-circle-check"></i>
                     <span>Receipt Attached</span>
                   </div>
-                  <span class="text-[10px] text-slate-400">Tap to replace image</span>
+                  <span class="text-xs text-slate-400">Tap to replace image</span>
                 </div>
               </div>
-              <div id="receipt-placeholder-container" class="flex items-center space-x-2 text-slate-300 text-xs">
-                <i class="fa-solid fa-receipt text-amber-400"></i>
-                <span>Tap to attach transfer screenshot</span>
-                <span class="text-rose-400 font-medium text-[10px]">(Required)</span>
+              <div id="receipt-placeholder-container" class="flex items-center space-x-2.5 text-slate-300 text-xs sm:text-[13px]">
+                <i class="fa-solid fa-receipt text-amber-400 text-base"></i>
+                <span class="font-semibold text-white">Tap to attach transfer screenshot</span>
+                <span class="text-rose-400 font-bold text-xs">(Required)</span>
               </div>
             </div>
 
@@ -907,37 +922,37 @@
               type="text" 
               id="order-trans-ref"
               placeholder="Transaction Reference / FT code (optional)" 
-              class="w-full bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60 mt-1" 
+              class="w-full bg-surface-card border border-surface-border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/20 mt-1" 
             />
           </div>
         </div>
 
         <!-- STEP 5: DIGITAL ORDER TICKET -->
         <div id="order-step-5" class="space-y-4 py-2 hidden">
-          <div class="text-center space-y-1">
-            <div class="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto mb-2">
-              <i class="fa-solid fa-check text-xl"></i>
+          <div class="text-center space-y-1.5">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto mb-2 shadow-lg shadow-emerald-500/10">
+              <i class="fa-solid fa-check text-2xl"></i>
             </div>
-            <h3 class="text-base font-bold text-white">Order Confirmed</h3>
-            <p class="text-xs text-slate-400">Your deposit has been submitted for studio review.</p>
+            <h3 class="text-base sm:text-lg font-bold text-white tracking-tight">Order Confirmed</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">Your deposit has been submitted for studio review.</p>
           </div>
 
-          <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-3 shadow-xl">
-            <div class="flex items-center justify-between border-b border-surface-border pb-3">
+          <div class="bg-surface-card border border-surface-border rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl">
+            <div class="flex items-center justify-between border-b border-surface-border pb-3.5">
               <div>
-                <span class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Order Code</span>
-                <h4 id="ticket-order-code" class="text-xl font-extrabold text-amber-400 tracking-wider">SLR-1004</h4>
+                <span class="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Order Code</span>
+                <h4 id="ticket-order-code" class="text-xl sm:text-2xl font-extrabold text-amber-400 tracking-wider font-mono mt-0.5">SLR-1004</h4>
               </div>
-              <button type="button" onclick="copyOrderCode()" id="btn-copy-ticket" class="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center space-x-1 active:scale-95 transition">
+              <button type="button" onclick="copyOrderCode()" id="btn-copy-ticket" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 active:scale-95 transition shadow-sm">
                 <i class="fa-regular fa-copy text-xs"></i>
                 <span id="ticket-copy-btn-txt">Copy</span>
               </button>
             </div>
 
-            <div class="space-y-1.5 text-xs text-slate-300">
+            <div class="space-y-2 text-xs sm:text-[13px] text-slate-300">
               <div class="flex justify-between">
                 <span class="text-slate-400">Product:</span>
-                <span id="ticket-items" class="font-semibold text-white truncate max-w-[180px]">Items</span>
+                <span id="ticket-items" class="font-semibold text-white truncate max-w-[200px]">Items</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-slate-400">Total Price:</span>
@@ -963,11 +978,11 @@
           </div>
 
           <!-- Actions -->
-          <div class="space-y-2 pt-2">
+          <div class="space-y-2.5 pt-2">
             <button 
               type="button"
               onclick="viewTicketInTracker()" 
-              class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1.5 active:scale-98 transition"
+              class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 active:scale-98 transition shadow-md"
             >
               <i class="fa-solid fa-magnifying-glass text-xs"></i>
               <span>Track Order Live Status</span>
@@ -985,16 +1000,16 @@
       </div>
 
       <!-- Modal Bottom Action Bar -->
-      <div id="modal-footer-bar" class="p-3 bg-surface-card border-t border-surface-border flex items-center justify-between">
+      <div id="modal-footer-bar" class="p-4 bg-surface-card border-t border-surface-border flex items-center justify-between shadow-xl">
         <div>
-          <span id="modal-footer-price-label" class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Estimated Total</span>
-          <div id="modal-footer-price-val" class="text-sm font-extrabold text-amber-300">0 ETB</div>
+          <span id="modal-footer-price-label" class="text-[11px] text-slate-400 uppercase font-bold tracking-wider">Estimated Total</span>
+          <div id="modal-footer-price-val" class="text-base sm:text-lg font-extrabold text-amber-300 mt-0.5">0 ETB</div>
         </div>
         <button 
           id="btn-modal-next" 
           type="button"
           onclick="nextOrderStep()" 
-          class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 active:scale-95 transition"
+          class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center space-x-2 active:scale-95 transition shadow-md"
         >
           <span id="btn-modal-next-txt">Next: Artwork</span>
           <i class="fa-solid fa-chevron-right text-xs"></i>
@@ -1008,29 +1023,29 @@
   <div id="reupload-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col justify-end hidden">
     <div class="bg-[#0f1422] border-t border-surface-border rounded-t-3xl max-h-[90vh] flex flex-col shadow-2xl max-w-lg mx-auto w-full overflow-hidden">
       <!-- Modal Header -->
-      <div class="px-4 py-3 border-b border-surface-border flex items-center justify-between">
+      <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between">
         <div>
-          <h3 id="reupload-modal-title" class="text-sm font-bold text-white">Re-upload File</h3>
-          <p id="reupload-modal-subtitle" class="text-[10px] text-slate-400">Order</p>
+          <h3 id="reupload-modal-title" class="text-sm sm:text-base font-bold text-white tracking-tight">Re-upload File</h3>
+          <p id="reupload-modal-subtitle" class="text-xs text-slate-400 mt-0.5">Order</p>
         </div>
-        <button onclick="closeReuploadModal()" class="p-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white">
+        <button onclick="closeReuploadModal()" class="p-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white transition">
           <i class="fa-solid fa-xmark text-sm"></i>
         </button>
       </div>
 
-      <div class="p-4 space-y-4 overflow-y-auto">
-        <div id="reupload-desc-box" class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200">
+      <div class="p-5 space-y-4 overflow-y-auto">
+        <div id="reupload-desc-box" class="p-3.5 rounded-xl bg-amber-500/[0.08] border border-amber-500/25 text-xs text-amber-200/90 leading-relaxed">
           <!-- Populated via JS -->
         </div>
 
         <!-- File Upload Area -->
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+          <label class="block text-xs font-semibold text-slate-200 mb-1.5">
             Select New File <span class="text-rose-500 font-bold">*</span>
           </label>
           <div 
             onclick="document.getElementById('reupload-file-input').click()"
-            class="border-2 border-dashed border-surface-border hover:border-amber-400/60 rounded-2xl p-5 text-center cursor-pointer transition bg-white/[0.02]"
+            class="border-2 border-dashed border-surface-border hover:border-amber-400/60 rounded-2xl p-6 text-center cursor-pointer transition bg-white/[0.02]"
           >
             <input 
               type="file" 
@@ -1039,39 +1054,39 @@
               onchange="handleReuploadFileChange(this)"
             />
             <div id="reupload-dropzone-content" class="space-y-2">
-              <i class="fa-solid fa-arrow-up-from-bracket text-xl text-amber-400"></i>
-              <div class="text-xs text-white font-medium">Click to choose file</div>
-              <div class="text-[10px] text-slate-500">Max size 25MB • JPG, PNG, WEBP, PDF</div>
+              <i class="fa-solid fa-arrow-up-from-bracket text-2xl text-amber-400"></i>
+              <div class="text-xs sm:text-sm text-white font-medium">Click to choose file</div>
+              <div class="text-xs text-slate-500">Max size 25MB • JPG, PNG, WEBP, PDF</div>
             </div>
           </div>
         </div>
 
         <!-- Optional Notes -->
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+          <label class="block text-xs font-semibold text-slate-200 mb-1.5">
             Note for Studio (Optional)
           </label>
           <input 
             type="text" 
             id="reupload-notes-input" 
             placeholder="e.g. Sent via CBEBirr reference #..."
-            class="w-full bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/60"
+            class="w-full bg-surface-card border border-surface-border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/20"
           />
         </div>
 
-        <div id="reupload-error-box" class="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs hidden items-center space-x-2">
+        <div id="reupload-error-box" class="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs hidden items-center space-x-2">
           <i class="fa-solid fa-circle-exclamation text-rose-400 text-xs shrink-0"></i>
           <span id="reupload-error-msg">Please select a file to upload.</span>
         </div>
       </div>
 
       <!-- Footer submit button -->
-      <div class="p-3 bg-surface-card border-t border-surface-border flex items-center justify-end">
+      <div class="p-4 bg-surface-card border-t border-surface-border flex items-center justify-end">
         <button 
           id="btn-reupload-submit"
           type="button"
           onclick="submitReupload()" 
-          class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1.5 active:scale-95 transition"
+          class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 active:scale-95 transition shadow-md"
         >
           <span id="btn-reupload-txt">Submit Update</span>
         </button>
@@ -1312,18 +1327,18 @@
           <div>
             <div class="relative aspect-square bg-[#0c101c] overflow-hidden">
               <img src="${prod.imageUrl}" alt="${name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='/product-images/stickers.png'">
-              <div class="absolute top-2 left-2 bg-[#090d16]/85 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
-                ${prod.price ? `${prod.price} ETB` : 'Custom Quote'} <span class="text-slate-400 font-normal">/${unit}</span>
+              <div class="absolute top-2.5 left-2.5 bg-[#080c14]/90 backdrop-blur-md border border-white/10 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
+                ${prod.price ? `${prod.price} ETB` : 'Custom Quote'} <span class="text-slate-400 font-normal text-[10px]">/${unit}</span>
               </div>
             </div>
-            <div class="p-3">
-              <h3 class="font-bold text-xs text-white leading-snug line-clamp-1 group-hover:text-amber-300 transition">${name}</h3>
-              <p class="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">${desc}</p>
+            <div class="p-3.5 space-y-1">
+              <h3 class="font-bold text-xs sm:text-[13px] text-white leading-snug line-clamp-1 group-hover:text-amber-300 transition tracking-tight">${name}</h3>
+              <p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">${desc}</p>
             </div>
           </div>
-          <div class="p-3 pt-0 flex items-center justify-between text-[11px] text-slate-400 border-t border-surface-border mt-2">
-            <span class="text-[10px] font-medium text-slate-400">${I18N[currentLang].min}: ${prod.minOrder || 1}</span>
-            <span class="font-bold text-amber-400 flex items-center group-hover:translate-x-0.5 transition">
+          <div class="px-3.5 py-2.5 flex items-center justify-between text-xs text-slate-400 border-t border-surface-border bg-white/[0.01]">
+            <span class="text-[11px] font-medium text-slate-400">${I18N[currentLang].min}: ${prod.minOrder || 1}</span>
+            <span class="font-bold text-xs text-amber-400 flex items-center group-hover:translate-x-0.5 transition">
               ${I18N[currentLang].order} <i class="fa-solid fa-chevron-right text-[9px] ml-1"></i>
             </span>
           </div>
@@ -1340,7 +1355,7 @@
       items.forEach(des => {
         const targetProd = PRODUCTS.find(p => p.id === des.productId);
         const card = document.createElement('div');
-        card.className = "bg-surface-card border border-surface-border hover:border-amber-400/50 rounded-2xl overflow-hidden cursor-pointer group active:scale-[0.98] transition shadow-sm";
+        card.className = "bg-surface-card border border-surface-border hover:border-amber-400/50 rounded-2xl overflow-hidden cursor-pointer group active:scale-[0.98] transition shadow-sm flex flex-col justify-between";
         card.onclick = () => {
           if (targetProd) {
             openOrderModal(targetProd);
@@ -1351,17 +1366,21 @@
         };
 
         card.innerHTML = `
-          <div class="relative aspect-square bg-[#0c101c] overflow-hidden">
-            <img src="${des.imageUrl}" alt="${des.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='/designs-images/des_stickers_1.png'">
-            <div class="absolute top-2 right-2 bg-[#090d16]/85 backdrop-blur-md px-2 py-0.5 rounded text-[9px] font-bold text-amber-300 border border-white/10">
-              ${des.category}
+          <div>
+            <div class="relative aspect-square bg-[#0c101c] overflow-hidden">
+              <img src="${des.imageUrl}" alt="${des.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='/designs-images/des_stickers_1.png'">
+              <div class="absolute top-2.5 right-2.5 bg-[#080c14]/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold text-amber-300 border border-white/10 shadow-sm">
+                ${des.category}
+              </div>
+            </div>
+            <div class="p-3.5 space-y-1">
+              <h4 class="text-xs sm:text-[13px] font-bold text-white line-clamp-1 leading-snug tracking-tight">${des.title}</h4>
+              <p class="text-[11px] text-slate-400 line-clamp-1">${targetProd ? targetProd.name : 'Custom Print'}</p>
             </div>
           </div>
-          <div class="p-2.5">
-            <h4 class="text-xs font-bold text-white line-clamp-1">${des.title}</h4>
-            <p class="text-[10px] text-amber-400 mt-1 font-semibold flex items-center">
-              Use for ${targetProd ? targetProd.name : 'Print'} <i class="fa-solid fa-chevron-right text-[8px] ml-1"></i>
-            </p>
+          <div class="px-3.5 py-2.5 border-t border-surface-border bg-white/[0.01] flex items-center justify-between text-xs">
+            <span class="text-amber-400 font-semibold text-[11px]">Select Design</span>
+            <i class="fa-solid fa-chevron-right text-[9px] text-amber-400 group-hover:translate-x-0.5 transition"></i>
           </div>
         `;
         container.appendChild(card);
@@ -1372,11 +1391,11 @@
     function setCategory(cat) {
       haptic('selection');
       document.querySelectorAll('.cat-pill').forEach(btn => {
-        btn.className = "cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300";
+        btn.className = "cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs";
       });
       const activeBtn = document.getElementById(`cat-${cat}`);
       if (activeBtn) {
-        activeBtn.className = "cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-bold bg-white text-slate-950";
+        activeBtn.className = "cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-bold bg-amber-400 text-slate-950 shadow-sm text-xs";
       }
 
       if (cat === 'all') {
@@ -1408,9 +1427,9 @@
       container.innerHTML = '';
       if (!items || items.length === 0) {
         container.innerHTML = `
-          <div class="col-span-2 py-12 text-center text-slate-400 space-y-2">
-            <i class="fa-solid fa-images text-2xl text-slate-600"></i>
-            <p class="text-xs">No works found in this category.</p>
+          <div class="col-span-2 py-16 text-center text-slate-400 space-y-2">
+            <i class="fa-solid fa-images text-3xl text-slate-600"></i>
+            <p class="text-xs sm:text-sm font-medium">No works found in this category.</p>
           </div>
         `;
         return;
@@ -1428,22 +1447,22 @@
                 loading="lazy"
                 onerror="this.src='/product-images/stickers.png'"
               />
-              <div class="absolute top-2 left-2">
-                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#090d16]/85 backdrop-blur-md text-amber-300 border border-white/10">
+              <div class="absolute top-2.5 left-2.5">
+                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#080c14]/90 backdrop-blur-md text-amber-300 border border-white/10 shadow-sm">
                   ${item.category || 'Custom Print'}
                 </span>
               </div>
             </div>
-            <div class="p-3">
-              <h3 class="font-bold text-xs text-white leading-tight line-clamp-1">${item.title}</h3>
-              <p class="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">${item.description || ''}</p>
+            <div class="p-3.5 space-y-1.5">
+              <h3 class="font-bold text-xs sm:text-[13px] text-white leading-snug line-clamp-1 tracking-tight">${item.title}</h3>
+              <p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">${item.description || ''}</p>
             </div>
           </div>
-          <div class="p-3 pt-0">
+          <div class="p-3.5 pt-0">
             <button 
               type="button"
               onclick="orderSimilarProduct('${(item.category || '').replace(/'/g, "\\'")}', '${(item.title || '').replace(/'/g, "\\'")}')"
-              class="w-full py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center justify-center space-x-1.5 transition active:scale-95"
+              class="w-full py-2.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center justify-center space-x-2 transition active:scale-95 shadow-sm"
             >
               <i class="fa-solid fa-cart-plus text-xs"></i>
               <span>${currentLang === 'am' ? 'ይህን እዘዝ' : 'Order Similar'}</span>
@@ -1458,12 +1477,28 @@
       haptic('selection');
       currentPortfolioCategory = cat;
       document.querySelectorAll('.port-cat-pill').forEach(btn => {
-        btn.className = "port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300";
+        btn.className = "port-cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs";
       });
       const activeBtn = document.getElementById(`port-cat-${cat}`);
       if (activeBtn) {
-        activeBtn.className = "port-cat-pill px-3 py-1.5 rounded-lg whitespace-nowrap transition font-bold bg-white text-slate-950";
+        activeBtn.className = "port-cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-bold bg-amber-400 text-slate-950 shadow-sm text-xs";
       }
+
+      if (cat === 'all') {
+        renderPortfolio(PORTFOLIO);
+      } else {
+        const filtered = PORTFOLIO.filter(item => {
+          const c = (item.category || '').toLowerCase();
+          const t = (item.title || '').toLowerCase();
+          if (cat === 'stickers') return c.includes('sticker') || t.includes('sticker');
+          if (cat === 'books') return c.includes('book') || t.includes('book');
+          if (cat === 'cards') return c.includes('card') || c.includes('bookmark') || t.includes('card') || t.includes('bookmark');
+          if (cat === 'merch') return c.includes('mug') || c.includes('puzzle') || t.includes('mug') || t.includes('puzzle');
+          return false;
+        });
+        renderPortfolio(filtered);
+      }
+    }
 
       if (cat === 'all') {
         renderPortfolio(PORTFOLIO);
@@ -2541,30 +2576,30 @@
           const isReadyDone = o.status === 'ready' || o.status === 'completed';
 
           card.innerHTML = `
-            <div class="flex items-center justify-between border-b border-surface-border pb-3">
+            <div class="flex items-center justify-between border-b border-surface-border pb-3.5">
               <div>
-                <span class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">Order Code</span>
-                <h3 class="text-base font-bold text-amber-400 tracking-wide">${o.order_code}</h3>
+                <span class="text-[11px] text-slate-400 font-bold tracking-wider uppercase">Order Code</span>
+                <h3 class="text-lg sm:text-xl font-extrabold text-amber-400 tracking-wider font-mono mt-0.5">${o.order_code}</h3>
               </div>
-              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${isRejected ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : (o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-amber-500/10 text-amber-300 border-amber-500/20')}">
+              <span class="px-3 py-1 rounded-full text-xs font-bold border ${isRejected ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : (o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-amber-500/10 text-amber-300 border-amber-500/20')}">
                 ${statusUpper}
               </span>
             </div>
 
             ${isRejected ? `
-              <div class="bg-rose-500/15 border border-rose-500/30 rounded-xl p-3.5 space-y-2.5">
-                <div class="flex items-center space-x-2 text-rose-300 font-bold text-xs">
-                  <i class="fa-solid fa-triangle-exclamation text-rose-400 text-sm"></i>
+              <div class="bg-rose-500/15 border border-rose-500/30 rounded-2xl p-4 space-y-3">
+                <div class="flex items-center space-x-2 text-rose-300 font-bold text-xs sm:text-sm">
+                  <i class="fa-solid fa-triangle-exclamation text-rose-400 text-base"></i>
                   <span>${currentLang === 'am' ? 'ማስተካከያ ያስፈልጋል፡ ትዕዛዝ አልተረጋገጠም' : 'Action Required: Order Needs Adjustment'}</span>
                 </div>
-                <p class="text-[11px] text-rose-200/90 leading-relaxed">
-                  <strong>${currentLang === 'am' ? 'ምክንያት፡' : 'Studio Note:'}</strong> ${o.rejection_reason || (currentLang === 'am' ? 'የክፍያ ደረሰኝ ወይም የህትመት ፋይል አልተረጋገጠም። እባክዎ እንደገና ይላኩ።' : 'Deposit receipt or artwork file could not be verified by studio admin.')}
+                <p class="text-xs text-rose-200/90 leading-relaxed">
+                  <strong class="text-white">${currentLang === 'am' ? 'ምክንያት፡' : 'Studio Note:'}</strong> ${o.rejection_reason || (currentLang === 'am' ? 'የክፍያ ደረሰኝ ወይም የህትመት ፋይል አልተረጋገጠም። እባክዎ እንደገና ይላኩ።' : 'Deposit receipt or artwork file could not be verified by studio admin.')}
                 </p>
-                <div class="flex items-center space-x-2 pt-1">
+                <div class="flex items-center space-x-2.5 pt-1">
                   <button 
                     type="button"
                     onclick="openReuploadModal('receipt', '${o.order_code}')"
-                    class="flex-1 py-2 px-2.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition active:scale-95"
+                    class="flex-1 py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-200 text-xs sm:text-[13px] font-bold flex items-center justify-center space-x-1.5 transition active:scale-95 shadow-sm"
                   >
                     <i class="fa-solid fa-receipt text-xs"></i>
                     <span>${currentLang === 'am' ? 'ደረሰኝ በድጋሚ ላክ' : 'Re-Upload Receipt'}</span>
@@ -2572,7 +2607,7 @@
                   <button 
                     type="button"
                     onclick="openReuploadModal('artwork', '${o.order_code}')"
-                    class="flex-1 py-2 px-2.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-surface-border text-slate-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition active:scale-95"
+                    class="flex-1 py-2.5 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-surface-border text-slate-200 text-xs sm:text-[13px] font-bold flex items-center justify-center space-x-1.5 transition active:scale-95 shadow-sm"
                   >
                     <i class="fa-solid fa-file-arrow-up text-xs"></i>
                     <span>${currentLang === 'am' ? 'ፋይል በድጋሚ ላክ' : 'Re-Upload Artwork'}</span>
@@ -2580,34 +2615,34 @@
                 </div>
               </div>
             ` : `
-              <div class="space-y-2 pt-1 text-xs">
-                <div class="flex items-center space-x-2">
-                  <i class="fa-solid fa-circle-check text-emerald-400"></i>
+              <div class="space-y-3 py-1.5 text-xs sm:text-[13px]">
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
                   <span class="text-white font-medium">1. Order Submitted & Received</span>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <i class="fa-solid ${isDepositDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'}"></i>
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid ${isDepositDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'} text-sm"></i>
                   <span class="${isDepositDone ? 'text-white font-medium' : 'text-slate-500'}">2. 50% Deposit Verified</span>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <i class="fa-solid ${isPrintingDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'}"></i>
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid ${isPrintingDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'} text-sm"></i>
                   <span class="${isPrintingDone ? 'text-white font-medium' : 'text-slate-500'}">3. Printing & Finishing</span>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <i class="fa-solid ${isReadyDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'}"></i>
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid ${isReadyDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'} text-sm"></i>
                   <span class="${isReadyDone ? 'text-white font-medium' : 'text-slate-500'}">4. Ready for Pickup / Delivery</span>
                 </div>
               </div>
             `}
 
-            <div class="bg-black/30 rounded-xl p-3 space-y-1.5 text-xs text-slate-300">
+            <div class="bg-black/40 rounded-2xl p-4 space-y-2 text-xs sm:text-[13px] text-slate-300 border border-white/[0.04]">
               <div class="flex justify-between"><span class="text-slate-400">Items:</span><span class="font-medium text-white">${o.items}</span></div>
               <div class="flex justify-between"><span class="text-slate-400">Delivery:</span><span>${o.delivery_type} (${o.delivery_location})</span></div>
               <div class="flex justify-between"><span class="text-slate-400">Deadline:</span><span>${o.deadline}</span></div>
             </div>
 
-            <a href="https://t.me/Yosef_selora" target="_blank" class="w-full py-2.5 rounded-xl border border-surface-border bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold text-slate-200 flex items-center justify-center space-x-1.5 transition">
-              <i class="fa-brands fa-telegram text-amber-400"></i>
+            <a href="https://t.me/Yosef_selora" target="_blank" class="w-full py-3 rounded-xl border border-surface-border bg-white/[0.04] hover:bg-white/[0.08] text-xs sm:text-[13px] font-semibold text-slate-200 flex items-center justify-center space-x-2 transition active:scale-98">
+              <i class="fa-brands fa-telegram text-amber-400 text-sm"></i>
               <span>Chat with Selora Support</span>
             </a>
           `;
