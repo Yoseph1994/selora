@@ -1,5 +1,5 @@
 # Selora Prints - Production Dockerfile for Render
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Prevent Python from writing .pyc files and enable unbuffered output
 ENV PYTHONDONTWRITEBYTECODE=1

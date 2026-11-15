@@ -833,7 +833,8 @@ def add_design(
 
     if not design_id:
         clean = re.sub(r"[^\w\s-]", "", title.lower()).strip()
-        base_id = f"des_{product_id}_{re.sub(r'[-\s]+', '_', clean)}" or f"des_{int(datetime.now().timestamp())}"
+        clean_slug = re.sub(r'[-\s]+', '_', clean)
+        base_id = f"des_{product_id}_{clean_slug}" if clean_slug else f"des_{int(datetime.now().timestamp())}"
         design_id = base_id
         counter = 1
         existing_ids = {d.get("id") for d in designs}
