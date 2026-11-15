@@ -17,3 +17,4 @@ RUN mkdir -p data/receipts data/products_images
 EXPOSE 8000
 
 CMD ["python", "main.py"]
+

@@ -230,6 +230,14 @@ async def dashboard_index(request: Request):
     )
 
 # Protected API Routes
+@app.get("/api/orders", dependencies=[Depends(require_api_auth)])
+async def get_orders_api():
+    """Returns latest orders and stats for live dashboard polling."""
+    return {
+        "orders": database.get_all_orders(),
+        "stats": database.get_stats()
+    }
+
 @app.post("/api/orders/{order_code}/approve", dependencies=[Depends(require_api_auth)])
 async def approve_order(order_code: str):
     order = database.get_order_by_code(order_code)

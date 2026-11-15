@@ -522,6 +522,39 @@
         alert('Network error while uploading image: ' + err);
       }
     }
+    // Live Auto-Refresh & Audio Alert (Every 10 seconds)
+    let knownOrdersCount = {{ orders|length }};
+    async function checkLiveOrders() {
+      try {
+        const res = await fetch('/api/orders');
+        if (res.status === 200) {
+          const data = await res.json();
+          if (data.orders && data.orders.length > knownOrdersCount) {
+            playOrderChime();
+            knownOrdersCount = data.orders.length;
+            location.reload();
+          }
+        }
+      } catch (e) {}
+    }
+
+    function playOrderChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.6);
+      } catch(e) {}
+    }
+
+    setInterval(checkLiveOrders, 10000);
   </script>
 </body>
 </html>
