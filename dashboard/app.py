@@ -264,7 +264,7 @@ async def login_page(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"error": None, "username": "admin"}
+        context={"error": None, "username": ""}
     )
 
 @app.post("/login", response_class=HTMLResponse)
@@ -327,6 +327,7 @@ async def dashboard_index(request: Request):
     design_categories = database.get_design_categories()
 
     portfolio = database.get_portfolio_items()
+    analytics = database.get_sales_analytics()
 
     return templates.TemplateResponse(
         request=request,
@@ -338,6 +339,7 @@ async def dashboard_index(request: Request):
             "designs": designs,
             "design_categories": design_categories,
             "portfolio": portfolio,
+            "analytics": analytics,
             "store_name": config.STORE_NAME
         }
     )
@@ -350,6 +352,11 @@ async def get_orders_api():
         "orders": database.get_all_orders(),
         "stats": database.get_stats()
     }
+
+@app.get("/api/analytics", dependencies=[Depends(require_api_auth)])
+async def get_analytics_api():
+    """Returns sales analytics data for charts."""
+    return database.get_sales_analytics()
 
 @app.post("/api/orders/{order_code}/approve", dependencies=[Depends(require_api_auth)])
 async def approve_order(order_code: str):

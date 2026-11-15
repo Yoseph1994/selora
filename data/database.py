@@ -412,6 +412,136 @@ def export_orders_to_csv(filepath: Path) -> Path:
 
     return filepath
 
+def get_sales_analytics() -> Dict[str, Any]:
+    """Compute comprehensive sales analytics from orders and product catalog."""
+    import re
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+
+    # Fetch all non-cancelled, non-rejected orders
+    cursor.execute("""
+        SELECT order_code, items, notes, status, payment_status, created_at
+        FROM orders
+        WHERE status NOT IN ('cancelled', 'rejected')
+          AND payment_status NOT IN ('rejected')
+        ORDER BY created_at ASC
+    """)
+    rows = fetch_all(cursor, is_pg)
+    conn.close()
+
+    # Load product prices for fallback calculation
+    products_data = get_products_data()
+    price_map = {}
+    for p in products_data.get("products", []):
+        pid = p.get("id", "")
+        pname = p.get("name", "").lower().replace("🏷 ", "").replace("🔖 ", "").replace("💼 ", "").replace("📸 ", "").replace("📓 ", "").replace("📔 ", "").replace("📖 ", "").replace("☕ ", "").replace("🧩 ", "").replace("🟢 ", "").strip()
+        price_val = p.get("price")
+        if price_val is not None:
+            price_map[pid] = float(price_val)
+            price_map[pname] = float(price_val)
+
+    total_revenue = 0.0
+    total_deposits_collected = 0.0
+    completed_revenue = 0.0
+    order_count = 0
+    product_sales = {}      # product_name -> {"qty": int, "revenue": float}
+    daily_revenue = {}       # "YYYY-MM-DD" -> float
+    status_counts = {"pending_review": 0, "in_production": 0, "ready_for_delivery": 0, "completed": 0, "reuploaded": 0}
+
+    for row in rows:
+        notes = row.get("notes", "") or ""
+        items_str = row.get("items", "") or ""
+        status = row.get("status", "")
+        pay_status = row.get("payment_status", "")
+        created = row.get("created_at", "")
+
+        # Parse total and deposit from notes: "Deposit: 150 ETB (Total: 300 ETB)"
+        order_total = 0.0
+        order_deposit = 0.0
+
+        total_match = re.search(r"Total:\s*([\d,]+(?:\.\d+)?)\s*ETB", notes, re.IGNORECASE)
+        deposit_match = re.search(r"Deposit:\s*([\d,]+(?:\.\d+)?)\s*ETB", notes, re.IGNORECASE)
+
+        if total_match:
+            order_total = float(total_match.group(1).replace(",", ""))
+        if deposit_match:
+            order_deposit = float(deposit_match.group(1).replace(",", ""))
+
+        # Fallback: parse items like "15x Stickers" and compute from price_map
+        if order_total == 0 and items_str:
+            qty_match = re.match(r"(\d+)\s*x\s*(.+)", items_str, re.IGNORECASE)
+            if qty_match:
+                qty = int(qty_match.group(1))
+                product_name = qty_match.group(2).strip().lower()
+                for key, price in price_map.items():
+                    if key in product_name or product_name in key:
+                        order_total = qty * price
+                        order_deposit = order_total * 0.5
+                        break
+
+        total_revenue += order_total
+        order_count += 1
+
+        # Only count deposit as collected if payment approved or further
+        if pay_status == "approved" or status in ("in_production", "ready_for_delivery", "completed"):
+            total_deposits_collected += order_deposit
+
+        if status == "completed":
+            completed_revenue += order_total
+
+        # Product breakdown
+        prod_display = items_str.strip() or "Unknown"
+        if prod_display not in product_sales:
+            product_sales[prod_display] = {"qty": 0, "revenue": 0.0}
+        # Parse quantity
+        qty_m = re.match(r"(\d+)\s*x", items_str, re.IGNORECASE)
+        product_sales[prod_display]["qty"] += int(qty_m.group(1)) if qty_m else 1
+        product_sales[prod_display]["revenue"] += order_total
+
+        # Daily revenue
+        if created:
+            day = created[:10]  # "YYYY-MM-DD"
+            daily_revenue[day] = daily_revenue.get(day, 0.0) + order_total
+
+        # Status counts
+        effective_status = status
+        if pay_status == "pending_review" and status not in ("reuploaded",):
+            effective_status = "pending_review"
+        elif pay_status == "approved" and status == "in_production":
+            effective_status = "in_production"
+
+        if effective_status in status_counts:
+            status_counts[effective_status] += 1
+
+    pending_balance = total_revenue - total_deposits_collected
+    aov = (total_revenue / order_count) if order_count > 0 else 0.0
+
+    # Sort daily revenue by date
+    sorted_days = sorted(daily_revenue.keys())
+    daily_labels = sorted_days
+    daily_values = [daily_revenue[d] for d in sorted_days]
+
+    # Top products by revenue
+    sorted_products = sorted(product_sales.items(), key=lambda x: x[1]["revenue"], reverse=True)
+    product_labels = [p[0] for p in sorted_products[:10]]
+    product_revenues = [p[1]["revenue"] for p in sorted_products[:10]]
+    product_quantities = [p[1]["qty"] for p in sorted_products[:10]]
+
+    return {
+        "total_revenue": round(total_revenue, 2),
+        "total_deposits_collected": round(total_deposits_collected, 2),
+        "pending_balance": round(pending_balance, 2),
+        "completed_revenue": round(completed_revenue, 2),
+        "order_count": order_count,
+        "aov": round(aov, 2),
+        "daily_labels": daily_labels,
+        "daily_values": daily_values,
+        "product_labels": product_labels,
+        "product_revenues": product_revenues,
+        "product_quantities": product_quantities,
+        "status_counts": status_counts,
+    }
+
 # Product catalog management
 def get_products_data() -> Dict[str, Any]:
     try:
