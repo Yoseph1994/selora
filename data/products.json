@@ -4,7 +4,7 @@
   "currency_name": "Birr",
   "location": "Ledeta, Addis Ababa",
   "pickup_info": "Free pickup directly from our store in Ledeta.",
-  "delivery_info": "Delivered across Addis Ababa via Yango (delivery fee is covered by customer upon receipt).",
+  "delivery_info": "Delivered across Addis Ababa via Yango / Feres (delivery fee is 300 - 1,000 ETB paid to driver on delivery).",
   "turnaround_policy": "Standard turnaround is 3+ days. Urgent rush orders needed in 2 days incur an additional 200 ETB rush fee. Orders cannot be accepted for next-day (tomorrow).",
   "products": [
     {
@@ -14,7 +14,8 @@
       "unit": "per piece",
       "min_order": 15,
       "description": "High-quality custom printed stickers, vibrant colors and durable finish. Minimum order: 15 pieces.",
-      "image_url": "/product-images/stickers.png"
+      "image_url": "/product-images/stickers.png",
+      "has_ready_designs": true
     },
     {
       "id": "bookmarks",
@@ -23,7 +24,8 @@
       "unit": "per piece",
       "min_order": 2,
       "description": "Beautiful custom printed bookmarks for book lovers and students. Minimum order: 2 pieces.",
-      "image_url": "/product-images/bookmarks.png"
+      "image_url": "/product-images/bookmarks.png",
+      "has_ready_designs": true
     },
     {
       "id": "business_cards",
@@ -32,7 +34,8 @@
       "unit": "per piece",
       "min_order": 50,
       "description": "Professional high-resolution business cards for your brand and networking. Minimum order: 50 pieces.",
-      "image_url": "/product-images/business_cards.png"
+      "image_url": "/product-images/business_cards.png",
+      "has_ready_designs": true
     },
     {
       "id": "polaroid",
@@ -40,8 +43,9 @@
       "price": null,
       "unit": "per piece",
       "min_order": 10,
-      "description": "Classic vintage-style polaroid photo prints of your favorite pictures and memories. Minimum order: 10 pieces.",
-      "image_url": "/product-images/polaroid.png"
+      "description": "Classic vintage-style polaroid photo prints of your personal photos and memories. Minimum order: 10 pieces.",
+      "image_url": "/product-images/polaroid.png",
+      "has_ready_designs": false
     },
     {
       "id": "mini_notebook",
@@ -49,7 +53,8 @@
       "price": 200,
       "unit": "each",
       "description": "Compact, portable pocket-sized notebook for quick notes and sketches.",
-      "image_url": "/product-images/mini_notebook.png"
+      "image_url": "/product-images/mini_notebook.png",
+      "has_ready_designs": true
     },
     {
       "id": "notebook",
@@ -57,39 +62,44 @@
       "price": 500,
       "unit": "each",
       "description": "Standard custom branded/aesthetic notebook with high quality paper.",
-      "image_url": "/product-images/notebook.png"
+      "image_url": "/product-images/notebook.png",
+      "has_ready_designs": true
     },
     {
       "id": "minibook_white",
       "name": "📖 Mini Book (White)",
       "price": 600,
       "unit": "each",
-      "description": "Custom bound pocket minibook with elegant white cover. Perfect for memories and photos.",
-      "image_url": "/product-images/minibook.png"
+      "description": "Custom bound pocket minibook with elegant white cover. Personal photos album.",
+      "image_url": "/product-images/minibook.png",
+      "has_ready_designs": false
     },
     {
       "id": "minibook_black",
       "name": "📖 Mini Book (Black)",
       "price": 700,
       "unit": "each",
-      "description": "Sleek custom bound pocket minibook with premium black cover.",
-      "image_url": "/product-images/minibook.png"
+      "description": "Sleek custom bound pocket minibook with premium black cover. Personal photos album.",
+      "image_url": "/product-images/minibook.png",
+      "has_ready_designs": false
     },
     {
       "id": "book_medium",
       "name": "📖 Medium Photo Book",
       "price": 800,
       "unit": "each",
-      "description": "Medium-sized custom photo book with high resolution prints and binding.",
-      "image_url": "/product-images/minibook.png"
+      "description": "Medium-sized custom photo book for your personal memories with high-res binding.",
+      "image_url": "/product-images/minibook.png",
+      "has_ready_designs": false
     },
     {
       "id": "book_a5",
       "name": "📖 A5 Photo Book",
       "price": 1000,
       "unit": "each",
-      "description": "A5 premium custom bound photo book for collections and special occasions.",
-      "image_url": "/product-images/notebook.png"
+      "description": "A5 premium custom bound photo book for personal collections and special occasions.",
+      "image_url": "/product-images/notebook.png",
+      "has_ready_designs": false
     },
     {
       "id": "book_a4",
@@ -97,7 +107,8 @@
       "price": 1500,
       "unit": "each",
       "description": "Large A4 luxury custom photo book for portfolios, weddings, and milestones.",
-      "image_url": "/product-images/notebook.png"
+      "image_url": "/product-images/notebook.png",
+      "has_ready_designs": false
     },
     {
       "id": "mug",
@@ -105,15 +116,17 @@
       "price": 1500,
       "unit": "each",
       "description": "Custom printed ceramic mug, dishwasher and microwave safe. Great for gifts!",
-      "image_url": "/product-images/mug.png"
+      "image_url": "/product-images/mug.png",
+      "has_ready_designs": true
     },
     {
       "id": "puzzle",
       "name": "🧩 Puzzle",
       "price": 1500,
       "unit": "each",
-      "description": "Personalized custom photo jigsaw puzzle. A fun and thoughtful gift.",
-      "image_url": "/product-images/puzzle.png"
+      "description": "Personalized custom photo jigsaw puzzle made from your favorite photo.",
+      "image_url": "/product-images/puzzle.png",
+      "has_ready_designs": false
     },
     {
       "id": "sticker_poster_a5",
@@ -122,7 +135,8 @@
       "unit": "per piece",
       "min_order": 10,
       "description": "Peel & stick wall/glass/smooth surface poster in A5 size. Minimum order: 10 pieces.",
-      "image_url": "/product-images/sticker_poster_a5.png"
+      "image_url": "/product-images/sticker_poster_a5.png",
+      "has_ready_designs": true
     },
     {
       "id": "sticker_poster_a4",
@@ -131,7 +145,8 @@
       "unit": "per piece",
       "min_order": 10,
       "description": "Peel & stick wall/glass/smooth surface poster in A4 size. Minimum order: 10 pieces.",
-      "image_url": "/product-images/sticker_poster_a4.png"
+      "image_url": "/product-images/sticker_poster_a4.png",
+      "has_ready_designs": true
     }
   ]
 }

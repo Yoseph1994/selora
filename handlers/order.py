@@ -47,7 +47,12 @@ class OrderFSM(StatesGroup):
     waiting_for_deadline = State()
     waiting_for_recipient_name = State()
     waiting_for_phone = State()
+    waiting_for_custom_notes = State()
     waiting_for_payment_receipt = State()
+
+class ReuploadFSM(StatesGroup):
+    waiting_for_artwork = State()
+    waiting_for_receipt = State()
 
 class PostDeliveryFSM(StatesGroup):
     waiting_for_address = State()
@@ -146,15 +151,16 @@ def get_card_design_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
     ])
 
-def get_design_mode_keyboard(qty: int, prod_name: str) -> InlineKeyboardMarkup:
+def get_design_mode_keyboard(qty: int, prod_name: str, has_ready_designs: bool = True) -> InlineKeyboardMarkup:
     buttons = []
     if qty > 1:
-        buttons.append([InlineKeyboardButton(text=f"🖼 1 design for all {qty} copies", callback_data="dmode:single")])
+        buttons.append([InlineKeyboardButton(text=f"🖼 1 photo for all {qty} copies", callback_data="dmode:single")])
         buttons.append([InlineKeyboardButton(text=f"📸 Different photo per item ({qty} photos)", callback_data="dmode:multi")])
     else:
         buttons.append([InlineKeyboardButton(text="📸 Upload My Photo / Artwork", callback_data="dmode:single")])
 
-    buttons.append([InlineKeyboardButton(text="🎨 Browse Selora Ready Designs", callback_data="dmode:templates")])
+    if has_ready_designs:
+        buttons.append([InlineKeyboardButton(text="🎨 Browse Selora Ready Designs", callback_data="dmode:templates")])
     buttons.append([InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -330,7 +336,7 @@ async def callback_cancel_order(callback: types.CallbackQuery, state: FSMContext
     await callback.answer()
 
 @router.message(Command("order"))
-@router.message(F.text == "📝 Place an Order")
+@router.message(F.text.in_(["📝 Place an Order", "📝 ማዘዝ ይጀምሩ", "📝 Place an Order / ማዘዝ ይጀምሩ"]))
 async def start_order(message: types.Message, state: FSMContext):
     await state.clear()
     await state.set_state(OrderFSM.waiting_for_product)
@@ -477,10 +483,18 @@ async def callback_quantity_confirm(callback: types.CallbackQuery, state: FSMCon
     unit_price = data.get("unit_price", 0)
     subtotal = unit_price * qty
 
+    prod_data = database.get_products_data()
+    has_ready_designs = True
+    for p in prod_data.get("products", []):
+        if p.get("id") == prod_id:
+            has_ready_designs = p.get("has_ready_designs", True)
+            break
+
     await state.update_data(
         quantity=qty,
         items=f"{qty}x {prod_name}",
-        subtotal=subtotal
+        subtotal=subtotal,
+        has_ready_designs=has_ready_designs
     )
 
     # Special flow for Business Cards (+100 ETB design fee)
@@ -588,6 +602,7 @@ async def advance_to_design_mode(message: types.Message, state: FSMContext):
     data = await state.get_data()
     qty = data.get("quantity", 1)
     prod_name = data.get("product_name", "Items")
+    has_ready_designs = data.get("has_ready_designs", True)
 
     # If user already selected a ready design prior to stepper
     if data.get("selected_design_id") and data.get("design_note"):
@@ -596,6 +611,50 @@ async def advance_to_design_mode(message: types.Message, state: FSMContext):
         else:
             await message.answer(f"✓ Using Design: *{data.get('design_note')}*", parse_mode="Markdown")
         await advance_to_deadline_picker(message, state)
+        return
+
+    # If product does not use ready designs (e.g. Polaroid, Minibook photo albums, Puzzles)
+    if not has_ready_designs:
+        if qty == 1:
+            await state.update_data(design_mode="single", photos=[], customer_files=[])
+            await state.set_state(OrderFSM.waiting_for_photos)
+            inline_cancel = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="✕ Cancel Order", callback_data="cancel_order")]
+            ])
+            text = (
+                _step_header(3, "Upload Artwork", "📎") + "\n"
+                "─────────────────────\n"
+                f"Ordering: *1x {prod_name}*\n\n"
+                "⚠️ *IMPORTANT FOR PRINT QUALITY:*\n"
+                "Telegram compresses standard photos and degrades print sharpness.\n"
+                "👉 *Please send your image as an uncompressed FILE/DOCUMENT:*\n"
+                "   1. Tap the 📎 (Paperclip) icon\n"
+                "   2. Select *'File' / 'Document'* (NOT Photo/Gallery)\n"
+                "   3. Select your original high-resolution file\n\n"
+                "─────────────────────\n"
+                "Send your image file now:"
+            )
+            if isinstance(message, types.CallbackQuery):
+                await message.message.edit_text(text, parse_mode="Markdown", reply_markup=inline_cancel)
+            else:
+                await message.edit_text(text, parse_mode="Markdown", reply_markup=inline_cancel)
+            return
+
+        # If qty > 1, let them choose between 1 photo for all vs different photo per item
+        await state.set_state(OrderFSM.waiting_for_design_mode)
+        text = (
+            _step_header(3, "Photo Selection", "📸") + "\n"
+            "─────────────────────\n"
+            f"Item: *{qty}x {prod_name}*\n\n"
+            "How would you like to provide the photos for your order?\n\n"
+            f"▸ *1 photo for all:* Print the same photo on all {qty} copies\n"
+            f"▸ *Different photo per item:* Send {qty} individual personal photos"
+        )
+        markup = get_design_mode_keyboard(qty, prod_name, has_ready_designs=False)
+        if isinstance(message, types.CallbackQuery):
+            await message.message.edit_text(text, parse_mode="Markdown", reply_markup=markup)
+        else:
+            await message.edit_text(text, parse_mode="Markdown", reply_markup=markup)
         return
 
     await state.set_state(OrderFSM.waiting_for_design_mode)
@@ -607,10 +666,11 @@ async def advance_to_design_mode(message: types.Message, state: FSMContext):
         "▸ *Upload Photo:* Send your own custom artwork\n"
         "▸ *Ready Designs:* Browse curated templates"
     )
+    markup = get_design_mode_keyboard(qty, prod_name, has_ready_designs=True)
     if isinstance(message, types.CallbackQuery):
-        await message.message.edit_text(text, parse_mode="Markdown", reply_markup=get_design_mode_keyboard(qty, prod_name))
+        await message.message.edit_text(text, parse_mode="Markdown", reply_markup=markup)
     else:
-        await message.edit_text(text, parse_mode="Markdown", reply_markup=get_design_mode_keyboard(qty, prod_name))
+        await message.edit_text(text, parse_mode="Markdown", reply_markup=markup)
 
 @router.callback_query(OrderFSM.waiting_for_design_mode, F.data.startswith("dmode:"))
 async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext):
@@ -658,13 +718,17 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
         ])
 
         await callback.message.edit_text(
-            _step_header(3, "Upload Artwork", "📸") + "\n"
+            _step_header(3, "Upload Artwork", "📎") + "\n"
             "─────────────────────\n"
-            f"This design will print on all *{qty}* copies of {prod_name}.\n\n"
-            "▸ For best quality: tap 📎 and send as *File/Document*\n"
-            "▸ Regular high-res photos are also accepted\n"
+            f"This artwork will print on all *{qty}* copies of {prod_name}.\n\n"
+            "⚠️ *CRITICAL FOR PRINT QUALITY:*\n"
+            "To prevent Telegram from compressing and blurring your artwork:\n"
+            "👉 *Please send your image as an uncompressed FILE/DOCUMENT:*\n"
+            "   1. Tap the 📎 (Paperclip) icon\n"
+            "   2. Select *'File' / 'Document'* (NOT Photo/Gallery)\n"
+            "   3. Pick your original high-resolution file\n\n"
             "─────────────────────\n"
-            "Send your photo or artwork now:",
+            "Send your file now:",
             parse_mode="Markdown",
             reply_markup=inline_cancel
         )
@@ -681,14 +745,14 @@ async def callback_design_mode(callback: types.CallbackQuery, state: FSMContext)
         ])
 
         await callback.message.edit_text(
-            _step_header(3, "Upload Photos", "📸") + "\n"
+            _step_header(3, "Upload Photos", "📎") + "\n"
             "─────────────────────\n"
             f"Send {qty} photos, one by one or as an album.\n\n"
-            "▸ For best quality: send as *Files/Documents* (📎)\n"
-            "▸ Regular photos also accepted\n\n"
+            "⚠️ *MAXIMUM PRINT RESOLUTION:*\n"
+            "👉 Tap 📎 (Paperclip) → select *'File' / 'Document'* (NOT Photo/Gallery) to send uncompressed originals.\n\n"
             f"Progress: `0 / {qty}` photos received\n"
             "─────────────────────\n"
-            "Send your photos now:",
+            "Send your files now:",
             parse_mode="Markdown",
             reply_markup=done_btn
         )
@@ -813,6 +877,12 @@ async def process_photo_upload(message: types.Message, state: FSMContext):
             customer_files=customer_files
         )
         await message.answer(f"✓ *Artwork received!* ({file_type})", parse_mode="Markdown")
+        if not message.document:
+            await message.answer(
+                "⚠️ *Print Quality Notice:*\n"
+                "_This was received as a standard compressed photo. For maximum print sharpness, you can tap 📎 and re-send as File/Document. Our team will review image resolution before printing._",
+                parse_mode="Markdown"
+            )
         await advance_to_deadline_picker(message, state)
         return
 
@@ -985,7 +1055,7 @@ async def process_phone_contact(message: types.Message, state: FSMContext):
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
-    await show_payment_summary(message, state)
+    await prompt_custom_notes(message, state)
 
 @router.message(OrderFSM.waiting_for_phone, F.text)
 async def process_phone_text(message: types.Message, state: FSMContext):
@@ -1005,6 +1075,60 @@ async def process_phone_text(message: types.Message, state: FSMContext):
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
+    await prompt_custom_notes(message, state)
+
+# ─── CUSTOM INSTRUCTIONS / NOTES ─────────────────────────────
+
+async def prompt_custom_notes(message: types.Message, state: FSMContext):
+    """Prompt the customer for any optional custom instructions/text."""
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✍️ Add Custom Note / Request", callback_data="cust_note:add")],
+        [InlineKeyboardButton(text="⏭️ Skip (No Special Notes)", callback_data="cust_note:skip")]
+    ])
+    text = (
+        "╭─── 📝 Custom Instructions ───╮\n"
+        "│  Personalization & Special Requests\n"
+        "╰───────────────────────────────╯\n\n"
+        "Do you have any specific text, names, color themes, or special instructions for our team?\n\n"
+        "👉 *Tap '✍️ Add Custom Note' to enter, or '⏭️ Skip':*"
+    )
+    if isinstance(message, types.CallbackQuery):
+        await message.message.answer(text, parse_mode="Markdown", reply_markup=kb)
+    else:
+        await message.answer(text, parse_mode="Markdown", reply_markup=kb)
+
+@router.callback_query(F.data == "cust_note:skip")
+async def callback_skip_custom_notes(callback: types.CallbackQuery, state: FSMContext):
+    await state.update_data(custom_notes="")
+    try:
+        await callback.message.edit_text("✓ _No special notes added._", parse_mode="Markdown")
+    except Exception:
+        pass
+    await show_payment_summary(callback.message, state)
+    await callback.answer()
+
+@router.callback_query(F.data == "cust_note:add")
+async def callback_add_custom_notes(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(OrderFSM.waiting_for_custom_notes)
+    inline_skip = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⏭️ Skip Note", callback_data="cust_note:skip")]
+    ])
+    await callback.message.edit_text(
+        "✏️ *Please type your custom note or instructions below:*\n\n"
+        "_e.g., Please add 'Happy 25th Birthday Bethlehem' on the bottom right in cursive gold, or Keep the background transparent._",
+        parse_mode="Markdown",
+        reply_markup=inline_skip
+    )
+    await callback.answer()
+
+@router.message(OrderFSM.waiting_for_custom_notes, F.text)
+async def process_custom_notes_input(message: types.Message, state: FSMContext):
+    if message.text in ["❌ Cancel", "❌ Cancel Order"]:
+        await cancel_order(message, state)
+        return
+    notes = message.text.strip()
+    await state.update_data(custom_notes=notes)
+    await message.answer(f"✓ *Custom note saved:* \"_{notes}_\"", parse_mode="Markdown")
     await show_payment_summary(message, state)
 
 # ─── PAYMENT SUMMARY & VERIFICATION ──────────────────────────
@@ -1030,12 +1154,14 @@ async def show_payment_summary(message: types.Message, state: FSMContext):
 
     recip_str = data.get('recipient_name', 'Customer')
     phone_str = data.get('phone', 'N/A')
+    custom_note_line = f"│  Special Note: {data.get('custom_notes')}\n" if data.get('custom_notes') else ""
 
     payment_prompt = (
         "╭─── 💳 Order Summary ───╮\n"
         "│\n"
         f"│  *{data.get('items')}*\n"
         f"│  Design: {data.get('design_note', 'Custom artwork')}\n"
+        f"{custom_note_line}"
         f"│  Needed by: {data.get('deadline')}\n"
         "│\n"
         f"│  Recipient: {recip_str}\n"
@@ -1102,6 +1228,8 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
 
     # Save to database
     notes_combined = f"{data.get('design_note', '')} | Deposit: {data.get('deposit_amount', 0)} ETB (Total: {data.get('total_price', 0)} ETB)"
+    if data.get('custom_notes'):
+        notes_combined += f" | Custom Note: {data.get('custom_notes')}"
     if data.get('delivery_maps_url'):
         notes_combined += f" | GPS: {data.get('delivery_maps_url')}"
 
@@ -1567,3 +1695,153 @@ async def callback_post_del_change(callback: types.CallbackQuery, state: FSMCont
     except Exception:
         await callback.message.answer(text, parse_mode="Markdown", reply_markup=get_post_delivery_choice_keyboard(order_code))
     await callback.answer()
+
+# ─── RE-UPLOAD HANDLERS (ADMIN REJECTION FLOW) ────────────────
+
+@router.callback_query(F.data.startswith("reupload_art:"))
+async def start_reupload_artwork(callback: types.CallbackQuery, state: FSMContext):
+    order_code = callback.data.split(":")[1]
+    await state.clear()
+    await state.set_state(ReuploadFSM.waiting_for_artwork)
+    await state.update_data(reupload_order_code=order_code)
+
+    inline_cancel = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")]
+    ])
+    await callback.message.answer(
+        f"📎 *Re-upload Artwork for Order #{order_code}*\n\n"
+        "⚠️ *MAXIMUM PRINT RESOLUTION:*\n"
+        "To avoid Telegram compression and ensure sharp, professional printing:\n"
+        "👉 *Please send your image as an uncompressed FILE/DOCUMENT:*\n"
+        "   1. Tap the 📎 (Paperclip) icon\n"
+        "   2. Select *'File' / 'Document'* (NOT Photo/Gallery)\n"
+        "   3. Pick your original high-resolution image file\n\n"
+        "─────────────────────\n"
+        "Send your replacement file now:",
+        parse_mode="Markdown",
+        reply_markup=inline_cancel
+    )
+    await callback.answer()
+
+@router.message(ReuploadFSM.waiting_for_artwork, F.document | F.photo)
+async def process_reupload_artwork(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    order_code = data.get("reupload_order_code")
+    user = message.from_user
+
+    if message.document:
+        file_id = message.document.file_id
+        orig_name = message.document.file_name or "reuploaded_doc.jpg"
+        ext = Path(orig_name).suffix.lower() or ".jpg"
+        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_reup{ext}"
+        file_type = "Document (Uncompressed)"
+    else:
+        best_photo = message.photo[-1]
+        file_id = best_photo.file_id
+        orig_name = f"photo_{best_photo.width}x{best_photo.height}.jpg"
+        filename = f"art_{user.id}_{int(datetime.now().timestamp())}_reup.jpg"
+        file_type = f"Photo ({best_photo.width}x{best_photo.height})"
+
+    dest_path = CUSTOMER_UPLOADS_DIR / filename
+    try:
+        await message.bot.download(file_id, destination=dest_path)
+    except Exception as err:
+        logger.warning(f"Could not download re-uploaded artwork: {err}")
+
+    file_entry = [{
+        "file_id": file_id,
+        "filename": filename,
+        "original_name": orig_name,
+        "file_type": file_type,
+        "url": f"/customer-uploads/{filename}"
+    }]
+    database.update_order_artwork(order_code, json.dumps(file_entry))
+    await state.clear()
+
+    await message.answer(
+        f"✅ *New Artwork Successfully Received for Order #{order_code}!* 💛\n\n"
+        f"Format: `{file_type}`\n"
+        "Our production team has been notified and will review your file right away. Thank you!",
+        parse_mode="Markdown",
+        reply_markup=get_main_menu_keyboard()
+    )
+
+    if config.ADMIN_CHAT_ID:
+        try:
+            await message.bot.send_message(
+                chat_id=config.ADMIN_CHAT_ID,
+                text=(
+                    f"🔄 *ARTWORK RE-UPLOADED — {order_code}*\n"
+                    f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
+                    f"📁 Type: {file_type}\n"
+                    "Please review the revised file on the dashboard!"
+                ),
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+
+@router.callback_query(F.data.startswith("reupload_rcpt:"))
+async def start_reupload_receipt(callback: types.CallbackQuery, state: FSMContext):
+    order_code = callback.data.split(":")[1]
+    await state.clear()
+    await state.set_state(ReuploadFSM.waiting_for_receipt)
+    await state.update_data(reupload_order_code=order_code)
+
+    inline_cancel = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✕ Cancel", callback_data="cancel_order")]
+    ])
+    await callback.message.answer(
+        f"💳 *Re-upload Payment Receipt for Order #{order_code}*\n\n"
+        "Payment Accounts:\n"
+        f"• *CBE:* `{config.PAYMENT_CBE_ACCOUNT}` ({config.PAYMENT_CBE_NAME})\n"
+        f"• *Telebirr:* `{config.PAYMENT_TELEBIRR}` ({config.PAYMENT_TELEBIRR_NAME})\n\n"
+        "Please send a clear screenshot of your deposit transfer receipt now:",
+        parse_mode="Markdown",
+        reply_markup=inline_cancel
+    )
+    await callback.answer()
+
+@router.message(ReuploadFSM.waiting_for_receipt, F.photo | F.document)
+async def process_reupload_receipt(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    order_code = data.get("reupload_order_code")
+    user = message.from_user
+
+    if message.document:
+        file_id = message.document.file_id
+        ext = Path(message.document.file_name or "receipt.jpg").suffix.lower() or ".jpg"
+    else:
+        file_id = message.photo[-1].file_id
+        ext = ".jpg"
+
+    filename = f"rcpt_{user.id}_{int(datetime.now().timestamp())}_reup{ext}"
+    dest_path = RECEIPTS_DIR / filename
+    try:
+        await message.bot.download(file_id, destination=dest_path)
+    except Exception as err:
+        logger.warning(f"Could not download re-uploaded receipt: {err}")
+
+    database.update_order_receipt(order_code, file_id, filename)
+    await state.clear()
+
+    await message.answer(
+        f"✅ *New Payment Receipt Received for Order #{order_code}!* 💛\n\n"
+        "Our team will verify the deposit and update your order status shortly!",
+        parse_mode="Markdown",
+        reply_markup=get_main_menu_keyboard()
+    )
+
+    if config.ADMIN_CHAT_ID:
+        try:
+            await message.bot.send_message(
+                chat_id=config.ADMIN_CHAT_ID,
+                text=(
+                    f"💳 *PAYMENT RECEIPT RE-SUBMITTED — {order_code}*\n"
+                    f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
+                    "Please verify the updated receipt on the dashboard!"
+                ),
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass

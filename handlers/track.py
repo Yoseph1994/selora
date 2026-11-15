@@ -77,7 +77,7 @@ def render_status_card(order: dict) -> str:
     )
 
 @router.message(Command("track"))
-@router.message(F.text == "🔍 Track My Order")
+@router.message(F.text.in_(["🔍 Track My Order", "🔍 ትዕዛዝ ይከታተሉ", "🔍 Track My Order / ትዕዛዝ ይከታተሉ"]))
 async def track_orders_handler(message: types.Message):
     text = message.text or ""
     parts = text.strip().split()

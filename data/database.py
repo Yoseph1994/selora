@@ -19,6 +19,7 @@ DATA_DIR = Path(__file__).resolve().parent
 DB_PATH = DATA_DIR / "selora_orders.db"
 PRODUCTS_FILE = DATA_DIR / "products.json"
 DESIGNS_FILE = DATA_DIR / "designs.json"
+PORTFOLIO_FILE = DATA_DIR / "portfolio.json"
 
 def get_db_url() -> Optional[str]:
     url = os.getenv("DATABASE_URL", "").strip()
@@ -97,6 +98,8 @@ def init_db():
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS recipient_name TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_files TEXT;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+            ALTER TABLE customers ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'en';
         """)
         conn.commit()
     else:
@@ -144,7 +147,8 @@ def init_db():
             "updated_at": "TEXT",
             "phone": "TEXT",
             "recipient_name": "TEXT",
-            "customer_files": "TEXT DEFAULT '[]'"
+            "customer_files": "TEXT DEFAULT '[]'",
+            "rejection_reason": "TEXT"
         }
 
         for col, col_type in new_cols.items():
@@ -154,6 +158,14 @@ def init_db():
                     logger.info(f"Migrated column {col} in orders table.")
                 except Exception as e:
                     logger.warning(f"Column migration notice for {col}: {e}")
+
+        cursor.execute("PRAGMA table_info(customers)")
+        cust_cols = [row[1] for row in cursor.fetchall()]
+        if "language" not in cust_cols:
+            try:
+                cursor.execute("ALTER TABLE customers ADD COLUMN language TEXT DEFAULT 'en'")
+            except Exception:
+                pass
 
         conn.commit()
     conn.close()
@@ -440,7 +452,8 @@ def add_product(
     description: str = "",
     min_order: Optional[int] = None,
     image_url: Optional[str] = None,
-    product_id: Optional[str] = None
+    product_id: Optional[str] = None,
+    has_ready_designs: bool = True
 ) -> Dict[str, Any]:
     """Add a new product to products.json catalog."""
     import re
@@ -467,7 +480,8 @@ def add_product(
             "price": float(price) if price is not None else 0.0,
             "unit": unit.strip() or "each",
             "description": description.strip() or f"High quality custom printed {name.strip()} from Selora Prints.",
-            "image_url": image_url or f"/product-images/{product_id}.png"
+            "image_url": image_url or f"/product-images/{product_id}.png",
+            "has_ready_designs": bool(has_ready_designs)
         }
         if min_order and int(min_order) > 1:
             new_item["min_order"] = int(min_order)
@@ -630,6 +644,130 @@ def get_design_categories() -> Dict[str, List[str]]:
         if pid and sub:
             mapping.setdefault(pid, set()).add(sub)
     return {k: sorted(list(v)) for k, v in mapping.items()}
+
+# ─── USER LANGUAGE PREFERENCE ─────────────────────────────────
+
+def get_user_language(user_id: int) -> Optional[str]:
+    """Retrieve saved language preference ('en' or 'am')."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(q("SELECT language FROM customers WHERE user_id = ?", is_pg), (user_id,))
+    row = fetch_one(cursor, is_pg)
+    conn.close()
+    if row and row.get("language"):
+        return row["language"]
+    return None
+
+def set_user_language(user_id: int, lang: str, full_name: str = "", username: str = ""):
+    """Save or update customer's preferred language."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if is_pg:
+        cursor.execute("""
+            INSERT INTO customers (user_id, full_name, username, first_seen, last_seen, language)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (user_id) DO UPDATE SET language = EXCLUDED.language, last_seen = EXCLUDED.last_seen;
+        """, (user_id, full_name, username or "", now, now, lang))
+    else:
+        cursor.execute("""
+            INSERT INTO customers (user_id, full_name, username, first_seen, last_seen, language)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET language = excluded.language, last_seen = excluded.last_seen;
+        """, (user_id, full_name, username or "", now, now, lang))
+    conn.commit()
+    conn.close()
+
+# ─── PORTFOLIO / OUR WORKS ────────────────────────────────────
+
+def get_portfolio_items() -> List[Dict[str, Any]]:
+    """Get list of showcased past works."""
+    if not PORTFOLIO_FILE.exists():
+        return []
+    try:
+        with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
+            return json.load(f).get("items", [])
+    except Exception:
+        return []
+
+def save_portfolio_items(items: List[Dict[str, Any]]):
+    with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
+        json.dump({"items": items}, f, indent=2, ensure_ascii=False)
+
+def add_portfolio_item(title: str, category: str, description: str, image_url: str) -> Dict[str, Any]:
+    items = get_portfolio_items()
+    new_id = f"work_{int(datetime.now().timestamp())}"
+    item = {
+        "id": new_id,
+        "title": title.strip(),
+        "category": category.strip(),
+        "description": description.strip(),
+        "image_url": image_url,
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    items.append(item)
+    save_portfolio_items(items)
+    return item
+
+def delete_portfolio_item(item_id: str) -> bool:
+    items = get_portfolio_items()
+    new_items = [i for i in items if i.get("id") != item_id]
+    if len(new_items) < len(items):
+        save_portfolio_items(new_items)
+        return True
+    return False
+
+def update_order_artwork(order_code: str, customer_files: str) -> bool:
+    """Update customer artwork files after re-upload and reset status to pending."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute(q("""
+        UPDATE orders
+        SET customer_files = ?, status = 'pending', updated_at = ?
+        WHERE order_code = ?
+    """, is_pg), (customer_files, updated_at, order_code))
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return success
+
+def update_order_receipt(order_code: str, file_id: str, filename: str) -> bool:
+    """Update customer deposit receipt after re-upload and reset payment_status to pending_review."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute(q("""
+        UPDATE orders
+        SET payment_screenshot_file_id = ?, payment_screenshot_filename = ?,
+            payment_status = 'pending_review', updated_at = ?
+        WHERE order_code = ?
+    """, is_pg), (file_id, filename, updated_at, order_code))
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return success
+
+# ─── ORDER REJECTION WITH REASON ──────────────────────────────
+
+def update_order_rejection(order_code: str, reason: str) -> bool:
+    """Mark order rejected and record reason in notes and rejection_reason column."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    rejection_text = f"REJECTED REASON: {reason}"
+    cursor.execute(q("""
+        UPDATE orders
+        SET status = 'rejected', payment_status = 'rejected',
+            rejection_reason = ?,
+            notes = CASE WHEN notes IS NULL OR notes = '' THEN ? ELSE notes || ' | ' || ? END,
+            updated_at = ?
+        WHERE order_code = ?
+    """, is_pg), (reason, rejection_text, rejection_text, updated_at, order_code))
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return success
 
 # Initialize DB on import
 init_db()

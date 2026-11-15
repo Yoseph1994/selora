@@ -120,6 +120,10 @@
         <i class="fa-solid fa-palette"></i>
         <span>Designs & Sub-Products ({{ designs|length }})</span>
       </button>
+      <button id="tab-portfolio-btn" onclick="switchTab('portfolio')" class="pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2 whitespace-nowrap">
+        <i class="fa-solid fa-star text-amber-500"></i>
+        <span>Our Works / Showcase ({{ portfolio|length }})</span>
+      </button>
     </div>
 
     <!-- TAB 1: ORDERS TABLE -->
@@ -324,6 +328,13 @@
                     </button>
                     {% endif %}
 
+                    {% if o.status != 'completed' and o.status != 'cancelled' %}
+                    <button onclick="openRejectModal('{{ o.order_code }}')" class="px-2 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition flex items-center space-x-1" title="Reject Order / Blurry Artwork / Receipt">
+                      <i class="fa-solid fa-ban"></i>
+                      <span>Reject</span>
+                    </button>
+                    {% endif %}
+
                     <button onclick="updateOrderStatus('{{ o.order_code }}', 'cancel')" class="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-400 hover:text-rose-600 text-xs transition" title="Cancel Order">
                       <i class="fa-solid fa-xmark"></i>
                     </button>
@@ -490,6 +501,55 @@
       </div>
     </div>
 
+    <!-- TAB 4: PORTFOLIO & OUR WORKS -->
+    <div id="tab-portfolio" class="space-y-4 hidden">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-slate-900 text-base">Our Works / Portfolio Showcase</h3>
+            <p class="text-xs text-slate-500">Showcase your real finished prints in the Telegram bot under /portfolio and main menu.</p>
+          </div>
+          <button onclick="openAddPortfolioModal()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-xs">
+            <i class="fa-solid fa-plus"></i>
+            <span>Add Showcase Item</span>
+          </button>
+        </div>
+
+        {% if portfolio %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {% for item in portfolio %}
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between">
+            <div>
+              <div class="h-44 bg-slate-100 relative overflow-hidden">
+                <img src="{{ item.image_url }}" alt="{{ item.title }}" class="w-full h-full object-cover">
+                <span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-semibold">
+                  {{ item.category }}
+                </span>
+              </div>
+              <div class="p-3.5">
+                <h4 class="font-bold text-slate-900 text-xs mb-1 line-clamp-1">{{ item.title }}</h4>
+                <p class="text-[11px] text-slate-500 line-clamp-2 mb-2">{{ item.description }}</p>
+                <div class="text-[10px] text-slate-400">Added: {{ item.created_at[:10] if item.created_at else 'Recent' }}</div>
+              </div>
+            </div>
+            <div class="p-3 pt-0 flex justify-end">
+              <button onclick="deletePortfolioItem('{{ item.id }}', '{{ item.title }}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition text-xs flex items-center space-x-1" title="Delete Showcase Item">
+                <i class="fa-regular fa-trash-can"></i>
+                <span class="text-[11px]">Delete</span>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12 text-slate-400 text-xs">
+          <i class="fa-solid fa-star text-3xl text-slate-300 mb-2"></i>
+          <p>No showcase items added yet. Click "+ Add Showcase Item" to show off your work!</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
   </main>
 
   <!-- Modal for viewing receipt screenshot -->
@@ -612,6 +672,13 @@
           </div>
         </div>
 
+        <div class="flex items-center space-x-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <input type="checkbox" id="new-prod-has-designs" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+          <label for="new-prod-has-designs" class="text-xs font-semibold text-slate-700 cursor-pointer">
+            Needs Selora Design Templates (Uncheck if this item only takes personal photos, e.g. Polaroids, Minibooks, Puzzles)
+          </label>
+        </div>
+
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Description / Details</label>
           <textarea id="new-prod-desc" rows="2" placeholder="e.g. High resolution custom printed on premium material with glossy finish." class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"></textarea>
@@ -685,6 +752,91 @@
     </div>
   </div>
 
+  <!-- Modal: Reject Order Artwork / Receipt with Custom Reason -->
+  <div id="modal-reject" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center space-x-2 text-rose-600">
+          <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+          <h3 class="font-bold text-slate-900 text-sm">Reject Order & Request Re-upload</h3>
+        </div>
+        <button onclick="closeRejectModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="mt-4 space-y-4">
+        <p class="text-xs text-slate-600">
+          Order: <strong id="reject-modal-order-code" class="text-slate-900 font-mono"></strong>.
+          The bot will immediately send a direct message (DM) to the customer with your rejection note and an interactive button to re-upload.
+        </p>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Quick Reason Template:</label>
+          <select id="reject-preset" onchange="applyRejectPreset(this.value)" class="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white">
+            <option value="">-- Choose a standard reason --</option>
+            <option value="Image was sent as a compressed photo and is too blurry for printing. Please re-send as an uncompressed File/Document (📎).">Image is compressed / blurry — re-send as File/Document (📎)</option>
+            <option value="The image resolution is too low for this print size. Please provide a higher-resolution file.">Image resolution is too low</option>
+            <option value="The payment receipt screenshot is unreadable or the deposit amount does not match 50%. Please re-upload your valid receipt.">Payment receipt illegible / wrong amount</option>
+            <option value="Artwork dimensions / aspect ratio do not fit this product. Please provide updated artwork.">Artwork dimensions don't fit</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Custom Reason Message to Customer:</label>
+          <textarea id="reject-custom-reason" rows="3" class="w-full text-xs p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none" placeholder="Explain why the artwork or receipt was rejected and what they should send..."></textarea>
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button onclick="closeRejectModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+          <button onclick="submitRejectOrder()" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center space-x-1.5">
+            <i class="fa-solid fa-ban"></i>
+            <span>Send Rejection & DM Customer</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add Showcase Portfolio Item -->
+  <div id="modal-add-portfolio" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm">Add Portfolio Showcase Item</h3>
+          <p class="text-xs text-slate-400">Display real past prints to showcase quality to potential clients in Telegram.</p>
+        </div>
+        <button onclick="closeAddPortfolioModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-add-portfolio" onsubmit="submitAddPortfolio(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Title *</label>
+          <input type="text" id="port-title" required placeholder="e.g. Holographic Cyberpunk Stickers, Luxury Foil Business Cards..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Category *</label>
+          <input type="text" id="port-cat" required placeholder="e.g. Stickers, Bookmarks, Photo Books, Business Cards, Mugs..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Description (Optional)</label>
+          <textarea id="port-desc" rows="2" placeholder="Brief note about the finish, client story, or print details..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Showcase Photo</label>
+          <input type="file" id="port-image" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeAddPortfolioModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Cancel</button>
+          <button type="submit" id="btn-submit-add-portfolio" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Add to Portfolio</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     function filterOrders() {
       const query = document.getElementById('order-search').value.toLowerCase();
@@ -714,29 +866,152 @@
       const tabOrders = document.getElementById('tab-orders');
       const tabProducts = document.getElementById('tab-products');
       const tabDesigns = document.getElementById('tab-designs');
+      const tabPortfolio = document.getElementById('tab-portfolio');
       const btnOrders = document.getElementById('tab-orders-btn');
       const btnProducts = document.getElementById('tab-products-btn');
       const btnDesigns = document.getElementById('tab-designs-btn');
+      const btnPortfolio = document.getElementById('tab-portfolio-btn');
 
       const activeClass = 'pb-3 px-4 font-semibold text-sm border-b-2 border-brand-500 text-brand-600 flex items-center space-x-2 whitespace-nowrap';
       const inactiveClass = 'pb-3 px-4 font-medium text-sm text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center space-x-2 whitespace-nowrap';
 
-      tabOrders.classList.add('hidden');
-      tabProducts.classList.add('hidden');
-      tabDesigns.classList.add('hidden');
-      btnOrders.className = inactiveClass;
-      btnProducts.className = inactiveClass;
-      btnDesigns.className = inactiveClass;
+      if (tabOrders) tabOrders.classList.add('hidden');
+      if (tabProducts) tabProducts.classList.add('hidden');
+      if (tabDesigns) tabDesigns.classList.add('hidden');
+      if (tabPortfolio) tabPortfolio.classList.add('hidden');
+      if (btnOrders) btnOrders.className = inactiveClass;
+      if (btnProducts) btnProducts.className = inactiveClass;
+      if (btnDesigns) btnDesigns.className = inactiveClass;
+      if (btnPortfolio) btnPortfolio.className = inactiveClass;
 
       if (tab === 'orders') {
-        tabOrders.classList.remove('hidden');
-        btnOrders.className = activeClass;
+        if (tabOrders) tabOrders.classList.remove('hidden');
+        if (btnOrders) btnOrders.className = activeClass;
       } else if (tab === 'products') {
-        tabProducts.classList.remove('hidden');
-        btnProducts.className = activeClass;
+        if (tabProducts) tabProducts.classList.remove('hidden');
+        if (btnProducts) btnProducts.className = activeClass;
       } else if (tab === 'designs') {
-        tabDesigns.classList.remove('hidden');
-        btnDesigns.className = activeClass;
+        if (tabDesigns) tabDesigns.classList.remove('hidden');
+        if (btnDesigns) btnDesigns.className = activeClass;
+      } else if (tab === 'portfolio') {
+        if (tabPortfolio) tabPortfolio.classList.remove('hidden');
+        if (btnPortfolio) btnPortfolio.className = activeClass;
+      }
+    }
+
+    // ─── REJECTION MODAL HANDLERS ───
+    let currentRejectOrderCode = null;
+
+    function openRejectModal(code) {
+      currentRejectOrderCode = code;
+      document.getElementById('reject-modal-order-code').innerText = code;
+      document.getElementById('reject-preset').value = '';
+      document.getElementById('reject-custom-reason').value = '';
+      document.getElementById('modal-reject').classList.remove('hidden');
+    }
+
+    function closeRejectModal() {
+      document.getElementById('modal-reject').classList.add('hidden');
+      currentRejectOrderCode = null;
+    }
+
+    function applyRejectPreset(val) {
+      if (val) {
+        document.getElementById('reject-custom-reason').value = val;
+      }
+    }
+
+    async function submitRejectOrder() {
+      if (!currentRejectOrderCode) return;
+      const reason = document.getElementById('reject-custom-reason').value.trim();
+      if (!reason) {
+        alert('Please enter or select a rejection reason so the customer knows what to fix.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/orders/${currentRejectOrderCode}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: reason })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`Order ${currentRejectOrderCode} rejected. The bot has sent a direct message (DM) to the customer with your reason and an interactive button to re-upload.`);
+          closeRejectModal();
+          location.reload();
+        } else {
+          alert('Error: ' + (data.detail || data.error || 'Failed'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
+      }
+    }
+
+    // ─── PORTFOLIO MODAL HANDLERS ───
+    function openAddPortfolioModal() {
+      document.getElementById('form-add-portfolio').reset();
+      document.getElementById('modal-add-portfolio').classList.remove('hidden');
+    }
+
+    function closeAddPortfolioModal() {
+      document.getElementById('modal-add-portfolio').classList.add('hidden');
+    }
+
+    async function submitAddPortfolio(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-add-portfolio');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...';
+
+      const title = document.getElementById('port-title').value.trim();
+      const cat = document.getElementById('port-cat').value.trim();
+      const desc = document.getElementById('port-desc').value.trim();
+      const fileInput = document.getElementById('port-image');
+
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('category', cat);
+      formData.append('description', desc);
+      if (fileInput.files && fileInput.files[0]) {
+        formData.append('image', fileInput.files[0]);
+      }
+
+      try {
+        const res = await fetch('/api/portfolio/add', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('🌟 Showcase item added! It is now live in the bot under /portfolio and main menu.');
+          closeAddPortfolioModal();
+          location.reload();
+        } else {
+          alert('Error: ' + (data.detail || 'Failed to add showcase item'));
+          btn.innerHTML = origText;
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
+        btn.innerHTML = origText;
+        btn.disabled = false;
+      }
+    }
+
+    async function deletePortfolioItem(itemId, title) {
+      if (!confirm(`Are you sure you want to remove "${title}" from the portfolio showcase?`)) return;
+      try {
+        const res = await fetch(`/api/portfolio/${itemId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert('Error: ' + (data.detail || 'Failed to delete'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
       }
     }
 
@@ -1091,6 +1366,8 @@
       formData.append('unit', unit);
       if (minOrder) formData.append('min_order', minOrder);
       if (desc) formData.append('description', desc);
+      const hasDesigns = document.getElementById('new-prod-has-designs') ? document.getElementById('new-prod-has-designs').checked : true;
+      formData.append('has_ready_designs', hasDesigns ? 'true' : 'false');
       if (fileInput.files && fileInput.files[0]) {
         formData.append('image', fileInput.files[0]);
       }

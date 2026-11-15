@@ -37,7 +37,7 @@ def get_delivery_action_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 @router.message(Command("delivery"))
-@router.message(F.text == "📍 Delivery & Pickup")
+@router.message(F.text.in_(["📍 Delivery & Pickup", "📍 የማድረስ መረጃ", "📍 Delivery & Pickup / የማድረስ መረጃ"]))
 async def show_delivery(message: types.Message):
     await message.answer(
         text=DELIVERY_TEXT,

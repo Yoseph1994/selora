@@ -119,7 +119,7 @@ def get_product_card(index: int):
     return caption, FSInputFile(image_path), keyboard
 
 @router.message(Command("catalog"))
-@router.message(F.text == "🏷 Products & Prices")
+@router.message(F.text.in_(["🏷 Products & Prices", "🏷 እቃዎች እና ዋጋ", "🏷 Products & Prices / እቃዎች እና ዋጋ"]))
 async def show_catalog_overview(message: types.Message):
     """Show interactive visual product browser."""
     caption, image_file, keyboard = get_product_card(0)
@@ -276,7 +276,7 @@ def get_design_card(index: int, product_id: Optional[str] = None):
     return caption, FSInputFile(image_path), keyboard
 
 @router.message(Command("designs"))
-@router.message(F.text.in_(["🖼 View Designs", "🎨 Ready Designs", "🎨 Browse Ready Designs"]))
+@router.message(F.text.in_(["🖼 View Designs", "🎨 Ready Designs", "🎨 ዝግጁ ዲዛይኖች", "🎨 Ready Designs / ዝግጁ ዲዛይኖች"]))
 @router.callback_query(F.data == "view_samples")
 async def show_designs_entry(event: types.Message | types.CallbackQuery):
     text = (

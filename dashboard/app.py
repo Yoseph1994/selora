@@ -127,6 +127,9 @@ def require_api_auth(request: Request):
 class PriceUpdateRequest(BaseModel):
     price: float
 
+class RejectRequest(BaseModel):
+    reason: str
+
 class WebappOrderRequest(BaseModel):
     user_id: int
     full_name: str
@@ -303,6 +306,8 @@ async def dashboard_index(request: Request):
     designs = database.get_designs()
     design_categories = database.get_design_categories()
 
+    portfolio = database.get_portfolio_items()
+
     return templates.TemplateResponse(
         request=request,
         name="index.html",
@@ -312,6 +317,7 @@ async def dashboard_index(request: Request):
             "products": products,
             "designs": designs,
             "design_categories": design_categories,
+            "portfolio": portfolio,
             "store_name": config.STORE_NAME
         }
     )
@@ -408,6 +414,37 @@ async def cancel_order_api(order_code: str):
     database.update_order_status(order_code, "cancelled")
     return {"success": True, "message": f"Order {order_code} cancelled"}
 
+@app.post("/api/orders/{order_code}/reject", dependencies=[Depends(require_api_auth)])
+async def reject_order_api(order_code: str, payload: RejectRequest):
+    order = database.get_order_by_code(order_code)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    reason = payload.reason.strip() or "Artwork is low resolution or compressed. Please upload an uncompressed File/Document (📎)."
+    database.update_order_rejection(order_code, reason)
+
+    dm_text = (
+        "⚠️ *Update Regarding Your Selora Prints Order*\n\n"
+        f"🔖 *Order Code:* `{order_code}`\n"
+        f"🏷 *Items:* {order.get('items', '')}\n"
+        "─────────────────────\n"
+        "Our production team reviewed your order and submitted files:\n\n"
+        f"❌ *Reason:* {reason}\n\n"
+        "👉 *Please tap below to send a revised high-resolution file:*"
+    )
+    markup = {
+        "inline_keyboard": [
+            [{"text": "📎 Re-upload Artwork (File/Doc)", "callback_data": f"reupload_art:{order_code}"}],
+            [{"text": "💳 Re-upload Payment Receipt", "callback_data": f"reupload_rcpt:{order_code}"}]
+        ]
+    }
+    if config.ADMIN_USERNAME:
+        markup["inline_keyboard"].append([
+            {"text": "💬 Contact Support", "url": f"https://t.me/{config.ADMIN_USERNAME}"}
+        ])
+    await send_telegram_notification(order["user_id"], dm_text, reply_markup=markup)
+    return {"success": True, "message": f"Order {order_code} rejected and customer notified via DM"}
+
 @app.post("/api/products/add", dependencies=[Depends(require_api_auth)])
 async def add_product_api(
     name: str = Form(...),
@@ -415,7 +452,8 @@ async def add_product_api(
     unit: str = Form("each"),
     min_order: Optional[int] = Form(None),
     description: str = Form(""),
-    image: Optional[UploadFile] = File(None)
+    image: Optional[UploadFile] = File(None),
+    has_ready_designs: Optional[str] = Form("true")
 ):
     """Add a new product to the catalog, with optional design photo upload."""
     import time
@@ -439,6 +477,8 @@ async def add_product_api(
             except Exception as e:
                 logger.error(f"Error saving uploaded design: {e}")
 
+    has_ready = str(has_ready_designs).lower() in ("true", "1", "yes", "on")
+
     try:
         new_item = database.add_product(
             name=name,
@@ -446,7 +486,8 @@ async def add_product_api(
             unit=unit,
             description=description,
             min_order=min_order,
-            image_url=image_url
+            image_url=image_url,
+            has_ready_designs=has_ready
         )
         return {"success": True, "product": new_item}
     except Exception as e:
@@ -604,3 +645,51 @@ async def delete_design_api(design_id: str):
                 pass
 
     return {"success": True, "message": f"Design {design_id} deleted successfully"}
+
+# ─── PORTFOLIO / OUR WORKS ENDPOINTS ─────────────────────────
+
+@app.get("/api/portfolio", dependencies=[Depends(require_api_auth)])
+async def get_portfolio_api():
+    """Retrieve all showcase portfolio works."""
+    return {"items": database.get_portfolio_items()}
+
+@app.post("/api/portfolio/add", dependencies=[Depends(require_api_auth)])
+async def add_portfolio_api(
+    title: str = Form(...),
+    category: str = Form("Custom Prints"),
+    description: str = Form(""),
+    image: Optional[UploadFile] = File(None)
+):
+    """Add a new finished work to the portfolio showcase."""
+    import time
+    if not title.strip():
+        raise HTTPException(status_code=400, detail="Title is required")
+
+    image_url = "/product-images/stickers.png"
+    if image and image.filename:
+        ext = Path(image.filename).suffix.lower()
+        if ext in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
+            filename = f"work_{int(time.time())}{ext}"
+            dest_path = PRODUCT_IMAGES_DIR / filename
+            try:
+                with open(dest_path, "wb") as buffer:
+                    shutil.copyfileobj(image.file, buffer)
+                image_url = f"/product-images/{filename}"
+            except Exception as e:
+                logger.error(f"Error saving portfolio image: {e}")
+
+    item = database.add_portfolio_item(
+        title=title.strip(),
+        category=category.strip(),
+        description=description.strip(),
+        image_url=image_url
+    )
+    return {"success": True, "item": item}
+
+@app.delete("/api/portfolio/{item_id}", dependencies=[Depends(require_api_auth)])
+async def delete_portfolio_api(item_id: str):
+    """Delete a showcase item from portfolio."""
+    success = database.delete_portfolio_item(item_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Portfolio item not found")
+    return {"success": True, "message": f"Portfolio item {item_id} deleted"}

@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
 import config
-from handlers import start, admin, catalog, delivery, order, track, business, ai_chat
+from handlers import start, admin, catalog, portfolio, delivery, order, track, business, ai_chat
 from dashboard.app import app as fastapi_app
 
 # Configure logging
@@ -26,7 +26,9 @@ async def set_bot_commands(bot: Bot):
         BotCommand(command="start", description="💛 Welcome menu"),
         BotCommand(command="catalog", description="🏷 Products & Prices"),
         BotCommand(command="order", description="📝 Place an order (50% deposit)"),
+        BotCommand(command="portfolio", description="🌟 Our Works / Portfolio"),
         BotCommand(command="track", description="🔍 Track your order status"),
+        BotCommand(command="language", description="🌐 Change language / ቋንቋ"),
         BotCommand(command="delivery", description="📍 Delivery & Pickup info"),
         BotCommand(command="contact", description="📞 Contact the owner"),
         BotCommand(command="admin", description="👑 Owner control center"),
@@ -81,6 +83,7 @@ async def run_bot():
     dp.include_router(start.router)
     dp.include_router(admin.router)
     dp.include_router(catalog.router)
+    dp.include_router(portfolio.router)
     dp.include_router(delivery.router)
     dp.include_router(order.router)
     dp.include_router(track.router)
