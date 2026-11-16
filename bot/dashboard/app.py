@@ -200,7 +200,7 @@ async def webapp_store(request: Request):
             "max_daily_orders": getattr(config, "MAX_DAILY_ORDERS", 100),
             "max_daily_rush_orders": getattr(config, "MAX_DAILY_RUSH_ORDERS", 50),
             "rush_order_fee": getattr(config, "RUSH_ORDER_FEE", 200),
-            "support_username": getattr(config, "SUPPORT_USERNAME", "Keb_g")
+            "support_username": getattr(config, "SUPPORT_USERNAME", "Seloras7")
         }
     )
 
@@ -291,7 +291,7 @@ async def webapp_get_config():
             "max_daily_orders": getattr(config, "MAX_DAILY_ORDERS", 100),
             "max_daily_rush_orders": getattr(config, "MAX_DAILY_RUSH_ORDERS", 50),
             "rush_order_fee": getattr(config, "RUSH_ORDER_FEE", 200),
-            "support_username": getattr(config, "SUPPORT_USERNAME", "Keb_g")
+            "support_username": getattr(config, "SUPPORT_USERNAME", "Seloras7")
         },
         "products": products_data.get("products", []),
         "designs": designs_data.get("designs", []),

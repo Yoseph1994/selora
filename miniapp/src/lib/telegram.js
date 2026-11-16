@@ -90,7 +90,7 @@ export async function callServerless(endpoint, payload = {}) {
       cbeName: 'KEBROM HAILU',
       telebirrAccount: '0947702896',
       telebirrName: 'KEBROM HAILU',
-      supportUsername: 'Keb_g',
+      supportUsername: 'Seloras7',
       depositRate: 0.50,
       storeLocation: 'Ledeta, Addis Ababa'
     };

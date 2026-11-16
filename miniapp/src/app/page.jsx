@@ -337,7 +337,7 @@ export default function SeloraMiniApp() {
     cbeName: "KEBROM HAILU",
     telebirr: "0947702896",
     telebirrName: "KEBROM HAILU",
-    supportUser: "Keb_g"
+    supportUser: "Seloras7"
   };
 
   // Products & Category Filter

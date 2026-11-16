@@ -11,7 +11,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "").strip()
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "").strip().lstrip("@")
-SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "Keb_g").strip().lstrip("@")
+SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", os.getenv("ADMIN_USERNAME", "Seloras7")).strip().lstrip("@")
 
 STORE_NAME = os.getenv("STORE_NAME", "Selora Prints")
 STORE_LOCATION = os.getenv("STORE_LOCATION", "Ledeta, Addis Ababa")

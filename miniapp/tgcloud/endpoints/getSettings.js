@@ -6,7 +6,7 @@ export default async function (input, ctx) {
     cbeAccountName: "Selora Prints / Yosef",
     telebirrAccount: "0906287728",
     telebirrAccountName: "Selora Prints",
-    supportUsername: "Keb_g",
+    supportUsername: "Seloras7",
     phone: "+251906287728",
     storeLocation: "Ledeta, Addis Ababa, Ethiopia (Behind Balcha Hospital)",
     storeGps: "https://maps.google.com/?q=9.0142,38.7458",
