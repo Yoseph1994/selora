@@ -110,33 +110,44 @@
 <body class="min-h-screen flex flex-col antialiased pb-24 overflow-x-hidden">
 
   <!-- TOP APP HEADER -->
-  <header class="sticky top-0 z-30 bg-[#0e1422] border-b border-slate-800 shadow-md px-4 py-3.5 flex items-center justify-between">
-    <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center font-extrabold text-base tracking-tight shadow-md shadow-amber-500/20">
-        S
+  <header class="sticky top-0 z-30 bg-[#0e1422] border-b border-slate-800 shadow-md px-4 py-3 flex items-center justify-between">
+    <!-- Brand Info -->
+    <div class="flex items-center space-x-2.5 min-w-0">
+      <!-- Circular Luxury SVG Logo (No plain text S in squircle) -->
+      <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 p-[1.5px] shadow-lg shadow-amber-500/25 flex items-center justify-center shrink-0">
+        <div class="w-full h-full rounded-full bg-[#0a0e17] flex items-center justify-center">
+          <svg class="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2.5L3.5 7.4V16.6L12 21.5L20.5 16.6V7.4L12 2.5Z" stroke="#fbbf24" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M9 8.5C9 7.7 9.7 7 10.5 7H13.5C14.3 7 15 7.7 15 8.5C15 9.3 14.3 10 13.5 10H10.5C9.7 10 9 10.7 9 11.5V14.5C9 15.3 9.7 16 10.5 16H13.5C14.3 16 15 15.3 15 14.5" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
       </div>
-      <div>
-        <h1 class="font-bold text-[15px] tracking-tight text-white leading-tight">Selora Prints</h1>
-        <p class="text-xs text-slate-300 mt-0.5">Custom Printing • Addis Ababa, Ledeta</p>
+      <div class="flex flex-col min-w-0">
+        <span class="font-bold text-[14px] sm:text-[15px] tracking-tight text-white leading-tight truncate">Selora Prints</span>
+        <span class="inline-flex items-center space-x-1 text-[10px] text-emerald-400 font-medium mt-0.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Studio Open</span>
+        </span>
       </div>
     </div>
 
-    <div class="flex items-center space-x-2">
-      <!-- Language Toggle -->
+    <!-- Actions: Language & Profile -->
+    <div class="flex items-center space-x-2 shrink-0">
       <button 
         type="button"
         onclick="toggleLanguage()" 
         id="lang-btn"
-        class="px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold text-white transition active:scale-95 flex items-center space-x-1.5"
+        class="h-8 px-2.5 rounded-full border border-slate-700 bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold text-white transition active:scale-95 flex items-center space-x-1.5 cursor-pointer shadow-sm"
       >
         <i class="fa-solid fa-globe text-[11px] text-amber-400"></i>
         <span id="lang-label">አማርኛ</span>
       </button>
 
-      <!-- Customer Badge -->
-      <div class="px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-slate-200 text-xs font-medium flex items-center space-x-1.5">
-        <i class="fa-solid fa-user text-amber-400 text-[11px]"></i>
-        <span id="user-display-name" class="truncate max-w-[85px]">Customer</span>
+      <div class="h-8 pl-1.5 pr-2.5 rounded-full bg-slate-800/90 border border-slate-700 text-slate-200 text-xs font-medium flex items-center space-x-1.5 shadow-sm">
+        <div class="w-5 h-5 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center text-[10px] font-bold">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <span id="user-display-name" class="truncate max-w-[75px] sm:max-w-[90px] text-[11px] font-semibold">Customer</span>
       </div>
     </div>
   </header>
@@ -200,6 +211,8 @@
       <div id="products-grid" class="grid grid-cols-2 gap-3.5 pt-1">
         <!-- Injected dynamically via JS from database -->
       </div>
+      <!-- Pagination -->
+      <div id="products-pagination" class="flex items-center justify-center pt-2 pb-1"></div>
     </section>
 
     <!-- TAB: WORKS & PORTFOLIO -->
@@ -234,6 +247,8 @@
       <div id="portfolio-grid" class="grid grid-cols-2 gap-3.5 pt-1">
         <!-- Injected dynamically via JS from SQL portfolio database -->
       </div>
+      <!-- Pagination -->
+      <div id="portfolio-pagination" class="flex items-center justify-center pt-2 pb-1"></div>
     </section>
 
     <!-- TAB 2: READY DESIGNS GALLERY -->
@@ -247,6 +262,8 @@
       <div id="designs-grid" class="grid grid-cols-2 gap-3.5 pt-1">
         <!-- Injected dynamically via JS from database -->
       </div>
+      <!-- Pagination -->
+      <div id="designs-pagination" class="flex items-center justify-center pt-2 pb-1"></div>
     </section>
 
     <!-- TAB 3: LIVE TRACKING -->
@@ -301,43 +318,94 @@
 
     <!-- TAB 4: STUDIO & OFFICIAL ACCOUNTS -->
     <section id="tab-info" class="space-y-4 hidden">
+      <!-- Studio Hero Card -->
       <div class="bg-surface-card border border-surface-border rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
         <div class="flex items-center space-x-3.5">
-          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center font-bold text-lg shadow-md shadow-amber-500/10">
-            S
+          <!-- Circular Luxury SVG Logo -->
+          <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 p-[2px] shadow-lg shadow-amber-500/25 flex items-center justify-center shrink-0">
+            <div class="w-full h-full rounded-full bg-[#0a0e17] flex items-center justify-center">
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2.5L3.5 7.4V16.6L12 21.5L20.5 16.6V7.4L12 2.5Z" stroke="#fbbf24" stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M9 8.5C9 7.7 9.7 7 10.5 7H13.5C14.3 7 15 7.7 15 8.5C15 9.3 14.3 10 13.5 10H10.5C9.7 10 9 10.7 9 11.5V14.5C9 15.3 9.7 16 10.5 16H13.5C14.3 16 15 15.3 15 14.5" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
           </div>
           <div>
-            <h3 class="font-bold text-sm sm:text-base text-white tracking-tight">Selora Prints Studio</h3>
-            <p class="text-xs text-slate-400 mt-0.5">Custom Merchandise & Photo Studio • Addis Ababa</p>
+            <h3 class="font-bold text-base sm:text-lg text-white tracking-tight">Selora Prints Studio</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Custom Printing & Visual Keepsake Studio • Addis Ababa</p>
           </div>
         </div>
 
-        <div class="space-y-3 pt-3 border-t border-surface-border text-xs sm:text-[13px] text-slate-300">
-          <div class="flex items-start space-x-3">
-            <i class="fa-solid fa-location-dot text-amber-400 text-sm mt-0.5 shrink-0"></i>
-            <div>
-              <span class="font-semibold text-white">Ledeta Office (Behind Balcha Hospital)</span>
-              <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">Free Customer Pickup • Monday to Saturday: 8:30 AM to 6:30 PM</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-surface-border text-xs sm:text-[13px]">
+          <!-- Studio Address -->
+          <div class="p-3.5 rounded-xl bg-white/[0.02] border border-surface-border space-y-1">
+            <div class="flex items-center space-x-2 text-amber-300 font-bold">
+              <i class="fa-solid fa-location-dot text-xs"></i>
+              <span>Ledeta Studio Location</span>
             </div>
+            <p class="text-slate-300 text-xs leading-relaxed">Behind Balcha Hospital, Addis Ababa</p>
+            <p class="text-[11px] text-slate-400">Free Customer Pickup Point</p>
           </div>
-          <div class="flex items-start space-x-3">
-            <i class="fa-solid fa-clock text-amber-400 text-sm mt-0.5 shrink-0"></i>
-            <div>
-              <span class="font-semibold text-white">Production Turnaround</span>
-              <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">Standard: 3 to 4 business days. Urgent 2-day priority rush: +200 ETB.</p>
+
+          <!-- Working & Rest Hours -->
+          <div class="p-3.5 rounded-xl bg-white/[0.02] border border-surface-border space-y-1">
+            <div class="flex items-center space-x-2 text-amber-300 font-bold">
+              <i class="fa-solid fa-clock text-xs"></i>
+              <span>Studio Working Hours</span>
             </div>
+            <p class="text-slate-300 text-xs">Mon - Sat: 8:30 AM - 6:30 PM</p>
+            <p class="text-[11px] text-rose-400 font-medium">Sunday: Studio Rest Day (No Production)</p>
           </div>
         </div>
+
+        <a 
+          href="https://maps.google.com/?q=Balcha+Hospital+Addis+Ababa" 
+          target="_blank"
+          class="w-full py-2.5 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-xs font-semibold text-amber-300 flex items-center justify-center space-x-2 transition active:scale-95"
+        >
+          <i class="fa-solid fa-diamond-turn-right text-xs"></i>
+          <span>Open Studio Location in Google Maps</span>
+        </a>
       </div>
 
-      <!-- Payment Accounts -->
+      <!-- Turnaround & Capacity Guidelines -->
+      <div class="bg-surface-card border border-surface-border rounded-2xl p-4 sm:p-5 space-y-3 shadow-sm">
+        <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center space-x-2">
+          <i class="fa-solid fa-shield-check text-amber-400"></i>
+          <span>Turnaround Speeds & Studio Capacity</span>
+        </h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+          <div class="p-3 rounded-xl bg-black/30 border border-surface-border space-y-0.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white">Standard Turnaround</span>
+              <span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded">Included</span>
+            </div>
+            <p class="text-[11px] text-slate-400">3+ business days (skipping Sundays)</p>
+          </div>
+          <div class="p-3 rounded-xl bg-black/30 border border-surface-border space-y-0.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-amber-300">⚡ Urgent Priority Rush</span>
+              <span class="text-[10px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded">+200 ETB</span>
+            </div>
+            <p class="text-[11px] text-slate-400">2 business days priority completion</p>
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-400 leading-relaxed pt-1 border-t border-surface-border">
+          Handcrafted by a dedicated solo artisan. Studio is capped at 100 total orders / 50 rush orders per day to preserve top tier quality.
+        </p>
+      </div>
+
+      <!-- Official Payment Accounts (50% Deposit) -->
       <div class="space-y-3">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1" id="accounts-header">
-          Official Payment Accounts (50% Deposit)
-        </h3>
+        <div class="flex items-center justify-between px-1">
+          <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider" id="accounts-header">
+            Official 50% Advance Deposit Accounts
+          </h3>
+          <span class="text-[10px] text-amber-400 font-medium">Tap copy icon to copy</span>
+        </div>
 
         <!-- CBE -->
-        <div class="bg-surface-card border border-surface-border rounded-xl p-3.5 flex items-center justify-between">
+        <div class="bg-surface-card border border-surface-border rounded-2xl p-4 flex items-center justify-between shadow-sm">
           <div class="space-y-1">
             <div class="flex items-center space-x-2">
               <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
@@ -348,13 +416,13 @@
             </div>
             <div id="display-tab-cbe-name" class="text-[11px] text-slate-400 font-medium">{{ cbe_name }}</div>
           </div>
-          <button onclick="copyToClipboard(STORE_CONFIG.cbeAccount, 'cbe')" id="btn-copy-cbe" class="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-slate-300 active:scale-95 transition cursor-pointer">
+          <button onclick="copyToClipboard(STORE_CONFIG.cbeAccount, 'cbe')" id="btn-copy-cbe" class="p-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-slate-300 active:scale-95 transition cursor-pointer">
             <i class="fa-regular fa-copy text-sm"></i>
           </button>
         </div>
 
         <!-- Telebirr -->
-        <div class="bg-surface-card border border-surface-border rounded-xl p-3.5 flex items-center justify-between">
+        <div class="bg-surface-card border border-surface-border rounded-2xl p-4 flex items-center justify-between shadow-sm">
           <div class="space-y-1">
             <div class="flex items-center space-x-2">
               <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
@@ -365,14 +433,130 @@
             </div>
             <div id="display-tab-tele-name" class="text-[11px] text-slate-400 font-medium">{{ telebirr_name }}</div>
           </div>
-          <button onclick="copyToClipboard(STORE_CONFIG.telebirr, 'telebirr')" id="btn-copy-telebirr" class="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-slate-300 active:scale-95 transition cursor-pointer">
+          <button onclick="copyToClipboard(STORE_CONFIG.telebirr, 'telebirr')" id="btn-copy-telebirr" class="p-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-slate-300 active:scale-95 transition cursor-pointer">
             <i class="fa-regular fa-copy text-sm"></i>
           </button>
         </div>
       </div>
+
+      <!-- Direct Operator Support Button -->
+      <a 
+        href="https://t.me/Yosef_selora" 
+        target="_blank"
+        class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-extrabold text-xs sm:text-sm flex items-center justify-center space-x-2 transition active:scale-95 shadow-lg shadow-amber-500/20"
+      >
+        <i class="fa-brands fa-telegram text-base"></i>
+        <span>Chat with Studio Operator (@Yosef_selora)</span>
+      </a>
     </section>
 
   </main>
+
+  <!-- DRAGGABLE FLOATING ACTION BUTTON (QUICK STUDIO & LOCATION) -->
+  <div 
+    id="draggable-fab" 
+    class="fixed z-40 w-13 h-13 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 text-slate-950 shadow-2xl shadow-amber-500/35 flex items-center justify-center cursor-grab active:cursor-grabbing border-2 border-amber-300/40 select-none touch-none transition-transform hover:scale-105 active:scale-95"
+    style="bottom: 80px; right: 18px;"
+    title="Studio Address & Quick Info"
+  >
+    <div class="relative flex items-center justify-center">
+      <i class="fa-solid fa-location-dot text-lg text-slate-950"></i>
+      <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#080c14] animate-pulse"></span>
+    </div>
+  </div>
+
+  <!-- QUICK STUDIO & ADDRESS MODAL (TRIGGERED BY DRAGGABLE FAB) -->
+  <div id="quick-info-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col justify-end hidden">
+    <div class="bg-[#0f1422] border-t border-surface-border rounded-t-3xl max-h-[88vh] flex flex-col shadow-2xl max-w-lg mx-auto w-full overflow-hidden">
+      <!-- Header -->
+      <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center">
+            <i class="fa-solid fa-location-dot text-sm"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white tracking-tight">Selora Studio & Location</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Quick Location, Hours & Direct Support</p>
+          </div>
+        </div>
+        <button onclick="closeQuickInfoModal()" class="p-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
+        <!-- Location Card -->
+        <div class="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-2.5">
+          <div class="flex items-start space-x-3">
+            <i class="fa-solid fa-store text-amber-400 text-sm mt-0.5 shrink-0"></i>
+            <div class="space-y-1">
+              <span class="font-bold text-xs sm:text-sm text-white">Ledeta Pickup Studio</span>
+              <p class="text-xs text-slate-300 leading-relaxed">Behind Balcha Hospital, Ledeta Sub-City, Addis Ababa</p>
+              <p class="text-[11px] text-slate-400">Free order pickup point for all customers.</p>
+            </div>
+          </div>
+          <a 
+            href="https://maps.google.com/?q=Balcha+Hospital+Addis+Ababa" 
+            target="_blank"
+            class="w-full py-2.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-center space-x-2 transition active:scale-95"
+          >
+            <i class="fa-solid fa-diamond-turn-right text-xs"></i>
+            <span>Open in Google Maps / Navigation</span>
+          </a>
+        </div>
+
+        <!-- Hours & Rest Day -->
+        <div class="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-2">
+          <div class="flex items-center space-x-2 text-xs font-bold text-slate-200">
+            <i class="fa-regular fa-clock text-amber-400"></i>
+            <span>Working & Turnaround Hours</span>
+          </div>
+          <div class="space-y-1.5 text-xs text-slate-300 pt-1">
+            <div class="flex justify-between items-center">
+              <span>Monday - Saturday:</span>
+              <span class="font-semibold text-white">8:30 AM - 6:30 PM</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span>Sunday:</span>
+              <span class="font-bold text-rose-400">Studio Rest Day (No Production)</span>
+            </div>
+            <div class="flex justify-between items-center pt-1 border-t border-surface-border text-[11px]">
+              <span class="text-slate-400">Online Intake (Bot & App):</span>
+              <span class="font-semibold text-emerald-400">Open 24/7</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Payment Reference -->
+        <div class="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-2.5">
+          <span class="text-xs font-bold text-slate-200 block">Payment Accounts (50% Deposit)</span>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="p-2.5 rounded-xl bg-black/40 border border-surface-border space-y-1">
+              <span class="text-[10px] font-bold text-purple-400 block">CBE Account</span>
+              <span class="font-mono font-bold text-white text-xs block truncate">{{ cbe_account }}</span>
+              <span class="text-[10px] text-slate-400 block truncate">{{ cbe_name }}</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-black/40 border border-surface-border space-y-1">
+              <span class="text-[10px] font-bold text-sky-400 block">Telebirr</span>
+              <span class="font-mono font-bold text-white text-xs block truncate">{{ telebirr }}</span>
+              <span class="text-[10px] text-slate-400 block truncate">{{ telebirr_name }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Support Button -->
+        <a 
+          href="https://t.me/Yosef_selora" 
+          target="_blank"
+          class="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-[13px] flex items-center justify-center space-x-2 transition active:scale-95 shadow-md"
+        >
+          <i class="fa-brands fa-telegram text-sm"></i>
+          <span>Chat with Studio Operator (@Yosef_selora)</span>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <!-- BOTTOM NAVIGATION BAR (Solid high-contrast surface, no transparency blur) -->
   <nav class="fixed bottom-0 left-0 right-0 z-30 bg-[#0e1422] border-t border-slate-800 max-w-lg mx-auto px-2 py-2 flex items-center justify-around shadow-2xl">
@@ -1479,6 +1663,9 @@
 
       // Check and render recent active orders in background
       loadActiveOrders();
+
+      // Initialize draggable Floating Action Button (FAB)
+      initDraggableFab();
     });
 
     // ─── HAPTIC FEEDBACK ───────────────────────────────────────────
@@ -1496,12 +1683,114 @@
       } catch (e) {}
     }
 
+    // ─── PAGINATION STATE & CONTROLS ───────────────────────────────
+    const ITEMS_PER_PAGE = 6;
+
+    let productsCurrentPage = 1;
+    let productsFilteredList = [];
+
+    let portfolioCurrentPage = 1;
+    let portfolioFilteredList = [];
+
+    let designsCurrentPage = 1;
+    let designsFilteredList = [];
+
+    function renderPaginationControls(containerId, currentPage, totalPages, onPageChange) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = '';
+      if (totalPages <= 1) return;
+
+      const navWrapper = document.createElement('div');
+      navWrapper.className = "flex items-center space-x-1.5 bg-surface-card border border-surface-border rounded-2xl p-1.5 shadow-sm";
+
+      // Prev Button
+      const prevBtn = document.createElement('button');
+      prevBtn.type = 'button';
+      prevBtn.className = `px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1 transition active:scale-95 ${
+        currentPage === 1 
+          ? 'text-slate-600 cursor-not-allowed' 
+          : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] cursor-pointer'
+      }`;
+      prevBtn.innerHTML = `<i class="fa-solid fa-chevron-left text-[10px]"></i><span>Prev</span>`;
+      prevBtn.disabled = (currentPage === 1);
+      prevBtn.onclick = () => {
+        if (currentPage > 1) {
+          haptic('light');
+          onPageChange(currentPage - 1);
+        }
+      };
+      navWrapper.appendChild(prevBtn);
+
+      // Page Number Pills
+      for (let p = 1; p <= totalPages; p++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.type = 'button';
+        pageBtn.className = `w-8 h-8 rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center cursor-pointer ${
+          p === currentPage 
+            ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20' 
+            : 'text-slate-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.08]'
+        }`;
+        pageBtn.textContent = p;
+        pageBtn.onclick = () => {
+          if (p !== currentPage) {
+            haptic('light');
+            onPageChange(p);
+          }
+        };
+        navWrapper.appendChild(pageBtn);
+      }
+
+      // Next Button
+      const nextBtn = document.createElement('button');
+      nextBtn.type = 'button';
+      nextBtn.className = `px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1 transition active:scale-95 ${
+        currentPage === totalPages 
+          ? 'text-slate-600 cursor-not-allowed' 
+          : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] cursor-pointer'
+      }`;
+      nextBtn.innerHTML = `<span>Next</span><i class="fa-solid fa-chevron-right text-[10px]"></i>`;
+      nextBtn.disabled = (currentPage === totalPages);
+      nextBtn.onclick = () => {
+        if (currentPage < totalPages) {
+          haptic('light');
+          onPageChange(currentPage + 1);
+        }
+      };
+      navWrapper.appendChild(nextBtn);
+
+      container.appendChild(navWrapper);
+    }
+
     // ─── RENDER PRODUCTS GRID (CLEAN LUXURY RETAIL) ───────────────
     function renderProducts(items) {
+      productsFilteredList = items || [];
+      const totalPages = Math.ceil(productsFilteredList.length / ITEMS_PER_PAGE) || 1;
+      if (productsCurrentPage > totalPages) productsCurrentPage = 1;
+      renderProductsPage();
+    }
+
+    function renderProductsPage() {
       const container = document.getElementById('products-grid');
+      if (!container) return;
       container.innerHTML = '';
 
-      items.forEach(prod => {
+      const totalPages = Math.ceil(productsFilteredList.length / ITEMS_PER_PAGE) || 1;
+      const start = (productsCurrentPage - 1) * ITEMS_PER_PAGE;
+      const slice = productsFilteredList.slice(start, start + ITEMS_PER_PAGE);
+
+      if (slice.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-2 py-16 text-center text-slate-400 space-y-2">
+            <i class="fa-solid fa-box-open text-3xl text-slate-600"></i>
+            <p class="text-xs sm:text-sm font-medium">No products found.</p>
+          </div>
+        `;
+        renderPaginationControls('products-pagination', 1, 0, () => {});
+        return;
+      }
+
+      slice.forEach(prod => {
         const card = document.createElement('div');
         card.className = "bg-surface-card border border-surface-border hover:border-amber-400/50 rounded-2xl overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.98] transition duration-200 shadow-sm";
         card.onclick = () => openOrderModal(prod);
@@ -1532,14 +1821,43 @@
         `;
         container.appendChild(card);
       });
+
+      renderPaginationControls('products-pagination', productsCurrentPage, totalPages, (newPage) => {
+        productsCurrentPage = newPage;
+        renderProductsPage();
+        document.getElementById('tab-catalog')?.scrollIntoView({ behavior: 'smooth' });
+      });
     }
 
     // ─── RENDER DESIGNS GALLERY ────────────────────────────────────
     function renderDesigns(items) {
+      designsFilteredList = items || [];
+      const totalPages = Math.ceil(designsFilteredList.length / ITEMS_PER_PAGE) || 1;
+      if (designsCurrentPage > totalPages) designsCurrentPage = 1;
+      renderDesignsPage();
+    }
+
+    function renderDesignsPage() {
       const container = document.getElementById('designs-grid');
+      if (!container) return;
       container.innerHTML = '';
 
-      items.forEach(des => {
+      const totalPages = Math.ceil(designsFilteredList.length / ITEMS_PER_PAGE) || 1;
+      const start = (designsCurrentPage - 1) * ITEMS_PER_PAGE;
+      const slice = designsFilteredList.slice(start, start + ITEMS_PER_PAGE);
+
+      if (slice.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-2 py-16 text-center text-slate-400 space-y-2">
+            <i class="fa-solid fa-layer-group text-3xl text-slate-600"></i>
+            <p class="text-xs sm:text-sm font-medium">No designs found.</p>
+          </div>
+        `;
+        renderPaginationControls('designs-pagination', 1, 0, () => {});
+        return;
+      }
+
+      slice.forEach(des => {
         const targetProd = PRODUCTS.find(p => p.id === des.productId);
         const card = document.createElement('div');
         card.className = "bg-surface-card border border-surface-border hover:border-amber-400/50 rounded-2xl overflow-hidden cursor-pointer group active:scale-[0.98] transition shadow-sm flex flex-col justify-between";
@@ -1572,11 +1890,18 @@
         `;
         container.appendChild(card);
       });
+
+      renderPaginationControls('designs-pagination', designsCurrentPage, totalPages, (newPage) => {
+        designsCurrentPage = newPage;
+        renderDesignsPage();
+        document.getElementById('tab-designs')?.scrollIntoView({ behavior: 'smooth' });
+      });
     }
 
     // ─── CATEGORY & SEARCH FILTERING ───────────────────────────────
     function setCategory(cat) {
       haptic('selection');
+      productsCurrentPage = 1;
       document.querySelectorAll('.cat-pill').forEach(btn => {
         btn.className = "cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs";
       });
@@ -1594,6 +1919,7 @@
     }
 
     function handleSearch(query) {
+      productsCurrentPage = 1;
       const q = query.trim().toLowerCase();
       if (!q) {
         renderProducts(PRODUCTS);
@@ -1609,19 +1935,33 @@
 
     // ─── RENDER PORTFOLIO / WORKS SHOWCASE ─────────────────────────
     function renderPortfolio(items) {
+      portfolioFilteredList = items || [];
+      const totalPages = Math.ceil(portfolioFilteredList.length / ITEMS_PER_PAGE) || 1;
+      if (portfolioCurrentPage > totalPages) portfolioCurrentPage = 1;
+      renderPortfolioPage();
+    }
+
+    function renderPortfolioPage() {
       const container = document.getElementById('portfolio-grid');
       if (!container) return;
       container.innerHTML = '';
-      if (!items || items.length === 0) {
+
+      const totalPages = Math.ceil(portfolioFilteredList.length / ITEMS_PER_PAGE) || 1;
+      const start = (portfolioCurrentPage - 1) * ITEMS_PER_PAGE;
+      const slice = portfolioFilteredList.slice(start, start + ITEMS_PER_PAGE);
+
+      if (slice.length === 0) {
         container.innerHTML = `
           <div class="col-span-2 py-16 text-center text-slate-400 space-y-2">
             <i class="fa-solid fa-images text-3xl text-slate-600"></i>
             <p class="text-xs sm:text-sm font-medium">No works found in this category.</p>
           </div>
         `;
+        renderPaginationControls('portfolio-pagination', 1, 0, () => {});
         return;
       }
-      items.forEach(item => {
+
+      slice.forEach(item => {
         const card = document.createElement('div');
         card.className = "bg-surface-card border border-surface-border hover:border-amber-400/40 rounded-2xl overflow-hidden flex flex-col justify-between transition shadow-sm";
         card.innerHTML = `
@@ -1658,11 +1998,18 @@
         `;
         container.appendChild(card);
       });
+
+      renderPaginationControls('portfolio-pagination', portfolioCurrentPage, totalPages, (newPage) => {
+        portfolioCurrentPage = newPage;
+        renderPortfolioPage();
+        document.getElementById('tab-portfolio')?.scrollIntoView({ behavior: 'smooth' });
+      });
     }
 
     function setPortfolioCategory(cat) {
       haptic('selection');
       currentPortfolioCategory = cat;
+      portfolioCurrentPage = 1;
       document.querySelectorAll('.port-cat-pill').forEach(btn => {
         btn.className = "port-cat-pill px-3.5 py-2 rounded-xl whitespace-nowrap transition font-medium bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs";
       });
@@ -2896,24 +3243,27 @@
         }
 
         const itemCard = document.createElement('div');
-        itemCard.className = "p-3 rounded-xl bg-surface-card border border-surface-border hover:border-amber-400/50 transition cursor-pointer flex items-center justify-between group shadow-sm";
+        itemCard.className = "p-3.5 sm:p-4 rounded-2xl bg-surface-card border border-surface-border hover:border-amber-400/50 transition cursor-pointer flex items-center justify-between group shadow-sm";
         itemCard.onclick = () => {
           document.getElementById('track-code-input').value = o.order_code;
           queryTrackOrder(o.order_code);
         };
 
         itemCard.innerHTML = `
-          <div class="space-y-1 min-w-0 flex-1 pr-3">
+          <div class="space-y-1.5 min-w-0 flex-1 pr-3">
             <div class="flex items-center space-x-2">
-              <span class="font-mono text-xs sm:text-sm font-bold text-amber-300 tracking-wider">${o.order_code}</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusBadgeClass}">
+              <span class="font-mono text-sm font-bold text-amber-300 tracking-wider">${o.order_code}</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusBadgeClass}">
                 ${statusText}
               </span>
             </div>
-            <div class="text-[11px] text-slate-300 font-medium truncate">${o.items || 'Custom Order'}</div>
-            <div class="text-[10px] text-slate-400">${o.deadline ? (currentLang === 'am' ? 'የመድረሻ ቀን: ' : 'Target: ') + o.deadline : ''}</div>
+            <div class="text-xs text-slate-200 font-semibold truncate">${o.items || 'Custom Order'}</div>
+            <div class="text-[11px] text-slate-400 flex items-center space-x-2">
+              <span>${o.deadline ? (currentLang === 'am' ? 'የመድረሻ ቀን: ' : 'Target: ') + o.deadline : ''}</span>
+              ${o.delivery_type ? `<span class="text-slate-600">•</span><span>${o.delivery_type}</span>` : ''}
+            </div>
           </div>
-          <button type="button" class="p-2 rounded-lg bg-white/[0.04] group-hover:bg-amber-400/20 text-slate-400 group-hover:text-amber-300 transition">
+          <button type="button" class="w-8 h-8 rounded-xl bg-white/[0.04] group-hover:bg-amber-400/20 text-slate-400 group-hover:text-amber-300 flex items-center justify-center transition shrink-0">
             <i class="fa-solid fa-chevron-right text-xs"></i>
           </button>
         `;
@@ -3111,74 +3461,159 @@
           const isReadyDone = o.status === 'ready' || o.status === 'completed';
 
           card.innerHTML = `
-            <div class="flex items-center justify-between border-b border-surface-border pb-3.5">
-              <div>
-                <span class="text-[11px] text-slate-400 font-bold tracking-wider uppercase">Order Code</span>
-                <h3 class="text-lg sm:text-xl font-extrabold text-amber-400 tracking-wider font-mono mt-0.5">${o.order_code}</h3>
+            <!-- Order Header with Status Pill and Copy Button -->
+            <div class="flex items-center justify-between border-b border-surface-border pb-4">
+              <div class="space-y-0.5">
+                <span class="text-[10px] text-slate-400 font-bold tracking-wider uppercase">Order Code</span>
+                <div class="flex items-center space-x-2">
+                  <h3 class="text-xl sm:text-2xl font-black text-amber-400 tracking-wider font-mono">${o.order_code}</h3>
+                  <button type="button" onclick="copyToClipboard('${o.order_code}', 'track-code')" id="btn-copy-track-code" class="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-400 hover:text-white transition cursor-pointer" title="Copy code">
+                    <i class="fa-regular fa-copy text-xs"></i>
+                  </button>
+                </div>
               </div>
-              <span class="px-3 py-1 rounded-full text-xs font-bold border ${isRejected ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : (o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-amber-500/10 text-amber-300 border-amber-500/20')}">
-                ${statusUpper}
+              <span class="px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm ${
+                isRejected 
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 flex items-center space-x-1.5' 
+                  : (o.status === 'completed' 
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 flex items-center space-x-1.5' 
+                      : (o.status === 'in_production' 
+                          ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 flex items-center space-x-1.5' 
+                          : 'bg-amber-500/15 text-amber-300 border-amber-500/30 flex items-center space-x-1.5'))
+              }">
+                <i class="${isRejected ? 'fa-solid fa-triangle-exclamation text-xs' : (o.status === 'completed' ? 'fa-solid fa-check text-xs' : 'fa-solid fa-clock text-xs')}"></i>
+                <span>${statusUpper}</span>
               </span>
             </div>
 
+            <!-- Rejection Warning Banner (If Rejected) -->
             ${isRejected ? `
-              <div class="bg-rose-500/15 border border-rose-500/30 rounded-2xl p-4 space-y-3">
-                <div class="flex items-center space-x-2 text-rose-300 font-bold text-xs sm:text-sm">
-                  <i class="fa-solid fa-triangle-exclamation text-rose-400 text-base"></i>
-                  <span>${currentLang === 'am' ? 'ማስተካከያ ያስፈልጋል፡ ትዕዛዝ አልተረጋገጠም' : 'Action Required: Order Needs Adjustment'}</span>
+              <div class="p-4 sm:p-5 rounded-2xl bg-rose-500/15 border border-rose-500/35 space-y-3.5 shadow-md">
+                <div class="flex items-center space-x-2.5 text-rose-300 font-bold text-sm">
+                  <div class="w-7 h-7 rounded-full bg-rose-500/25 flex items-center justify-center text-rose-400 shrink-0">
+                    <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                  </div>
+                  <span>${currentLang === 'am' ? 'ይህ ትዕዛዝ ማስተካከያ ይፈልጋል' : 'Action Required: Revision Needed'}</span>
                 </div>
+
+                <div class="p-3.5 rounded-xl bg-black/50 border-l-4 border-rose-500 text-xs sm:text-[13px] text-rose-200 leading-relaxed space-y-1">
+                  <span class="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+                    <i class="fa-solid fa-message text-rose-400"></i>
+                    <span>Studio Operator Note:</span>
+                  </span>
+                  <p class="text-white font-medium pt-0.5">${o.rejection_reason || (currentLang === 'am' ? 'የክፍያ ደረሰኝ ወይም የህትመት ፋይል አልተረጋገጠም። እባክዎ እንደገና ይላኩ።' : 'Deposit receipt or artwork file could not be verified by studio admin.')}</p>
+                </div>
+
                 <p class="text-xs text-rose-200/90 leading-relaxed">
-                  <strong class="text-white">${currentLang === 'am' ? 'ምክንያት፡' : 'Studio Note:'}</strong> ${o.rejection_reason || (currentLang === 'am' ? 'የክፍያ ደረሰኝ ወይም የህትመት ፋይል አልተረጋገጠም። እባክዎ እንደገና ይላኩ።' : 'Deposit receipt or artwork file could not be verified by studio admin.')}
+                  Please tap an option below to submit your corrected file. Once re-uploaded, the studio will immediately resume production.
                 </p>
-                <div class="flex items-center space-x-2.5 pt-1">
-                  <button 
-                    type="button"
-                    onclick="openReuploadModal('receipt', '${o.order_code}')"
-                    class="flex-1 py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-200 text-xs sm:text-[13px] font-bold flex items-center justify-center space-x-1.5 transition active:scale-95 shadow-sm"
-                  >
-                    <i class="fa-solid fa-receipt text-xs"></i>
-                    <span>${currentLang === 'am' ? 'ደረሰኝ በድጋሚ ላክ' : 'Re-Upload Receipt'}</span>
-                  </button>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                   <button 
                     type="button"
                     onclick="openReuploadModal('artwork', '${o.order_code}')"
-                    class="flex-1 py-2.5 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-surface-border text-slate-200 text-xs sm:text-[13px] font-bold flex items-center justify-center space-x-1.5 transition active:scale-95 shadow-sm"
+                    class="py-3 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-[13px] flex items-center justify-center space-x-2 transition active:scale-95 shadow-md cursor-pointer"
                   >
-                    <i class="fa-solid fa-file-arrow-up text-xs"></i>
-                    <span>${currentLang === 'am' ? 'ፋይል በድጋሚ ላክ' : 'Re-Upload Artwork'}</span>
+                    <i class="fa-solid fa-file-arrow-up text-sm"></i>
+                    <span>${currentLang === 'am' ? 'የህትመት ፋይል በድጋሚ ላክ' : 'Re-Upload Artwork'}</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onclick="openReuploadModal('receipt', '${o.order_code}')"
+                    class="py-3 px-3.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/10 text-white font-bold text-xs sm:text-[13px] flex items-center justify-center space-x-2 transition active:scale-95 cursor-pointer shadow-sm"
+                  >
+                    <i class="fa-solid fa-receipt text-sm"></i>
+                    <span>${currentLang === 'am' ? 'የክፍያ ደረሰኝ በድጋሚ ላክ' : 'Re-Upload Receipt'}</span>
                   </button>
                 </div>
               </div>
             ` : `
-              <div class="space-y-3 py-1.5 text-xs sm:text-[13px]">
-                <div class="flex items-center space-x-2.5">
-                  <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
-                  <span class="text-white font-medium">1. Order Submitted & Received</span>
-                </div>
-                <div class="flex items-center space-x-2.5">
-                  <i class="fa-solid ${isDepositDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'} text-sm"></i>
-                  <span class="${isDepositDone ? 'text-white font-medium' : 'text-slate-500'}">2. 50% Deposit Verified</span>
-                </div>
-                <div class="flex items-center space-x-2.5">
-                  <i class="fa-solid ${isPrintingDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'} text-sm"></i>
-                  <span class="${isPrintingDone ? 'text-white font-medium' : 'text-slate-500'}">3. Printing & Finishing</span>
-                </div>
-                <div class="flex items-center space-x-2.5">
-                  <i class="fa-solid ${isReadyDone ? 'fa-circle-check text-emerald-400' : 'fa-circle-dot text-slate-600'} text-sm"></i>
-                  <span class="${isReadyDone ? 'text-white font-medium' : 'text-slate-500'}">4. Ready for Pickup / Delivery</span>
+              <!-- Visual Production Milestone Tracker -->
+              <div class="py-2 px-1 space-y-3">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Production Milestone</span>
+                <div class="space-y-3 text-xs sm:text-[13px]">
+                  <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 border border-emerald-500/30">
+                      <i class="fa-solid fa-check text-xs"></i>
+                    </div>
+                    <div>
+                      <div class="font-bold text-white">1. Order Placed & Intake Verified</div>
+                      <div class="text-[11px] text-slate-400">Order successfully logged in database</div>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 rounded-full ${isDepositDone ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-slate-500 border border-surface-border'} flex items-center justify-center shrink-0 mt-0.5">
+                      <i class="fa-solid ${isDepositDone ? 'fa-check' : 'fa-circle-dot'} text-xs"></i>
+                    </div>
+                    <div>
+                      <div class="font-bold ${isDepositDone ? 'text-white' : 'text-slate-400'}">2. 50% Advance Deposit Approved</div>
+                      <div class="text-[11px] text-slate-500">CBE / Telebirr transaction confirmation</div>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 rounded-full ${isPrintingDone ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-slate-500 border border-surface-border'} flex items-center justify-center shrink-0 mt-0.5">
+                      <i class="fa-solid ${isPrintingDone ? 'fa-check' : 'fa-circle-dot'} text-xs"></i>
+                    </div>
+                    <div>
+                      <div class="font-bold ${isPrintingDone ? 'text-white' : 'text-slate-400'}">3. Studio Printing & Handcrafting</div>
+                      <div class="text-[11px] text-slate-500">Drying, cutting, lamination, and quality inspection</div>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 rounded-full ${isReadyDone ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-slate-500 border border-surface-border'} flex items-center justify-center shrink-0 mt-0.5">
+                      <i class="fa-solid ${isReadyDone ? 'fa-check' : 'fa-circle-dot'} text-xs"></i>
+                    </div>
+                    <div>
+                      <div class="font-bold ${isReadyDone ? 'text-white' : 'text-slate-400'}">4. Ready for Pickup / Taxi Delivery</div>
+                      <div class="text-[11px] text-slate-500">Available at Ledeta Studio or dispatched to taxi</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             `}
 
-            <div class="bg-black/40 rounded-2xl p-4 space-y-2 text-xs sm:text-[13px] text-slate-300 border border-white/[0.04]">
-              <div class="flex justify-between"><span class="text-slate-400">Items:</span><span class="font-medium text-white">${o.items}</span></div>
-              <div class="flex justify-between"><span class="text-slate-400">Delivery:</span><span>${o.delivery_type} (${o.delivery_location})</span></div>
-              <div class="flex justify-between"><span class="text-slate-400">Deadline:</span><span>${o.deadline}</span></div>
+            <!-- Structured Specifications Sheet -->
+            <div class="bg-surface-card border border-surface-border rounded-2xl p-4 sm:p-5 space-y-3 shadow-sm">
+              <span class="text-xs font-bold text-slate-300 uppercase tracking-wider block border-b border-surface-border pb-2">
+                Order Specifications
+              </span>
+              <div class="space-y-2.5 text-xs sm:text-[13px] text-slate-300">
+                <div class="flex items-start justify-between">
+                  <span class="text-slate-400 shrink-0 mr-3">Items:</span>
+                  <span class="font-bold text-white text-right">${o.items}</span>
+                </div>
+                <div class="flex items-start justify-between">
+                  <span class="text-slate-400 shrink-0 mr-3">Completion Target:</span>
+                  <span class="font-bold text-amber-300 text-right">${o.deadline}</span>
+                </div>
+                <div class="flex items-start justify-between">
+                  <span class="text-slate-400 shrink-0 mr-3">Delivery Method:</span>
+                  <span class="font-medium text-slate-200 text-right">${o.delivery_type}</span>
+                </div>
+                <div class="flex items-start justify-between">
+                  <span class="text-slate-400 shrink-0 mr-3">Location / Landmark:</span>
+                  <span class="font-medium text-slate-200 text-right">${o.delivery_location || 'Ledeta Studio Pickup'}</span>
+                </div>
+                ${o.recipient_name ? `
+                  <div class="flex items-start justify-between">
+                    <span class="text-slate-400 shrink-0 mr-3">Recipient Name:</span>
+                    <span class="font-medium text-slate-200 text-right">${o.recipient_name} ${o.phone ? `(${o.phone})` : ''}</span>
+                  </div>
+                ` : ''}
+              </div>
             </div>
 
-            <a href="https://t.me/Yosef_selora" target="_blank" class="w-full py-3 rounded-xl border border-surface-border bg-white/[0.04] hover:bg-white/[0.08] text-xs sm:text-[13px] font-semibold text-slate-200 flex items-center justify-center space-x-2 transition active:scale-98">
+            <!-- Direct Support Link -->
+            <a 
+              href="https://t.me/Yosef_selora" 
+              target="_blank" 
+              class="w-full py-3.5 px-4 rounded-xl border border-surface-border bg-white/[0.04] hover:bg-white/[0.08] text-xs sm:text-[13px] font-semibold text-slate-200 flex items-center justify-center space-x-2 transition active:scale-98 shadow-sm"
+            >
               <i class="fa-brands fa-telegram text-amber-400 text-sm"></i>
-              <span>Chat with Selora Support</span>
+              <span>Chat with Studio Operator on Telegram</span>
             </a>
           `;
           card.classList.remove('hidden');
@@ -3194,6 +3629,102 @@
         btn.innerHTML = 'Track';
         btn.disabled = false;
       }
+    }
+
+    // ─── DRAGGABLE FLOATING ACTION BUTTON (FAB) ─────────────────────
+    function initDraggableFab() {
+      const fab = document.getElementById('draggable-fab');
+      if (!fab) return;
+
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let initialLeft = 0;
+      let initialTop = 0;
+      let hasMoved = false;
+
+      function getCoords(e) {
+        if (e.touches && e.touches.length > 0) {
+          return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+      }
+
+      function onStart(e) {
+        const c = getCoords(e);
+        startX = c.x;
+        startY = c.y;
+        hasMoved = false;
+        isDragging = true;
+        const rect = fab.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+        fab.style.transition = 'none';
+      }
+
+      function onMove(e) {
+        if (!isDragging) return;
+        const c = getCoords(e);
+        const dx = c.x - startX;
+        const dy = c.y - startY;
+
+        if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+          hasMoved = true;
+        }
+
+        const fabW = fab.offsetWidth || 52;
+        const fabH = fab.offsetHeight || 52;
+        const minX = 8;
+        const maxX = window.innerWidth - fabW - 8;
+        const minY = 55;
+        const maxY = window.innerHeight - fabH - 75;
+
+        const newL = Math.max(minX, Math.min(maxX, initialLeft + dx));
+        const newT = Math.max(minY, Math.min(maxY, initialTop + dy));
+
+        fab.style.left = `${newL}px`;
+        fab.style.top = `${newT}px`;
+        fab.style.bottom = 'auto';
+        fab.style.right = 'auto';
+
+        if (e.cancelable && hasMoved) {
+          e.preventDefault();
+        }
+      }
+
+      function onEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+        fab.style.transition = 'transform 0.15s ease';
+
+        if (!hasMoved) {
+          haptic('light');
+          openQuickInfoModal();
+        }
+      }
+
+      fab.addEventListener('pointerdown', (e) => {
+        onStart(e);
+        try { fab.setPointerCapture(e.pointerId); } catch(err) {}
+      });
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onEnd);
+      window.addEventListener('pointercancel', onEnd);
+
+      // Fallback for touch
+      fab.addEventListener('touchstart', onStart, { passive: true });
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onEnd);
+    }
+
+    function openQuickInfoModal() {
+      const modal = document.getElementById('quick-info-modal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeQuickInfoModal() {
+      const modal = document.getElementById('quick-info-modal');
+      if (modal) modal.classList.add('hidden');
     }
 
     // ─── LANGUAGE TOGGLE ───────────────────────────────────────────
