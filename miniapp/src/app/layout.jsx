@@ -2,7 +2,7 @@ import Script from 'next/script';
 import './globals.css';
 
 export const metadata = {
-  title: 'Selora Prints — Telegram Mini App',
+  title: 'Selora Prints - Telegram Mini App',
   description: 'Premier Custom Printing in Addis Ababa. Business cards, apparel, packaging, and promotional prints.',
 };
 

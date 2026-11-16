@@ -337,7 +337,7 @@ export default function SeloraMiniApp() {
     cbeName: "KEBROM HAILU",
     telebirr: "0947702896",
     telebirrName: "KEBROM HAILU",
-    supportUser: "Yosef_selora"
+    supportUser: "Keb_g"
   };
 
   // Products & Category Filter
@@ -590,7 +590,7 @@ export default function SeloraMiniApp() {
     const itemsText = `${quantity}x ${selectedProduct.name} (${selectedProduct.unit || 'unit'})`;
     
     const deadlineText = urgency === 'rush' 
-      ? 'Rush Order (2 Days — +200 ETB)' 
+      ? 'Rush Order (2 Days - +200 ETB)' 
       : 'Standard Turnaround (3-4 Days)';
 
     const deliveryText = deliveryType === 'pickup'

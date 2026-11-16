@@ -199,7 +199,8 @@ async def webapp_store(request: Request):
             "telebirr_name": config.PAYMENT_TELEBIRR_NAME,
             "max_daily_orders": getattr(config, "MAX_DAILY_ORDERS", 100),
             "max_daily_rush_orders": getattr(config, "MAX_DAILY_RUSH_ORDERS", 50),
-            "rush_order_fee": getattr(config, "RUSH_ORDER_FEE", 200)
+            "rush_order_fee": getattr(config, "RUSH_ORDER_FEE", 200),
+            "support_username": getattr(config, "SUPPORT_USERNAME", "Keb_g")
         }
     )
 
@@ -287,10 +288,10 @@ async def webapp_get_config():
             "telebirr": config.PAYMENT_TELEBIRR,
             "telebirr_name": config.PAYMENT_TELEBIRR_NAME,
             "location": "Ledeta, Addis Ababa",
-            "support_username": "Yosef_selora",
             "max_daily_orders": getattr(config, "MAX_DAILY_ORDERS", 100),
             "max_daily_rush_orders": getattr(config, "MAX_DAILY_RUSH_ORDERS", 50),
-            "rush_order_fee": getattr(config, "RUSH_ORDER_FEE", 200)
+            "rush_order_fee": getattr(config, "RUSH_ORDER_FEE", 200),
+            "support_username": getattr(config, "SUPPORT_USERNAME", "Keb_g")
         },
         "products": products_data.get("products", []),
         "designs": designs_data.get("designs", []),

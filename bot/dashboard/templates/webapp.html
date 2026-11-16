@@ -441,12 +441,13 @@
 
       <!-- Direct Operator Support Button -->
       <a 
-        href="https://t.me/Yosef_selora" 
+        id="studio-support-link"
+        href="https://t.me/Keb_g" 
         target="_blank"
         class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-extrabold text-xs sm:text-sm flex items-center justify-center space-x-2 transition active:scale-95 shadow-lg shadow-amber-500/20"
       >
         <i class="fa-brands fa-telegram text-base"></i>
-        <span>Chat with Studio Operator (@Yosef_selora)</span>
+        <span id="studio-support-text">Chat with Studio Operator (@Keb_g)</span>
       </a>
     </section>
 
@@ -547,12 +548,13 @@
 
         <!-- Support Button -->
         <a 
-          href="https://t.me/Yosef_selora" 
+          id="modal-support-link"
+          href="https://t.me/Keb_g" 
           target="_blank"
           class="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-[13px] flex items-center justify-center space-x-2 transition active:scale-95 shadow-md"
         >
           <i class="fa-brands fa-telegram text-sm"></i>
-          <span>Chat with Studio Operator (@Yosef_selora)</span>
+          <span id="modal-support-text">Chat with Studio Operator (@Keb_g)</span>
         </a>
       </div>
     </div>
@@ -1452,7 +1454,8 @@
       storeName: {{ store_name | default("Selora Prints") | tojson }},
       maxDailyOrders: {{ max_daily_orders | default(100) | tojson }},
       maxDailyRushOrders: {{ max_daily_rush_orders | default(50) | tojson }},
-      rushOrderFee: {{ rush_order_fee | default(200) | tojson }}
+      rushOrderFee: {{ rush_order_fee | default(200) | tojson }},
+      supportUsername: {{ support_username | default("Keb_g") | tojson }}
     };
 
     // ─── DASHBOARD SYNC (JINJA2 + REALTIME API) ────────────────────
@@ -1624,6 +1627,17 @@
               if (data.store.max_daily_orders) STORE_CONFIG.maxDailyOrders = data.store.max_daily_orders;
               if (data.store.max_daily_rush_orders) STORE_CONFIG.maxDailyRushOrders = data.store.max_daily_rush_orders;
               if (data.store.rush_order_fee) STORE_CONFIG.rushOrderFee = data.store.rush_order_fee;
+              if (data.store.support_username) {
+                STORE_CONFIG.supportUsername = data.store.support_username;
+                const sLink = document.getElementById('studio-support-link');
+                if (sLink) sLink.href = `https://t.me/${data.store.support_username}`;
+                const sText = document.getElementById('studio-support-text');
+                if (sText) sText.textContent = `Chat with Studio Operator (@${data.store.support_username})`;
+                const mLink = document.getElementById('modal-support-link');
+                if (mLink) mLink.href = `https://t.me/${data.store.support_username}`;
+                const mText = document.getElementById('modal-support-text');
+                if (mText) mText.textContent = `Chat with Studio Operator (@${data.store.support_username})`;
+              }
 
               const elTabCbe = document.getElementById('display-tab-cbe-acc');
               if (elTabCbe) elTabCbe.textContent = STORE_CONFIG.cbeAccount;
@@ -3608,12 +3622,12 @@
 
             <!-- Direct Support Link -->
             <a 
-              href="https://t.me/Yosef_selora" 
+              href="https://t.me/${STORE_CONFIG?.supportUsername || 'Keb_g'}" 
               target="_blank" 
               class="w-full py-3.5 px-4 rounded-xl border border-surface-border bg-white/[0.04] hover:bg-white/[0.08] text-xs sm:text-[13px] font-semibold text-slate-200 flex items-center justify-center space-x-2 transition active:scale-98 shadow-sm"
             >
               <i class="fa-brands fa-telegram text-amber-400 text-sm"></i>
-              <span>Chat with Studio Operator on Telegram</span>
+              <span>Chat with Studio Operator on Telegram (@${STORE_CONFIG?.supportUsername || 'Keb_g'})</span>
             </a>
           `;
           card.classList.remove('hidden');

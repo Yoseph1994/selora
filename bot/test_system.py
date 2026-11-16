@@ -3,7 +3,7 @@ from pathlib import Path
 
 def run_tests():
     print("=" * 60)
-    print("   💛 SELORA PRINTS — SYSTEM HEALTH & DIAGNOSTIC CHECK")
+    print("   💛 SELORA PRINTS - SYSTEM HEALTH & DIAGNOSTIC CHECK")
     print("=" * 60)
 
     # 1. Check Directories
