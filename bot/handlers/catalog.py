@@ -95,11 +95,15 @@ def get_product_card(index: int):
         ]
     ])
 
+    custom_url = (p.get("image_url") or "").strip()
+    if custom_url.startswith(("http://", "https://")):
+        return caption, custom_url, keyboard
+
     image_path = None
     # 1. Check if image_url points to a local file
-    custom_url = p.get("image_url", "").split("?")[0]
-    if custom_url.startswith("/product-images/"):
-        fname = custom_url.replace("/product-images/", "")
+    clean_url = custom_url.split("?")[0]
+    if clean_url.startswith("/product-images/"):
+        fname = clean_url.replace("/product-images/", "")
         cand = PRODUCT_IMAGES_DIR / fname
         if cand.exists():
             image_path = cand
@@ -258,14 +262,18 @@ def get_design_card(index: int, product_id: Optional[str] = None):
         ]
     ])
 
+    custom_url = (d.get("image_url") or "").strip()
+    if custom_url.startswith(("http://", "https://")):
+        return caption, custom_url, keyboard
+
     image_path = None
     cand = DESIGNS_IMAGES_DIR / f"{d['id']}.png"
     if cand.exists():
         image_path = cand
     else:
-        custom_url = d.get("image_url", "").split("?")[0]
-        if custom_url.startswith("/designs-images/"):
-            fname = custom_url.replace("/designs-images/", "")
+        clean_url = custom_url.split("?")[0]
+        if clean_url.startswith("/designs-images/"):
+            fname = clean_url.replace("/designs-images/", "")
             cand = DESIGNS_IMAGES_DIR / fname
             if cand.exists():
                 image_path = cand

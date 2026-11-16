@@ -19,6 +19,7 @@ DATA_DIR = Path(__file__).resolve().parent
 DB_PATH = DATA_DIR / "selora_orders.db"
 
 # Default seed catalog, styles, and portfolio when initializing an empty database
+# High-resolution, aesthetic curated photography matching each custom print item
 DEFAULT_PRODUCTS = [
     {
         "id": "stickers",
@@ -27,7 +28,7 @@ DEFAULT_PRODUCTS = [
         "unit": "per piece",
         "min_order": 15,
         "description": "High-quality custom printed stickers, vibrant colors and durable finish. Minimum order: 15 pieces.",
-        "image_url": "/product-images/stickers.png",
+        "image_url": "https://images.unsplash.com/photo-1589384267710-7a170981ca78?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": True
     },
     {
@@ -37,7 +38,7 @@ DEFAULT_PRODUCTS = [
         "unit": "per piece",
         "min_order": 2,
         "description": "Beautiful custom printed bookmarks for book lovers and students. Minimum order: 2 pieces.",
-        "image_url": "/product-images/bookmarks.png",
+        "image_url": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": True
     },
     {
@@ -47,7 +48,7 @@ DEFAULT_PRODUCTS = [
         "unit": "per piece",
         "min_order": 50,
         "description": "Professional high-resolution business cards for your brand and networking. Minimum order: 50 pieces.",
-        "image_url": "/product-images/business_cards.png",
+        "image_url": "https://images.unsplash.com/photo-1616628188859-7a11abb6fcc9?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": True
     },
     {
@@ -57,7 +58,7 @@ DEFAULT_PRODUCTS = [
         "unit": "per piece",
         "min_order": 10,
         "description": "Classic vintage-style polaroid photo prints of your personal photos and memories. Minimum order: 10 pieces.",
-        "image_url": "/product-images/polaroid.png",
+        "image_url": "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": False
     },
     {
@@ -67,7 +68,7 @@ DEFAULT_PRODUCTS = [
         "unit": "each",
         "min_order": 1,
         "description": "Compact, portable pocket-sized notebook for quick notes and sketches.",
-        "image_url": "/product-images/mini_notebook.png",
+        "image_url": "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": True
     },
     {
@@ -77,7 +78,7 @@ DEFAULT_PRODUCTS = [
         "unit": "each",
         "min_order": 1,
         "description": "Standard custom branded/aesthetic notebook with high quality paper.",
-        "image_url": "/product-images/notebook.png",
+        "image_url": "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": True
     },
     {
@@ -87,7 +88,7 @@ DEFAULT_PRODUCTS = [
         "unit": "each",
         "min_order": 1,
         "description": "Custom bound pocket minibook with elegant white cover. Personal photos album.",
-        "image_url": "/product-images/minibook.png",
+        "image_url": "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": False
     },
     {
@@ -97,7 +98,7 @@ DEFAULT_PRODUCTS = [
         "unit": "each",
         "min_order": 1,
         "description": "Sleek custom bound pocket minibook with premium black cover. Personal photos album.",
-        "image_url": "/product-images/minibook.png",
+        "image_url": "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": False
     },
     {
@@ -107,7 +108,7 @@ DEFAULT_PRODUCTS = [
         "unit": "each",
         "min_order": 1,
         "description": "Medium-sized custom photo book for your personal memories with high-res binding.",
-        "image_url": "/product-images/minibook.png",
+        "image_url": "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": False
     },
     {
@@ -117,7 +118,7 @@ DEFAULT_PRODUCTS = [
         "unit": "each",
         "min_order": 1,
         "description": "A5 premium custom bound photo book for personal collections and special occasions.",
-        "image_url": "/product-images/notebook.png",
+        "image_url": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": False
     },
     {
@@ -127,7 +128,7 @@ DEFAULT_PRODUCTS = [
         "unit": "each",
         "min_order": 1,
         "description": "Large A4 luxury custom photo book for portfolios, weddings, and milestones.",
-        "image_url": "/product-images/notebook.png",
+        "image_url": "https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": False
     },
     {
@@ -137,7 +138,7 @@ DEFAULT_PRODUCTS = [
         "unit": "each",
         "min_order": 1,
         "description": "Custom printed ceramic mug, dishwasher and microwave safe. Great for gifts!",
-        "image_url": "/product-images/mug.png",
+        "image_url": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": True
     },
     {
@@ -147,7 +148,7 @@ DEFAULT_PRODUCTS = [
         "unit": "each",
         "min_order": 1,
         "description": "Personalized custom photo jigsaw puzzle made from your favorite photo.",
-        "image_url": "/product-images/puzzle.png",
+        "image_url": "https://images.unsplash.com/photo-1588702547919-26089e690ecc?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": False
     },
     {
@@ -157,7 +158,7 @@ DEFAULT_PRODUCTS = [
         "unit": "per piece",
         "min_order": 10,
         "description": "Peel & stick wall/glass/smooth surface poster in A5 size. Minimum order: 10 pieces.",
-        "image_url": "/product-images/sticker_poster_a5.png",
+        "image_url": "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": True
     },
     {
@@ -167,7 +168,7 @@ DEFAULT_PRODUCTS = [
         "unit": "per piece",
         "min_order": 10,
         "description": "Peel & stick wall/glass/smooth surface poster in A4 size. Minimum order: 10 pieces.",
-        "image_url": "/product-images/sticker_poster_a4.png",
+        "image_url": "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80",
         "has_ready_designs": True
     }
 ]
@@ -181,7 +182,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Studio Ghibli Anime",
         "category": "Anime & Ghibli",
         "description": "Whimsical watercolor characters and scenes inspired by Miyazaki classics.",
-        "image_url": "/designs-images/des_stickers_1.png"
+        "image_url": "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_stickers_2",
@@ -191,7 +192,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Vintage & Coffee",
         "category": "Vintage & Aesthetic",
         "description": "Warm muted earth tones featuring lattes, antique typewriters, and autumn leaves.",
-        "image_url": "/designs-images/des_stickers_2.png"
+        "image_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_stickers_3",
@@ -201,7 +202,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Typography & Quotes",
         "category": "Typography",
         "description": "Modern bold typography and uplifting affirmations in warm gold and pastel colors.",
-        "image_url": "/designs-images/des_stickers_3.png"
+        "image_url": "https://images.unsplash.com/photo-1555421689-491a97ff2040?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_bookmarks_1",
@@ -211,7 +212,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Dark Academia",
         "category": "Dark Academia",
         "description": "Gothic arches, golden celestial star maps, and moody Renaissance oil painting textures.",
-        "image_url": "/designs-images/des_bookmarks_1.png"
+        "image_url": "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_bookmarks_2",
@@ -221,7 +222,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Floral & Botanicals",
         "category": "Floral & Nature",
         "description": "Delicate botanicals with pressed lavender, chamomile, and soft pastel greenery.",
-        "image_url": "/designs-images/des_bookmarks_2.png"
+        "image_url": "https://images.unsplash.com/photo-1508615039623-a25605d2b022?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_cards_1",
@@ -231,7 +232,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Modern Corporate",
         "category": "Minimalist",
         "description": "High-contrast minimalist layout ideal for tech founders, lawyers, and consultants.",
-        "image_url": "/designs-images/des_cards_1.png"
+        "image_url": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_cards_2",
@@ -241,7 +242,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Luxury & Foil",
         "category": "Luxury",
         "description": "Ultra-premium textured black cardstock simulation with elegant gold metallic accents.",
-        "image_url": "/designs-images/des_cards_2.png"
+        "image_url": "https://images.unsplash.com/photo-1616628188859-7a11abb6fcc9?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_polaroid_1",
@@ -251,7 +252,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Classic Vintage",
         "category": "Vintage",
         "description": "Authentic nostalgic instant camera frame with writable bottom margin.",
-        "image_url": "/designs-images/des_polaroid_1.png"
+        "image_url": "https://images.unsplash.com/photo-1552168324-d612d77725e3?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_polaroid_2",
@@ -261,7 +262,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Retro Film",
         "category": "Retro",
         "description": "Vintage orange date stamp in corner with subtle film emulsion texture.",
-        "image_url": "/designs-images/des_polaroid_2.png"
+        "image_url": "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_book_1",
@@ -271,7 +272,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Wedding & Couple",
         "category": "Wedding & Romance",
         "description": "Pure white linen aesthetic with romantic typography, perfect for couples and anniversary gifts.",
-        "image_url": "/designs-images/des_book_1.png"
+        "image_url": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_book_2",
@@ -281,7 +282,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Luxury Keepsake",
         "category": "Luxury Portfolio",
         "description": "Matte black cover finish for high-end photography, portfolio showcases, and moody aesthetics.",
-        "image_url": "/designs-images/des_book_2.png"
+        "image_url": "https://images.unsplash.com/photo-1495640388908-05fa85288e61?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "des_mug_1",
@@ -291,7 +292,7 @@ DEFAULT_DESIGNS = [
         "subproduct": "Ethiopian Heritage",
         "category": "Heritage & Culture",
         "description": "Traditional average and coffee ceremony artwork printed in rich ceramic glaze.",
-        "image_url": "/designs-images/des_mug_1.png"
+        "image_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80"
     }
 ]
 
@@ -301,42 +302,42 @@ DEFAULT_PORTFOLIO = [
         "title": "Aesthetic Laptop & Bottle Stickers",
         "category": "Stickers",
         "description": "Die-cut waterproof vinyl stickers with holographic and matte lamination. Tested on laptops, bottles, and phone cases.",
-        "image_url": "/product-images/stickers.png"
+        "image_url": "https://images.unsplash.com/photo-1572375992501-4b0892d50c69?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "work_2",
         "title": "Hardcover Keepsake Minibooks",
         "category": "Photo Books",
         "description": "Pocket minibooks featuring 24 full-color photographic pages on archival luster paper with foil-stamped covers.",
-        "image_url": "/product-images/minibook.png"
+        "image_url": "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "work_3",
         "title": "Velvet Touch Luxury Bookmarks",
         "category": "Bookmarks",
         "description": "Double-sided 400gsm artboard bookmarks with custom typography, tassel ribbons, and soft-touch velvet finish.",
-        "image_url": "/product-images/bookmarks.png"
+        "image_url": "https://images.unsplash.com/photo-1476275466078-4007374efbbe?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "work_4",
         "title": "Executive Matte Business Cards",
         "category": "Business Cards",
         "description": "Premium 600gsm cotton business cards with spot UV gloss and rounded corners for creative agencies and professionals.",
-        "image_url": "/product-images/business_cards.png"
+        "image_url": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "work_5",
         "title": "Custom Ceramic Celebration Mugs",
         "category": "Mugs",
         "description": "Glossy high-definition dye sublimation mugs with custom illustrations, photos, and personalized names.",
-        "image_url": "/product-images/mug.png"
+        "image_url": "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=800&q=80"
     },
     {
         "id": "work_6",
         "title": "Personalized 120-Piece Photo Puzzle",
         "category": "Puzzles",
         "description": "Glossy cardboard photo puzzle in a custom presentation gift box for family anniversaries and birthdays.",
-        "image_url": "/product-images/puzzle.png"
+        "image_url": "https://images.unsplash.com/photo-1588702547919-26089e690ecc?auto=format&fit=crop&w=800&q=80"
     }
 ]
 
@@ -638,6 +639,27 @@ def init_db():
             logger.info("Seeded portfolio table in database with showcase items")
     except Exception as e:
         logger.warning(f"Portfolio seed notice: {e}")
+
+    # Migrate/Upgrade existing placeholder image URLs to high-resolution aesthetic photography
+    try:
+        for p in DEFAULT_PRODUCTS:
+            cursor.execute(
+                q("UPDATE products SET image_url = ? WHERE id = ? AND (image_url LIKE '/product-images/%' OR image_url IS NULL OR image_url = '')", is_pg),
+                (p["image_url"], p["id"])
+            )
+        for d in DEFAULT_DESIGNS:
+            cursor.execute(
+                q("UPDATE designs SET image_url = ? WHERE id = ? AND (image_url LIKE '/designs-images/%' OR image_url IS NULL OR image_url = '')", is_pg),
+                (d["image_url"], d["id"])
+            )
+        for item in DEFAULT_PORTFOLIO:
+            cursor.execute(
+                q("UPDATE portfolio SET image_url = ? WHERE id = ? AND (image_url LIKE '/product-images/%' OR image_url LIKE '/designs-images/%' OR image_url IS NULL OR image_url = '')", is_pg),
+                (item["image_url"], item["id"])
+            )
+        conn.commit()
+    except Exception as e:
+        logger.warning(f"Notice during image URL upgrade migration: {e}")
 
     # Sanitize existing orders if notes had REJECTED REASON appended historically
     try:

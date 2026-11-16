@@ -505,7 +505,7 @@ async def webapp_submit_order_full(
         except Exception as e:
             logger.error(f"Failed to save payment receipt file: {e}")
 
-    # 3. Construct rich notes
+    # 3. Construct clean notes (Customer Customization Instructions)
     note_parts = []
     if design_note:
         note_parts.append(f"Design: {design_note}")
@@ -513,8 +513,6 @@ async def webapp_submit_order_full(
         note_parts.append(f"Custom Note: {notes.strip()}")
     if transaction_ref and transaction_ref.strip():
         note_parts.append(f"Ref: {transaction_ref.strip()}")
-    if payment_method:
-        note_parts.append(f"Paid via {payment_method}")
     if total_price:
         note_parts.append(f"Total: {total_price:.0f} ETB (Deposit: {deposit_amount:.0f} ETB)")
     full_notes = " | ".join(note_parts)
@@ -764,9 +762,12 @@ def enrich_order_data(o: dict) -> dict:
         parts = [p.strip() for p in cleaned_notes.split("|") if p.strip()]
         cust_parts = []
         for p in parts:
-            if not re.match(r"^(Deposit|Total|GPS|Ready Design|Design Note|Design|Paid via|Ref|Payment Method):\s*", p, re.IGNORECASE):
+            if not re.match(r"^(Deposit|Total|GPS|Ready Design|Design Note|Design|Paid via|Payment|Ref|Payment Method)\b", p, re.IGNORECASE):
                 p_lower = p.lower()
-                if p_lower not in ("none", "null", "n/a", "placed via webapp") and not p_lower.startswith(("customer artwork", "ready design", "selora custom design")):
+                if (
+                    p_lower not in ("none", "null", "n/a", "placed via webapp")
+                    and not p_lower.startswith(("customer artwork", "ready design", "selora custom design", "paid via", "payment", "cbe", "telebirr"))
+                ):
                     cust_parts.append(p)
         o["custom_instructions"] = " | ".join(cust_parts) if cust_parts else ""
 

@@ -52,10 +52,14 @@ def get_portfolio_card(index: int):
         ]
     ])
 
+    custom_url = (item.get("image_url") or "").strip()
+    if custom_url.startswith(("http://", "https://")):
+        return caption, custom_url, keyboard
+
     image_path = None
-    custom_url = item.get("image_url", "").split("?")[0]
-    if custom_url.startswith("/product-images/"):
-        fname = custom_url.replace("/product-images/", "")
+    clean_url = custom_url.split("?")[0]
+    if clean_url.startswith("/product-images/"):
+        fname = clean_url.replace("/product-images/", "")
         cand = PRODUCT_IMAGES_DIR / fname
         if cand.exists():
             image_path = cand
