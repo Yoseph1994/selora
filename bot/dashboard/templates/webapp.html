@@ -330,6 +330,9 @@
           <!-- Dynamically populated via renderTrackOrdersList() -->
         </div>
 
+        <!-- Track Orders Pagination -->
+        <div id="track-orders-pagination" class="flex items-center justify-center pt-2 pb-1"></div>
+
         <div id="track-filter-empty" class="hidden text-center py-6 px-4 rounded-2xl bg-white/[0.02] border border-surface-border text-slate-400 text-xs space-y-1">
           <i class="fa-solid fa-inbox text-slate-500 text-lg mb-1"></i>
           <p id="track-filter-empty-msg">No orders match this filter.</p>
@@ -3355,6 +3358,8 @@
     let trackFilter = 'all'; // 'all' | 'accepted' | 'rejected' | 'done'
     let myOrdersList = [];
     let selectedTrackCode = null;
+    let trackOrdersCurrentPage = 1;
+    const TRACK_ORDERS_PER_PAGE = 4;
 
     function classifyTrackOrder(o) {
       const st = (o.status || '').toLowerCase();
@@ -3374,6 +3379,7 @@
 
     function setTrackFilter(f) {
       trackFilter = f;
+      trackOrdersCurrentPage = 1;
       ['all', 'accepted', 'rejected', 'done'].forEach(key => {
         const btn = document.getElementById(`track-filter-btn-${key}`);
         const badge = document.getElementById(`track-count-${key}`);
@@ -3422,6 +3428,9 @@
         return classifyTrackOrder(o) === trackFilter;
       });
 
+      const totalPages = Math.ceil(filtered.length / TRACK_ORDERS_PER_PAGE) || 1;
+      if (trackOrdersCurrentPage > totalPages) trackOrdersCurrentPage = 1;
+
       listEl.innerHTML = '';
 
       if (filtered.length === 0) {
@@ -3439,12 +3448,16 @@
             }
           }
         }
+        renderPaginationControls('track-orders-pagination', 1, 0, () => {});
         return;
       }
 
       if (emptyEl) emptyEl.classList.add('hidden');
 
-      filtered.forEach(o => {
+      const start = (trackOrdersCurrentPage - 1) * TRACK_ORDERS_PER_PAGE;
+      const pageSlice = filtered.slice(start, start + TRACK_ORDERS_PER_PAGE);
+
+      pageSlice.forEach(o => {
         const isFraud = (o.rejection_type === 'fraud' || o.payment_status === 'fraud');
         const isRejected = (o.status === 'rejected' || o.payment_status === 'rejected' || o.rejection_type === 'artwork');
         let statusBadgeClass = 'bg-amber-500/10 text-amber-300 border-amber-500/25';
@@ -3500,6 +3513,11 @@
           </button>
         `;
         listEl.appendChild(itemCard);
+      });
+
+      renderPaginationControls('track-orders-pagination', trackOrdersCurrentPage, totalPages, (newPage) => {
+        trackOrdersCurrentPage = newPage;
+        renderTrackOrdersList();
       });
     }
 

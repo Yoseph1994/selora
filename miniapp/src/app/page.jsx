@@ -16,6 +16,7 @@ import {
   Sparkles, 
   Layers, 
   ChevronRight, 
+  ChevronLeft, 
   ArrowLeft,
   X,
   UploadCloud,
@@ -390,6 +391,8 @@ export default function SeloraMiniApp() {
   const [trackingError, setTrackingError] = useState('');
   const [userOrders, setUserOrders] = useState([]);
   const [ordersFilter, setOrdersFilter] = useState('all');
+  const [trackPage, setTrackPage] = useState(1);
+  const TRACK_ORDERS_PER_PAGE = 4;
 
   function classifyOrder(o) {
     if (!o) return 'accepted';
@@ -1093,6 +1096,7 @@ export default function SeloraMiniApp() {
                       onClick={() => {
                         triggerHaptic('selection');
                         setOrdersFilter(f.id);
+                        setTrackPage(1);
                       }}
                       className={`py-1.5 px-1 rounded-lg text-center transition flex items-center justify-center space-x-1 cursor-pointer active:scale-95 ${
                         ordersFilter === f.id
@@ -1110,88 +1114,155 @@ export default function SeloraMiniApp() {
                   ))}
                 </div>
 
-                {/* Filtered Order Cards List */}
-                <div className="space-y-2">
-                  {userOrders
-                    .filter(o => ordersFilter === 'all' || classifyOrder(o) === ordersFilter)
-                    .map(o => {
-                      const cat = classifyOrder(o);
-                      const isSelected = trackedOrder?.order_code === o.order_code;
-                      const isFraud = (o.rejection_type === 'fraud' || o.payment_status === 'fraud');
-                      const isRejected = (o.status === 'rejected' || o.payment_status === 'rejected' || o.rejection_type === 'artwork');
-                      return (
-                        <div
-                          key={o.order_code}
-                          onClick={() => {
-                            triggerHaptic('light');
-                            setTrackingInput(o.order_code);
-                            setTrackedOrder(o);
-                          }}
-                          className={`p-3.5 rounded-2xl transition cursor-pointer flex items-center justify-between group shadow-sm ${
-                            isSelected
-                              ? 'bg-amber-400/[0.08] border-2 border-amber-400 shadow-amber-400/10 ring-1 ring-amber-400/30'
-                              : 'bg-white/[0.03] border border-white/10 hover:border-amber-400/50'
-                          }`}
-                        >
-                          <div className="space-y-1.5 min-w-0 flex-1 pr-3">
-                            <div className="flex items-center space-x-2">
-                              <span className="font-mono text-sm font-bold text-amber-300 tracking-wider">{o.order_code}</span>
-                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                cat === 'done'
-                                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 font-bold'
-                                  : (isFraud
-                                      ? 'bg-rose-900/40 text-rose-300 border-rose-700/60 font-bold'
-                                      : (isRejected
-                                          ? 'bg-rose-500/15 text-rose-300 border-rose-500/30 font-bold'
-                                          : (o.status === 'in_production'
-                                              ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 font-bold'
-                                              : (o.status === 'ready' || o.status === 'ready_for_delivery'
-                                                  ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30 font-bold'
-                                                  : 'bg-amber-500/10 text-amber-300 border-amber-500/25 font-bold'))))
-                              }`}>
-                                {cat === 'done'
-                                  ? (lang === 'en' ? 'Done ✓' : 'ተጠናቋል ✓')
-                                  : (isFraud
-                                      ? (lang === 'en' ? 'Flagged: Forgery ⚠️' : 'ተሰርዟል ⚠️')
-                                      : (isRejected
-                                          ? (lang === 'en' ? 'Revision Required' : 'ማስተካከያ ይፈልጋል')
-                                          : (o.status === 'in_production'
-                                              ? (lang === 'en' ? 'Under Work' : 'በህትመት ላይ')
-                                              : (o.status === 'ready' || o.status === 'ready_for_delivery'
-                                                  ? (lang === 'en' ? 'Ready' : 'ዝግጁ ነው')
-                                                  : (lang === 'en' ? 'Pending Review' : 'በግምገማ ላይ')))))}
-                              </span>
-                            </div>
-                            <div className="text-xs text-slate-200 font-semibold truncate">{o.items || 'Custom Order'}</div>
-                            <div className="text-[11px] text-slate-400 flex items-center space-x-2">
-                              {o.deadline && <span>{lang === 'en' ? 'Target: ' : 'የመድረሻ ቀን: '} {o.deadline}</span>}
-                              {o.delivery_type && (
-                                <>
-                                  <span className="text-slate-600">•</span>
-                                  <span>{o.delivery_type}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-300 transition shrink-0" />
-                        </div>
-                      );
-                    })}
+                {/* Filtered Order Cards List with Pagination */}
+                {(() => {
+                  const filteredOrders = userOrders.filter(o => ordersFilter === 'all' || classifyOrder(o) === ordersFilter);
+                  const totalTrackPages = Math.ceil(filteredOrders.length / TRACK_ORDERS_PER_PAGE) || 1;
+                  const currentTrackPageSafe = Math.min(trackPage, totalTrackPages);
+                  const startIdx = (currentTrackPageSafe - 1) * TRACK_ORDERS_PER_PAGE;
+                  const pagedOrders = filteredOrders.slice(startIdx, startIdx + TRACK_ORDERS_PER_PAGE);
 
-                  {userOrders.filter(o => ordersFilter === 'all' || classifyOrder(o) === ordersFilter).length === 0 && (
-                    <div className="text-center py-6 px-4 rounded-2xl bg-white/[0.02] border border-white/5 text-slate-400 text-xs space-y-1">
-                      <p>
-                        {ordersFilter === 'rejected'
-                          ? (lang === 'en' ? 'No rejected orders. Everything is progressing smoothly!' : 'ምንም ውድቅ የተደረገ ትዕዛዝ የለም።')
-                          : (ordersFilter === 'accepted'
-                              ? (lang === 'en' ? 'No active orders in production.' : 'በስራ ላይ ያለ ትዕዛዝ የለም።')
-                              : (ordersFilter === 'done'
-                                  ? (lang === 'en' ? 'No completed orders yet.' : 'ምንም የተጠናቀቀ ትዕዛዝ የለም።')
-                                  : (lang === 'en' ? 'No orders found.' : 'ምንም ትዕዛዝ አልተገኘም።')))}
-                      </p>
+                  return (
+                    <div className="space-y-2">
+                      {pagedOrders.map(o => {
+                        const cat = classifyOrder(o);
+                        const isSelected = trackedOrder?.order_code === o.order_code;
+                        const isFraud = (o.rejection_type === 'fraud' || o.payment_status === 'fraud');
+                        const isRejected = (o.status === 'rejected' || o.payment_status === 'rejected' || o.rejection_type === 'artwork');
+                        return (
+                          <div
+                            key={o.order_code}
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setTrackingInput(o.order_code);
+                              setTrackedOrder(o);
+                            }}
+                            className={`p-3.5 rounded-2xl transition cursor-pointer flex items-center justify-between group shadow-sm ${
+                              isSelected
+                                ? 'bg-amber-400/[0.08] border-2 border-amber-400 shadow-amber-400/10 ring-1 ring-amber-400/30'
+                                : 'bg-white/[0.03] border border-white/10 hover:border-amber-400/50'
+                            }`}
+                          >
+                            <div className="space-y-1.5 min-w-0 flex-1 pr-3">
+                              <div className="flex items-center space-x-2">
+                                <span className="font-mono text-sm font-bold text-amber-300 tracking-wider">{o.order_code}</span>
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  cat === 'done'
+                                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 font-bold'
+                                    : (isFraud
+                                        ? 'bg-rose-900/40 text-rose-300 border-rose-700/60 font-bold'
+                                        : (isRejected
+                                            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30 font-bold'
+                                            : (o.status === 'in_production'
+                                                ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 font-bold'
+                                                : (o.status === 'ready' || o.status === 'ready_for_delivery'
+                                                    ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30 font-bold'
+                                                    : 'bg-amber-500/10 text-amber-300 border-amber-500/25 font-bold'))))
+                                }`}>
+                                  {cat === 'done'
+                                    ? (lang === 'en' ? 'Done ✓' : 'ተጠናቋል ✓')
+                                    : (isFraud
+                                        ? (lang === 'en' ? 'Flagged: Forgery ⚠️' : 'ተሰርዟል ⚠️')
+                                        : (isRejected
+                                            ? (lang === 'en' ? 'Revision Required' : 'ማስተካከያ ይፈልጋል')
+                                            : (o.status === 'in_production'
+                                                ? (lang === 'en' ? 'Under Work' : 'በህትመት ላይ')
+                                                : (o.status === 'ready' || o.status === 'ready_for_delivery'
+                                                    ? (lang === 'en' ? 'Ready' : 'ዝግጁ ነው')
+                                                    : (lang === 'en' ? 'Pending Review' : 'በግምገማ ላይ')))))}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-200 font-semibold truncate">{o.items || 'Custom Order'}</div>
+                              <div className="text-[11px] text-slate-400 flex items-center space-x-2">
+                                {o.deadline && <span>{lang === 'en' ? 'Target: ' : 'የመድረሻ ቀን: '} {o.deadline}</span>}
+                                {o.delivery_type && (
+                                  <>
+                                    <span className="text-slate-600">•</span>
+                                    <span>{o.delivery_type}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-300 transition shrink-0" />
+                          </div>
+                        );
+                      })}
+
+                      {filteredOrders.length === 0 && (
+                        <div className="text-center py-6 px-4 rounded-2xl bg-white/[0.02] border border-white/5 text-slate-400 text-xs space-y-1">
+                          <p>
+                            {ordersFilter === 'rejected'
+                              ? (lang === 'en' ? 'No rejected orders. Everything is progressing smoothly!' : 'ምንም ውድቅ የተደረገ ትዕዛዝ የለም።')
+                              : (ordersFilter === 'accepted'
+                                  ? (lang === 'en' ? 'No active orders in production.' : 'በስራ ላይ ያለ ትዕዛዝ የለም።')
+                                  : (ordersFilter === 'done'
+                                      ? (lang === 'en' ? 'No completed orders yet.' : 'ምንም የተጠናቀቀ ትዕዛዝ የለም።')
+                                      : (lang === 'en' ? 'No orders found.' : 'ምንም ትዕዛዝ አልተገኘም።')))}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Pagination Controls */}
+                      {totalTrackPages > 1 && (
+                        <div className="flex items-center justify-center pt-2 pb-1">
+                          <div className="flex items-center space-x-1.5 bg-white/[0.04] border border-white/10 rounded-2xl p-1.5 shadow-sm">
+                            <button
+                              type="button"
+                              disabled={currentTrackPageSafe === 1}
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setTrackPage(p => Math.max(1, p - 1));
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1 transition active:scale-95 ${
+                                currentTrackPageSafe === 1
+                                  ? 'text-slate-600 cursor-not-allowed'
+                                  : 'text-slate-300 hover:text-white bg-white/[0.04] cursor-pointer'
+                              }`}
+                            >
+                              <ChevronLeft className="w-3.5 h-3.5" />
+                              <span>Prev</span>
+                            </button>
+
+                            {Array.from({ length: totalTrackPages }, (_, i) => i + 1).map(p => (
+                              <button
+                                key={p}
+                                type="button"
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  setTrackPage(p);
+                                }}
+                                className={`w-7 h-7 rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center cursor-pointer ${
+                                  p === currentTrackPageSafe
+                                    ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20'
+                                    : 'text-slate-400 hover:text-white bg-white/[0.03]'
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            ))}
+
+                            <button
+                              type="button"
+                              disabled={currentTrackPageSafe === totalTrackPages}
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setTrackPage(p => Math.min(totalTrackPages, p + 1));
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1 transition active:scale-95 ${
+                                currentTrackPageSafe === totalTrackPages
+                                  ? 'text-slate-600 cursor-not-allowed'
+                                  : 'text-slate-300 hover:text-white bg-white/[0.04] cursor-pointer'
+                              }`}
+                            >
+                              <span>Next</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
             )}
 
