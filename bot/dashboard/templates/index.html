@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <title>Selora Prints - Operations Dashboard</title>
 
   <!-- Typography: Inter font -->
@@ -366,20 +367,14 @@
                 </td>
 
                 <!-- Customer Customization Notes -->
-                <td class="py-3.5 px-3 max-w-[220px]">
+                <td class="py-3.5 px-3.5 whitespace-nowrap">
                   {% if o.custom_instructions %}
-                  <button type="button" onclick="openDetailModal('Customization Instructions', {{ o.custom_instructions|tojson }}, '{{ o.order_code }}', 'note')" class="group text-left p-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/90 text-amber-950 transition max-w-[210px] w-full flex items-start space-x-1.5 cursor-pointer shadow-2xs">
-                    <i class="fa-solid fa-pen-fancy text-amber-600 text-xs mt-0.5 shrink-0"></i>
-                    <div class="min-w-0 flex-1">
-                      <div class="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between">
-                        <span>Note</span>
-                        <i class="fa-solid fa-up-right-from-square text-[9px] text-amber-700 opacity-60 group-hover:opacity-100 transition"></i>
-                      </div>
-                      <div class="text-xs font-medium text-amber-900 truncate mt-0.5" title="{{ o.custom_instructions }}">{{ o.custom_instructions }}</div>
-                    </div>
+                  <button type="button" onclick="viewCustomerNote({{ o.custom_instructions|tojson }}, '{{ o.order_code }}')" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-medium transition cursor-pointer">
+                    <i class="fa-solid fa-note-sticky text-amber-600 text-xs"></i>
+                    <span>Note</span>
                   </button>
                   {% else %}
-                  <span class="text-[11px] text-slate-400 italic">None</span>
+                  <span class="text-[11px] text-slate-400 italic">No notes</span>
                   {% endif %}
                 </td>
 
@@ -1447,6 +1442,10 @@
 
     function closeDetailModal() {
       document.getElementById('order-detail-modal').classList.add('hidden');
+    }
+
+    function viewCustomerNote(noteText, orderCode) {
+      openDetailModal('Customer Customization Note', noteText, orderCode, 'note');
     }
 
     function copyDetailModalContent() {

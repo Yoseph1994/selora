@@ -565,101 +565,137 @@ def init_db():
 
         conn.commit()
 
-    # Seed products if empty
+    # Sync/Upsert products with default catalog and high-res photography
     try:
-        cursor.execute(q("SELECT COUNT(*) FROM products", is_pg))
-        count_row = cursor.fetchone()
-        count = count_row[0] if not is_pg else (list(count_row.values())[0] if isinstance(count_row, dict) else count_row[0])
-        if count == 0:
-            for p in DEFAULT_PRODUCTS:
-                cursor.execute(
-                    q("INSERT INTO products (id, name, price, unit, min_order, description, image_url, has_ready_designs, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", is_pg),
-                    (
-                        p["id"],
-                        p["name"],
-                        p.get("price"),
-                        p.get("unit", "per piece"),
-                        p.get("min_order", 1),
-                        p.get("description", ""),
-                        p.get("image_url", ""),
-                        1 if p.get("has_ready_designs", True) else 0,
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    )
-                )
-            conn.commit()
-            logger.info("Seeded products table in database with default catalog")
-    except Exception as e:
-        logger.warning(f"Product seed notice: {e}")
-
-    # Seed designs if empty
-    try:
-        cursor.execute(q("SELECT COUNT(*) FROM designs", is_pg))
-        count_row = cursor.fetchone()
-        count = count_row[0] if not is_pg else (list(count_row.values())[0] if isinstance(count_row, dict) else count_row[0])
-        if count == 0:
-            for d in DEFAULT_DESIGNS:
-                cursor.execute(
-                    q("INSERT INTO designs (id, product_id, product_name, subproduct, category, title, description, image_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", is_pg),
-                    (
-                        d["id"],
-                        d.get("product_id", ""),
-                        d.get("product_name", ""),
-                        d.get("subproduct", ""),
-                        d.get("category", ""),
-                        d.get("title", ""),
-                        d.get("description", ""),
-                        d.get("image_url", ""),
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    )
-                )
-            conn.commit()
-            logger.info("Seeded designs table in database with default styles")
-    except Exception as e:
-        logger.warning(f"Design seed notice: {e}")
-
-    # Seed portfolio if empty
-    try:
-        cursor.execute(q("SELECT COUNT(*) FROM portfolio", is_pg))
-        count_row = cursor.fetchone()
-        count = count_row[0] if not is_pg else (list(count_row.values())[0] if isinstance(count_row, dict) else count_row[0])
-        if count == 0:
-            for item in DEFAULT_PORTFOLIO:
-                cursor.execute(
-                    q("INSERT INTO portfolio (id, title, category, description, image_url, created_at) VALUES (?, ?, ?, ?, ?, ?)", is_pg),
-                    (
-                        item["id"],
-                        item.get("title", ""),
-                        item.get("category", ""),
-                        item.get("description", ""),
-                        item.get("image_url", ""),
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    )
-                )
-            conn.commit()
-            logger.info("Seeded portfolio table in database with showcase items")
-    except Exception as e:
-        logger.warning(f"Portfolio seed notice: {e}")
-
-    # Migrate/Upgrade existing placeholder image URLs to high-resolution aesthetic photography
-    try:
+        if is_pg:
+            sql_prod = """
+                INSERT INTO products (id, name, price, unit, min_order, description, image_url, has_ready_designs, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    price = EXCLUDED.price,
+                    unit = EXCLUDED.unit,
+                    min_order = EXCLUDED.min_order,
+                    description = EXCLUDED.description,
+                    image_url = EXCLUDED.image_url,
+                    has_ready_designs = EXCLUDED.has_ready_designs;
+            """
+        else:
+            sql_prod = """
+                INSERT INTO products (id, name, price, unit, min_order, description, image_url, has_ready_designs, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    name = excluded.name,
+                    price = excluded.price,
+                    unit = excluded.unit,
+                    min_order = excluded.min_order,
+                    description = excluded.description,
+                    image_url = excluded.image_url,
+                    has_ready_designs = excluded.has_ready_designs;
+            """
         for p in DEFAULT_PRODUCTS:
-            cursor.execute(
-                q("UPDATE products SET image_url = ? WHERE id = ? AND (image_url LIKE '/product-images/%' OR image_url IS NULL OR image_url = '')", is_pg),
-                (p["image_url"], p["id"])
-            )
-        for d in DEFAULT_DESIGNS:
-            cursor.execute(
-                q("UPDATE designs SET image_url = ? WHERE id = ? AND (image_url LIKE '/designs-images/%' OR image_url IS NULL OR image_url = '')", is_pg),
-                (d["image_url"], d["id"])
-            )
-        for item in DEFAULT_PORTFOLIO:
-            cursor.execute(
-                q("UPDATE portfolio SET image_url = ? WHERE id = ? AND (image_url LIKE '/product-images/%' OR image_url LIKE '/designs-images/%' OR image_url IS NULL OR image_url = '')", is_pg),
-                (item["image_url"], item["id"])
-            )
+            cursor.execute(sql_prod, (
+                p["id"],
+                p["name"],
+                p.get("price"),
+                p.get("unit", "per piece"),
+                p.get("min_order", 1),
+                p.get("description", ""),
+                p.get("image_url", ""),
+                1 if p.get("has_ready_designs", True) else 0,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ))
         conn.commit()
+        logger.info("Synced products table in database with verified catalog.")
     except Exception as e:
-        logger.warning(f"Notice during image URL upgrade migration: {e}")
+        logger.error(f"Product sync notice: {e}")
+        if is_pg:
+            conn.rollback()
+
+    # Sync/Upsert designs with curated styles
+    try:
+        if is_pg:
+            sql_des = """
+                INSERT INTO designs (id, product_id, product_name, subproduct, category, title, description, image_url, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    product_id = EXCLUDED.product_id,
+                    product_name = EXCLUDED.product_name,
+                    subproduct = EXCLUDED.subproduct,
+                    category = EXCLUDED.category,
+                    title = EXCLUDED.title,
+                    description = EXCLUDED.description,
+                    image_url = EXCLUDED.image_url;
+            """
+        else:
+            sql_des = """
+                INSERT INTO designs (id, product_id, product_name, subproduct, category, title, description, image_url, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    product_id = excluded.product_id,
+                    product_name = excluded.product_name,
+                    subproduct = excluded.subproduct,
+                    category = excluded.category,
+                    title = excluded.title,
+                    description = excluded.description,
+                    image_url = excluded.image_url;
+            """
+        for d in DEFAULT_DESIGNS:
+            cursor.execute(sql_des, (
+                d["id"],
+                d.get("product_id", ""),
+                d.get("product_name", ""),
+                d.get("subproduct", ""),
+                d.get("category", ""),
+                d.get("title", ""),
+                d.get("description", ""),
+                d.get("image_url", ""),
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ))
+        conn.commit()
+        logger.info("Synced designs table in database with default styles.")
+    except Exception as e:
+        logger.error(f"Design sync notice: {e}")
+        if is_pg:
+            conn.rollback()
+
+    # Sync/Upsert portfolio showcase works
+    try:
+        if is_pg:
+            sql_port = """
+                INSERT INTO portfolio (id, title, category, description, image_url, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    category = EXCLUDED.category,
+                    description = EXCLUDED.description,
+                    image_url = EXCLUDED.image_url;
+            """
+        else:
+            sql_port = """
+                INSERT INTO portfolio (id, title, category, description, image_url, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    title = excluded.title,
+                    category = excluded.category,
+                    description = excluded.description,
+                    image_url = excluded.image_url;
+            """
+        for item in DEFAULT_PORTFOLIO:
+            cursor.execute(sql_port, (
+                item["id"],
+                item.get("title", ""),
+                item.get("category", ""),
+                item.get("description", ""),
+                item.get("image_url", ""),
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ))
+        conn.commit()
+        logger.info("Synced portfolio table in database with showcase items.")
+    except Exception as e:
+        logger.error(f"Portfolio sync notice: {e}")
+        if is_pg:
+            conn.rollback()
 
     # Sanitize existing orders if notes had REJECTED REASON appended historically
     try:
@@ -1142,10 +1178,12 @@ def get_products_data() -> Dict[str, Any]:
                 "image_url": r["image_url"] or f"/product-images/{r['id']}.png",
                 "has_ready_designs": bool(r["has_ready_designs"])
             })
+        if not products:
+            return {"products": DEFAULT_PRODUCTS}
         return {"products": products}
     except Exception as e:
         logger.error(f"Error reading products from DB: {e}")
-        return {"products": []}
+        return {"products": DEFAULT_PRODUCTS}
     finally:
         conn.close()
 
@@ -1288,10 +1326,12 @@ def get_designs_data() -> Dict[str, Any]:
                 "description": r.get("description") or "",
                 "image_url": r.get("image_url") or f"/designs-images/{r['id']}.png"
             })
+        if not designs:
+            return {"designs": DEFAULT_DESIGNS}
         return {"designs": designs}
     except Exception as e:
         logger.error(f"Error reading designs from DB: {e}")
-        return {"designs": []}
+        return {"designs": DEFAULT_DESIGNS}
     finally:
         conn.close()
 
@@ -1470,10 +1510,12 @@ def get_portfolio_items() -> List[Dict[str, Any]]:
                 "image_url": r.get("image_url") or "",
                 "created_at": r.get("created_at") or ""
             })
+        if not items:
+            return DEFAULT_PORTFOLIO
         return items
     except Exception as e:
         logger.error(f"Error fetching portfolio from DB: {e}")
-        return []
+        return DEFAULT_PORTFOLIO
     finally:
         conn.close()
 

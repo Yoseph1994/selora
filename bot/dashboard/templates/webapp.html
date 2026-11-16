@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
   <title>Selora Prints | Store App</title>
   
   <!-- Telegram WebApp SDK -->
@@ -1189,6 +1190,39 @@
     const RAW_SERVER_DESIGNS = {{ designs | default([]) | tojson }};
     const RAW_SERVER_PORTFOLIO = {{ portfolio | default([]) | tojson }};
 
+    const PRODUCT_FALLBACK_IMAGES = {
+      'stickers': 'https://images.unsplash.com/photo-1589384267710-7a170981ca78?auto=format&fit=crop&w=800&q=80',
+      'bookmarks': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
+      'business_cards': 'https://images.unsplash.com/photo-1616628188859-7a11abb6fcc9?auto=format&fit=crop&w=800&q=80',
+      'polaroid': 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=800&q=80',
+      'mini_notebook': 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=800&q=80',
+      'notebook': 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80',
+      'minibook_white': 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80',
+      'minibook_black': 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80',
+      'book_medium': 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80',
+      'book_a5': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
+      'book_a4': 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=800&q=80',
+      'mug': 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80',
+      'puzzle': 'https://images.unsplash.com/photo-1588702547919-26089e690ecc?auto=format&fit=crop&w=800&q=80',
+      'sticker_poster_a5': 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
+      'sticker_poster_a4': 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80'
+    };
+
+    const DESIGN_FALLBACK_IMAGES = {
+      'des_stickers_1': 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80',
+      'des_stickers_2': 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
+      'des_stickers_3': 'https://images.unsplash.com/photo-1555421689-491a97ff2040?auto=format&fit=crop&w=800&q=80',
+      'des_bookmarks_1': 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80',
+      'des_bookmarks_2': 'https://images.unsplash.com/photo-1508615039623-a25605d2b022?auto=format&fit=crop&w=800&q=80',
+      'des_cards_1': 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=800&q=80',
+      'des_cards_2': 'https://images.unsplash.com/photo-1616628188859-7a11abb6fcc9?auto=format&fit=crop&w=800&q=80',
+      'des_polaroid_1': 'https://images.unsplash.com/photo-1552168324-d612d77725e3?auto=format&fit=crop&w=800&q=80',
+      'des_polaroid_2': 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=800&q=80',
+      'des_book_1': 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80',
+      'des_book_2': 'https://images.unsplash.com/photo-1495640388908-05fa85288e61?auto=format&fit=crop&w=800&q=80',
+      'des_mug_1': 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80'
+    };
+
     function normalizeProducts(rawList) {
       if (!rawList || !rawList.length) return [];
       return rawList.map(p => {
@@ -1201,7 +1235,10 @@
         else if (idLower.includes("mug") || idLower.includes("puzzle")) cat = "merch";
         else if (idLower.includes("poster") || idLower.includes("sticker")) cat = "stickers";
 
-        let img = p.image_url || p.imageUrl || `/product-images/${p.id}.png`;
+        let rawImg = p.image_url || p.imageUrl || '';
+        let img = (rawImg.startsWith('http://') || rawImg.startsWith('https://'))
+          ? rawImg
+          : (PRODUCT_FALLBACK_IMAGES[p.id] || 'https://images.unsplash.com/photo-1589384267710-7a170981ca78?auto=format&fit=crop&w=800&q=80');
 
         return {
           id: p.id,
@@ -1222,18 +1259,48 @@
 
     function normalizeDesigns(rawList) {
       if (!rawList || !rawList.length) return [];
-      return rawList.map(d => ({
-        id: d.id,
-        productId: d.product_id || d.productId,
-        title: d.title || d.name,
-        category: d.category || d.subproduct || "Curated",
-        imageUrl: d.image_url || d.imageUrl || `/designs-images/${d.id}.png`
-      }));
+      return rawList.map(d => {
+        let rawImg = d.image_url || d.imageUrl || '';
+        let img = (rawImg.startsWith('http://') || rawImg.startsWith('https://'))
+          ? rawImg
+          : (DESIGN_FALLBACK_IMAGES[d.id] || 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80');
+
+        return {
+          id: d.id,
+          productId: d.product_id || d.productId,
+          title: d.title || d.name,
+          category: d.category || d.subproduct || "Curated",
+          imageUrl: img
+        };
+      });
+    }
+
+    const PORTFOLIO_FALLBACK_IMAGES = {
+      'work_1': 'https://images.unsplash.com/photo-1572375992501-4b0892d50c69?auto=format&fit=crop&w=800&q=80',
+      'work_2': 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=800&q=80',
+      'work_3': 'https://images.unsplash.com/photo-1476275466078-4007374efbbe?auto=format&fit=crop&w=800&q=80',
+      'work_4': 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=800&q=80',
+      'work_5': 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=800&q=80',
+      'work_6': 'https://images.unsplash.com/photo-1588702547919-26089e690ecc?auto=format&fit=crop&w=800&q=80'
+    };
+
+    function normalizePortfolio(rawList) {
+      if (!rawList || !rawList.length) return [];
+      return rawList.map(item => {
+        let rawImg = item.image_url || item.imageUrl || '';
+        let img = (rawImg.startsWith('http://') || rawImg.startsWith('https://'))
+          ? rawImg
+          : (PORTFOLIO_FALLBACK_IMAGES[item.id] || 'https://images.unsplash.com/photo-1572375992501-4b0892d50c69?auto=format&fit=crop&w=800&q=80');
+        return {
+          ...item,
+          image_url: img
+        };
+      });
     }
 
     let PRODUCTS = normalizeProducts(RAW_SERVER_PRODUCTS);
     let DESIGNS = normalizeDesigns(RAW_SERVER_DESIGNS);
-    let PORTFOLIO = RAW_SERVER_PORTFOLIO || [];
+    let PORTFOLIO = normalizePortfolio(RAW_SERVER_PORTFOLIO);
     let currentPortfolioCategory = 'all';
 
     // ─── INITIALIZATION ────────────────────────────────────────────
@@ -1286,7 +1353,7 @@
               renderDesigns(DESIGNS);
             }
             if (data.portfolio && data.portfolio.length) {
-              PORTFOLIO = data.portfolio;
+              PORTFOLIO = normalizePortfolio(data.portfolio);
               renderPortfolio(PORTFOLIO);
             }
           }
@@ -1326,7 +1393,7 @@
         card.innerHTML = `
           <div>
             <div class="relative aspect-square bg-[#0c101c] overflow-hidden">
-              <img src="${prod.imageUrl}" alt="${name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='/product-images/stickers.png'">
+              <img src="${prod.imageUrl}" alt="${name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1589384267710-7a170981ca78?auto=format&fit=crop&w=800&q=80'">
               <div class="absolute top-2.5 left-2.5 bg-[#080c14]/90 backdrop-blur-md border border-white/10 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
                 ${prod.price ? `${prod.price} ETB` : 'Custom Quote'} <span class="text-slate-400 font-normal text-[10px]">/${unit}</span>
               </div>
@@ -1368,7 +1435,7 @@
         card.innerHTML = `
           <div>
             <div class="relative aspect-square bg-[#0c101c] overflow-hidden">
-              <img src="${des.imageUrl}" alt="${des.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='/designs-images/des_stickers_1.png'">
+              <img src="${des.imageUrl}" alt="${des.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80'">
               <div class="absolute top-2.5 right-2.5 bg-[#080c14]/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold text-amber-300 border border-white/10 shadow-sm">
                 ${des.category}
               </div>
@@ -1445,7 +1512,7 @@
                 alt="${item.title}" 
                 class="w-full h-full object-cover" 
                 loading="lazy"
-                onerror="this.src='/product-images/stickers.png'"
+                onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1572375992501-4b0892d50c69?auto=format&fit=crop&w=800&q=80'"
               />
               <div class="absolute top-2.5 left-2.5">
                 <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#080c14]/90 backdrop-blur-md text-amber-300 border border-white/10 shadow-sm">
@@ -2044,7 +2111,7 @@
         };
 
         item.innerHTML = `
-          <img src="${des.imageUrl}" alt="" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.src='/designs-images/des_stickers_1.png'">
+          <img src="${des.imageUrl}" alt="" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80'">
           <div class="overflow-hidden">
             <p class="text-[11px] font-bold text-white truncate">${des.title}</p>
             <span class="text-[9px] text-amber-400/90">${des.category}</span>
