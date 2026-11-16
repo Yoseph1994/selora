@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Depends, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -35,6 +36,15 @@ DESIGNS_IMAGES_DIR = BASE_DIR.parent / "data" / "designs_images"
 DESIGNS_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Selora Prints Dashboard")
+
+# Enable Cross-Origin Resource Sharing (CORS) for Cloudflare Pages and hybrid deployments
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 # Mount static directories

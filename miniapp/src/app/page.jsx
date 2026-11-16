@@ -42,6 +42,17 @@ import {
   callServerless 
 } from '../lib/telegram';
 
+const API_BASE_URL = (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_API_URL 
+  ? process.env.NEXT_PUBLIC_API_URL 
+  : '').replace(/\/$/, '');
+
+function getApiUrl(path) {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+  if (!API_BASE_URL) return path;
+  return `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
 // ─── OFFICIAL SELORA PRINTS PRODUCT CATALOG ─────────────────────────────────────
 const INITIAL_PRODUCTS = [
   {
@@ -411,7 +422,7 @@ export default function SeloraMiniApp() {
     let ordersMap = new Map();
     if (user?.id) {
       try {
-        const res = await fetch(`/api/webapp/my-orders/${user.id}`);
+        const res = await fetch(getApiUrl(`/api/webapp/my-orders/${user.id}`));
         const data = await res.json();
         if (data?.ok && Array.isArray(data.orders)) {
           data.orders.forEach(o => {
@@ -431,7 +442,7 @@ export default function SeloraMiniApp() {
     for (const code of localCodes) {
       if (!ordersMap.has(code)) {
         try {
-          const res = await fetch(`/api/webapp/track/${encodeURIComponent(code)}`);
+          const res = await fetch(getApiUrl(`/api/webapp/track/${encodeURIComponent(code)}`));
           const data = await res.json();
           if (data?.ok && data.order) {
             ordersMap.set(code, data.order);
@@ -465,7 +476,7 @@ export default function SeloraMiniApp() {
     }
 
     // Try fetching live config from backend
-    fetch('/api/webapp/config')
+    fetch(getApiUrl('/api/webapp/config'))
       .then(r => r.json())
       .then(data => {
         if (data?.ok && data.products?.length > 0) {
@@ -478,14 +489,18 @@ export default function SeloraMiniApp() {
               category: found?.category || 'all',
               unitAm: found?.unitAm || p.unit,
               descriptionAm: found?.descriptionAm || p.description,
-              imageUrl: found?.imageUrl || p.image_url || '/product-images/stickers.png',
+              imageUrl: getApiUrl(found?.imageUrl || p.image_url || '/product-images/stickers.png'),
               hasReadyDesigns: p.has_ready_designs ?? found?.hasReadyDesigns
             };
           });
           setProducts(merged);
         }
         if (data?.ok && data.designs?.length > 0) {
-          setDesigns(data.designs);
+          const mappedDesigns = data.designs.map(d => ({
+            ...d,
+            imageUrl: getApiUrl(d.imageUrl || d.image_url || '')
+          }));
+          setDesigns(mappedDesigns);
         }
       })
       .catch(() => {
@@ -737,7 +752,7 @@ export default function SeloraMiniApp() {
         formData.append('receipt_file', receiptFile);
       }
 
-      const res = await fetch('/api/webapp/order-full', {
+      const res = await fetch(getApiUrl('/api/webapp/order-full'), {
         method: 'POST',
         body: formData
       });
@@ -806,7 +821,7 @@ export default function SeloraMiniApp() {
     triggerHaptic('light');
 
     try {
-      const res = await fetch(`/api/webapp/track/${encodeURIComponent(code)}`);
+      const res = await fetch(getApiUrl(`/api/webapp/track/${encodeURIComponent(code)}`));
       const data = await res.json();
       if (data?.ok && data?.order) {
         triggerHaptic('success');
