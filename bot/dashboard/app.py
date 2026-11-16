@@ -19,6 +19,7 @@ import aiohttp
 from data import database
 import config
 from services.image_preflight import inspect_image_metadata
+from services.payment_verifier import parse_bank_sms, match_payment_to_order
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +171,15 @@ class RejectRequest(BaseModel):
     reason: str
     rejection_type: Optional[str] = "artwork"
     delete_order: Optional[bool] = False
+
+class VerifySMSRequest(BaseModel):
+    sms_text: str
+
+class ConfirmMatchRequest(BaseModel):
+    order_code: str
+    txn_id: Optional[str] = ""
+    bank: Optional[str] = "CBE"
+    amount: float
 
 class WebappOrderRequest(BaseModel):
     user_id: int
@@ -353,20 +363,24 @@ async def webapp_track_order(order_code: str):
 
 @app.get("/api/webapp/my-orders/{user_id}")
 async def webapp_my_orders(user_id: int):
-    """Retrieve active (non-completed) orders for the customer."""
+    """Retrieve active orders for the customer, including recent forgery-flagged orders."""
     try:
         user_orders = database.get_orders_by_user(user_id)
         active_list = []
         for o in user_orders:
             enrich_order_data(o)
             st = (o.get("status") or "pending").lower()
-            # Ignore completed or cancelled orders
-            if st in ("completed", "cancelled"):
+            is_fraud = o.get("rejection_type") == "fraud" or o.get("payment_status") == "fraud"
+            # Ignore completed orders, and normal cancelled orders unless flagged for fraud
+            if st == "completed":
+                continue
+            if st == "cancelled" and not is_fraud:
                 continue
             active_list.append({
                 "order_code": o.get("order_code"),
                 "status": o.get("status", "pending"),
                 "payment_status": o.get("payment_status", "pending_review"),
+                "rejection_type": o.get("rejection_type") or "",
                 "items": o.get("items", ""),
                 "deadline": o.get("deadline", ""),
                 "delivery_type": o.get("delivery_type", ""),
@@ -638,7 +652,8 @@ async def webapp_submit_order_full(
         status="pending",
         phone=phone or "",
         recipient_name=recipient_name or full_name,
-        customer_files=json.dumps(customer_files_list)
+        customer_files=json.dumps(customer_files_list),
+        transaction_ref=transaction_ref.strip() if transaction_ref else None
     )
 
     # 5. Customer Notification (Exact match to bot/handlers/order.py lines 1378-1397)
@@ -910,6 +925,18 @@ def enrich_order_data(o: dict) -> dict:
     gps_m = re.search(r"GPS:\s*(https?://[^\s|]+)", cleaned_notes)
     o["gps_url"] = gps_m.group(1).strip() if gps_m else ""
 
+    # 7. Payment Transaction Reference & Bank Verification
+    trans_ref = (o.get("transaction_ref") or "").strip()
+    if not trans_ref:
+        ref_m = re.search(r"Ref:\s*([A-Za-z0-9_-]+)", raw_notes, re.IGNORECASE)
+        if ref_m:
+            trans_ref = ref_m.group(1).strip()
+    o["transaction_ref"] = trans_ref
+    o["verified_txn_id"] = o.get("verified_txn_id") or ""
+    o["verified_bank"] = o.get("verified_bank") or ""
+    o["verified_amount"] = o.get("verified_amount")
+    o["verified_at"] = o.get("verified_at") or ""
+
     return o
 
 # Main Dashboard View
@@ -1110,12 +1137,12 @@ async def reject_order_api(order_code: str, payload: RejectRequest):
     else:
         # Fraudulent / Fake receipt: cancel order completely
         dm_text = (
-            "🚨 *Order Cancelled: Payment Receipt Verification Failed*\n\n"
+            "🚨 *Order Cancelled: Flagged for Payment Receipt Forgery*\n\n"
             f"🔖 *Order Code:* `{order_code}`\n"
             f"🏷 *Items:* {order.get('items', '')}\n"
             "─────────────────────\n"
             f"❌ *Reason:* {reason}\n\n"
-            "Your order has been cancelled due to an unverified or fraudulent payment receipt.\n\n"
+            "Your order has been cancelled because the submitted payment receipt was flagged as fake, altered, or unverified against bank records.\n\n"
             "If you would like to proceed with a genuine order, please start fresh from scratch in our Mini App or via /start."
         )
         markup = {
@@ -1127,12 +1154,151 @@ async def reject_order_api(order_code: str, payload: RejectRequest):
             ])
         await send_telegram_notification(order["user_id"], dm_text, reply_markup=markup)
 
-        if payload.delete_order:
-            database.delete_order(order_code)
-            return {"success": True, "message": f"Order {order_code} cancelled for fraud and completely deleted from database"}
-        else:
-            database.update_order_rejection(order_code, reason, rejection_type="fraud")
-            return {"success": True, "message": f"Order {order_code} cancelled for fraud"}
+        # Mark cancelled for fraud so Mini App and customer tracking can clearly show the forgery flag
+        database.update_order_rejection(order_code, reason, rejection_type="fraud")
+        return {"success": True, "message": f"Order {order_code} flagged for forgery and cancelled"}
+
+# ─── BANK SMS PAYMENT VERIFICATION ENDPOINTS ───────────────────
+
+@app.post("/api/webhooks/bank-sms")
+async def webhook_bank_sms(request: Request):
+    """Receive incoming bank SMS from Android SMS forwarder or webhook."""
+    raw_text = ""
+    try:
+        body = await request.json()
+        raw_text = body.get("text") or body.get("message") or body.get("content") or body.get("sms") or body.get("body") or ""
+    except Exception:
+        try:
+            form = await request.form()
+            raw_text = form.get("text") or form.get("message") or form.get("content") or form.get("sms") or ""
+        except Exception:
+            pass
+
+    if not raw_text:
+        return {"success": False, "error": "No SMS text provided"}
+
+    parsed = parse_bank_sms(raw_text)
+    if not parsed.get("success"):
+        return {"success": False, "error": "Could not parse bank SMS", "parsed": parsed}
+
+    bank = parsed.get("bank") or "CBE"
+    txn_id = parsed.get("txn_id") or ""
+    amount = parsed.get("amount") or 0.0
+    sender_name = parsed.get("sender_name")
+    sender_phone = parsed.get("sender_phone")
+
+    # Record incoming bank transaction for audit trail and fraud defense
+    tx_id = database.record_bank_transaction(
+        bank=bank,
+        txn_id=txn_id,
+        amount=amount,
+        sender_name=sender_name,
+        sender_phone=sender_phone,
+        raw_sms=raw_text
+    )
+
+    # Attempt automatic matching with pending orders
+    matches = match_payment_to_order(parsed)
+    if matches and matches[0]["confidence"] == "high":
+        top_match = matches[0]
+        order_code = top_match["order_code"]
+        order = top_match["order"]
+
+        database.verify_order_with_bank_transaction(order_code, txn_id, bank, amount)
+
+        # Notify customer via Telegram
+        customer_msg = (
+            "🎉 *Payment Verified & Order Confirmed!* 💛\n\n"
+            f"🔖 *Order Code:* `{order_code}`\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            f"🏷 *Items:* {order.get('items')}\n"
+            f"🗓 *Deadline:* {order.get('deadline')}\n"
+            f"🚚 *Delivery:* {order.get('delivery_type')} ({order.get('delivery_location')})\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            f"✅ *Verified via {bank} SMS* (Ref: `{txn_id}`)\n"
+            f"Deposit Amount: {amount:.2f} ETB\n\n"
+            "We have officially started production on your prints! ✨"
+        )
+        try:
+            await send_telegram_notification(order["user_id"], customer_msg)
+        except Exception as err:
+            logger.warning(f"Could not notify customer {order.get('user_id')}: {err}")
+
+        return {
+            "success": True,
+            "matched": True,
+            "auto_approved": True,
+            "order_code": order_code,
+            "bank": bank,
+            "txn_id": txn_id,
+            "amount": amount,
+            "reasons": top_match["match_reasons"]
+        }
+
+    return {
+        "success": True,
+        "matched": False,
+        "recorded_id": tx_id,
+        "bank": bank,
+        "txn_id": txn_id,
+        "amount": amount,
+        "candidate_matches": matches[:3]
+    }
+
+@app.post("/api/payments/verify-sms", dependencies=[Depends(require_api_auth)])
+async def api_verify_sms(payload: VerifySMSRequest):
+    """Operator endpoint to parse raw SMS or Txn ID and view matched pending orders."""
+    sms_text = payload.sms_text.strip()
+    if not sms_text:
+        raise HTTPException(status_code=400, detail="SMS text or Transaction Reference is required")
+
+    parsed = parse_bank_sms(sms_text)
+    matches = match_payment_to_order(parsed)
+
+    return {
+        "success": True,
+        "parsed": parsed,
+        "matches": matches
+    }
+
+@app.post("/api/payments/confirm-match", dependencies=[Depends(require_api_auth)])
+async def api_confirm_match(payload: ConfirmMatchRequest):
+    """Operator 1-click confirmation to verify order using matched bank transaction."""
+    order = database.get_order_by_code(payload.order_code)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    database.verify_order_with_bank_transaction(
+        order_code=payload.order_code,
+        txn_id=payload.txn_id or "",
+        bank=payload.bank or "CBE",
+        amount=payload.amount
+    )
+
+    customer_msg = (
+        "🎉 *Payment Verified & Order Confirmed!* 💛\n\n"
+        f"🔖 *Order Code:* `{payload.order_code}`\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"🏷 *Items:* {order.get('items')}\n"
+        f"🗓 *Deadline:* {order.get('deadline')}\n"
+        f"🚚 *Delivery:* {order.get('delivery_type')} ({order.get('delivery_location')})\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"✅ *Verified via {payload.bank or 'Bank'} SMS* (Ref: `{payload.txn_id or 'Verified'}`)\n"
+        f"Deposit: {payload.amount:.2f} ETB\n\n"
+        "We have officially started production on your prints! ✨"
+    )
+    try:
+        await send_telegram_notification(order["user_id"], customer_msg)
+    except Exception as err:
+        logger.warning(f"Notification error: {err}")
+
+    return {"success": True, "message": f"Order {payload.order_code} verified via bank transaction"}
+
+@app.get("/api/payments/transactions", dependencies=[Depends(require_api_auth)])
+async def api_get_transactions():
+    """Retrieve recent recorded bank SMS transactions."""
+    txs = database.get_recent_bank_transactions(limit=30)
+    return {"success": True, "transactions": txs}
 
 @app.post("/api/products/add", dependencies=[Depends(require_api_auth)])
 async def add_product_api(

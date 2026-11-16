@@ -230,10 +230,21 @@
           </button>
         </div>
 
-        <!-- Search input -->
-        <div class="w-full md:w-72 relative">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-          <input type="text" id="order-search" oninput="filterOrders()" placeholder="Search code, name, phone, item..." class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 transition">
+        <!-- Action Buttons: Verify Bank SMS & Search -->
+        <div class="flex items-center space-x-2 w-full md:w-auto">
+          <button 
+            type="button" 
+            onclick="openVerifySmsModal()" 
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center space-x-1.5 shadow-xs cursor-pointer whitespace-nowrap"
+            title="Paste bank SMS to instantly verify payment"
+          >
+            <i class="fa-solid fa-bolt-lightning text-amber-300"></i>
+            <span>Verify Bank SMS</span>
+          </button>
+          <div class="w-full md:w-64 relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="order-search" oninput="filterOrders()" placeholder="Search code, name, phone, item..." class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 transition">
+          </div>
         </div>
       </div>
 
@@ -457,6 +468,19 @@
                   </button>
                   {% else %}
                   <span class="text-[11px] text-slate-400 italic">No receipt</span>
+                  {% endif %}
+                  {% if o.verified_txn_id %}
+                  <div class="mt-1">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Verified via Bank SMS on {{ o.verified_at }}">
+                      <i class="fa-solid fa-circle-check text-emerald-600 mr-1 text-[9px]"></i>{{ o.verified_bank }}: {{ o.verified_txn_id }}
+                    </span>
+                  </div>
+                  {% elif o.transaction_ref %}
+                  <div class="mt-1">
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] text-slate-600 bg-slate-100 font-mono" title="Customer submitted reference">
+                      Ref: {{ o.transaction_ref }}
+                    </span>
+                  </div>
                   {% endif %}
                 </td>
 
@@ -1121,6 +1145,89 @@
     </div>
   </div>
 
+  <!-- Modal: Verify Bank SMS -->
+  <div id="modal-verify-sms" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-5 shadow-xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <i class="fa-solid fa-bolt-lightning text-sm text-emerald-600"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm">Verify Bank SMS Payment</h3>
+            <p class="text-xs text-slate-500">Paste incoming CBE or Telebirr notification</p>
+          </div>
+        </div>
+        <button onclick="closeVerifySmsModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="block text-xs font-semibold text-slate-700">Bank SMS Text or Transaction Reference:</label>
+        <textarea 
+          id="verify-sms-input" 
+          rows="3" 
+          placeholder="Paste official SMS here (e.g. 'Dear Customer, ETB 500.00 has been credited to your account... Ref: FT2432...')"
+          class="w-full text-xs p-3 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+        ></textarea>
+        <div class="flex justify-between items-center pt-1">
+          <span class="text-[11px] text-slate-400">Supports CBE, Telebirr, CBEBirr, and BoA</span>
+          <button 
+            type="button" 
+            onclick="inspectBankSms()" 
+            id="btn-inspect-sms" 
+            class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+          >
+            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+            <span>Parse & Match Order</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Inspection Preview -->
+      <div id="sms-inspect-result" class="hidden space-y-3">
+        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Detected Transaction</span>
+            <span id="sms-bank-pill" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200"></span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <span class="text-slate-400 text-[10px] block">Amount Credited</span>
+              <strong id="sms-amount-txt" class="text-emerald-700 font-mono text-sm"></strong>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[10px] block">Reference / Txn ID</span>
+              <strong id="sms-ref-txt" class="text-slate-900 font-mono text-xs"></strong>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[10px] block">Payer Name</span>
+              <span id="sms-payer-txt" class="text-slate-800 font-medium"></span>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[10px] block">Payer Phone</span>
+              <span id="sms-phone-txt" class="text-slate-800 font-mono"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Matched Orders Section -->
+        <div>
+          <h4 class="text-xs font-bold text-slate-800 mb-2 flex items-center space-x-1.5">
+            <i class="fa-solid fa-link text-emerald-600"></i>
+            <span>Candidate Orders for Verification</span>
+          </h4>
+          <div id="sms-matched-orders-list" class="space-y-2 max-h-52 overflow-y-auto">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-100">
+        <button onclick="closeVerifySmsModal()" class="px-4 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Printable Production Packing Slip -->
   <div id="slip-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-xl border border-slate-200" id="printable-slip">
@@ -1633,6 +1740,127 @@
         }
       } catch (err) {
         showToast('Network error while processing rejection', 'error');
+      }
+    }
+
+    // ─── BANK SMS VERIFICATION MODAL FUNCTIONS ─────────────────────
+    function openVerifySmsModal() {
+      document.getElementById('verify-sms-input').value = '';
+      document.getElementById('sms-inspect-result').classList.add('hidden');
+      document.getElementById('modal-verify-sms').classList.remove('hidden');
+      document.getElementById('verify-sms-input').focus();
+    }
+
+    function closeVerifySmsModal() {
+      document.getElementById('modal-verify-sms').classList.add('hidden');
+    }
+
+    let currentSmsParsed = null;
+
+    async function inspectBankSms() {
+      const text = document.getElementById('verify-sms-input').value.trim();
+      if (!text) {
+        showToast('Please paste SMS text or enter a transaction reference', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btn-inspect-sms');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i> Parsing...`;
+
+      try {
+        const res = await fetch('/api/payments/verify-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sms_text: text })
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-magnifying-glass text-xs"></i> Parse & Match Order`;
+
+        if (!data.success || !data.parsed) {
+          showToast('Could not extract bank transaction details', 'error');
+          return;
+        }
+
+        const p = data.parsed;
+        currentSmsParsed = p;
+
+        document.getElementById('sms-bank-pill').textContent = p.bank || 'Bank';
+        document.getElementById('sms-amount-txt').textContent = p.amount ? `${p.amount.toFixed(2)} ETB` : 'Not detected';
+        document.getElementById('sms-ref-txt').textContent = p.txn_id || 'Not detected';
+        document.getElementById('sms-payer-txt').textContent = p.sender_name || 'Not detected';
+        document.getElementById('sms-phone-txt').textContent = p.sender_phone || 'None';
+
+        const list = document.getElementById('sms-matched-orders-list');
+        list.innerHTML = '';
+
+        if (!data.matches || data.matches.length === 0) {
+          list.innerHTML = `<div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+            No pending unverified orders matched this transaction automatically. Check if the order was already verified or if the customer code is different.
+          </div>`;
+        } else {
+          data.matches.forEach(m => {
+            const card = document.createElement('div');
+            card.className = "p-3 rounded-xl border border-slate-200 bg-white hover:border-emerald-300 transition flex items-center justify-between gap-3 shadow-xs";
+            card.innerHTML = `
+              <div class="overflow-hidden space-y-0.5">
+                <div class="flex items-center space-x-2">
+                  <span class="font-mono font-bold text-slate-900 text-xs">${m.order_code}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${m.confidence === 'high' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                    ${m.confidence === 'high' ? 'High Match' : 'Possible Match'}
+                  </span>
+                </div>
+                <p class="text-xs text-slate-700 font-medium truncate">${m.customer_name || 'Customer'}</p>
+                <p class="text-[11px] text-slate-500">Items: ${m.items || ''} • Exp. Deposit: <strong class="font-mono text-emerald-700">${m.expected_deposit} ETB</strong></p>
+                <p class="text-[10px] text-slate-400">${m.match_reasons.join(' • ')}</p>
+              </div>
+              <button 
+                type="button" 
+                onclick="confirmVerifyMatch('${m.order_code}', '${p.txn_id || ''}', '${p.bank || 'CBE'}', ${p.amount || m.expected_deposit})" 
+                class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shrink-0 shadow-xs cursor-pointer flex items-center space-x-1"
+              >
+                <i class="fa-solid fa-circle-check"></i>
+                <span>Confirm & Approve</span>
+              </button>
+            `;
+            list.appendChild(card);
+          });
+        }
+
+        document.getElementById('sms-inspect-result').classList.remove('hidden');
+      } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-magnifying-glass text-xs"></i> Parse & Match Order`;
+        showToast('Network error while verifying SMS', 'error');
+      }
+    }
+
+    async function confirmVerifyMatch(orderCode, txnId, bank, amount) {
+      if (!confirm(`Confirm 50% deposit verification for ${orderCode} via ${bank} (Txn: ${txnId || 'N/A'}, Amount: ${amount} ETB)?`)) {
+        return;
+      }
+      try {
+        const res = await fetch('/api/payments/confirm-match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order_code: orderCode,
+            txn_id: txnId,
+            bank: bank,
+            amount: amount
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Order ${orderCode} verified and in production!`);
+          closeVerifySmsModal();
+          setTimeout(() => location.reload(), 600);
+        } else {
+          showToast(data.detail || 'Failed to confirm match', 'error');
+        }
+      } catch (e) {
+        showToast('Network error while confirming verification', 'error');
       }
     }
 

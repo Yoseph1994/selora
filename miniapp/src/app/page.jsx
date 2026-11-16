@@ -1029,34 +1029,73 @@ export default function SeloraMiniApp() {
                     <h3 className="text-base font-black text-amber-400 tracking-wide">{trackedOrder.order_code}</h3>
                   </div>
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                    trackedOrder.status === 'completed' 
-                      ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                      : (trackedOrder.status === 'in_production' || trackedOrder.status === 'confirmed'
-                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                          : 'bg-blue-500/10 text-blue-300 border-blue-500/20')
+                    trackedOrder.status === 'cancelled' || trackedOrder.payment_status === 'fraud' || trackedOrder.rejection_type === 'fraud'
+                      ? 'bg-rose-900/30 text-rose-300 border-rose-700/50'
+                      : (trackedOrder.status === 'completed' 
+                          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                          : (trackedOrder.status === 'in_production' || trackedOrder.status === 'confirmed'
+                              ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                              : 'bg-blue-500/10 text-blue-300 border-blue-500/20'))
                   }`}>
-                    {trackedOrder.status?.toUpperCase() || 'PENDING'}
+                    {trackedOrder.status === 'cancelled' || trackedOrder.payment_status === 'fraud' || trackedOrder.rejection_type === 'fraud'
+                      ? 'CANCELLED (FORGERY)'
+                      : (trackedOrder.status?.toUpperCase() || 'PENDING')}
                   </span>
                 </div>
 
-                {/* Progress Steps */}
-                <div className="space-y-2 pt-1">
-                  {[
-                    { label: lang === 'en' ? '1. Order Received' : '1. ትዕዛዝ ተቀብለናል', done: true },
-                    { label: lang === 'en' ? '2. 50% Deposit Verified' : '2. 50% ክፍያ ተረጋግጧል', done: trackedOrder.payment_status === 'approved' || trackedOrder.status !== 'pending' },
-                    { label: lang === 'en' ? '3. Printing & Finishing' : '3. በህትመት እና ዝግጅት ላይ', done: trackedOrder.status === 'in_production' || trackedOrder.status === 'ready' || trackedOrder.status === 'completed' },
-                    { label: lang === 'en' ? '4. Ready for Pickup / Delivery' : '4. ለመረከብ ዝግጁ / በመንገድ ላይ', done: trackedOrder.status === 'ready' || trackedOrder.status === 'completed' }
-                  ].map((st, idx) => (
-                    <div key={idx} className="flex items-center space-x-2 text-xs">
-                      {st.done ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border border-slate-600 shrink-0" />
-                      )}
-                      <span className={st.done ? 'text-white font-medium' : 'text-slate-500'}>{st.label}</span>
+                {/* Forgery Cancellation Alert vs Normal Progress */}
+                {(trackedOrder.status === 'cancelled' || trackedOrder.payment_status === 'fraud' || trackedOrder.rejection_type === 'fraud') ? (
+                  <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/35 space-y-3">
+                    <div className="flex items-center space-x-2 text-rose-300 font-bold text-xs sm:text-sm">
+                      <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                      <span>{lang === 'en' ? 'Flagged for Forgery: Order Cancelled' : 'በክፍያ ደረሰኝ ማጭበርበር ምክንያት ተሰርዟል'}</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="p-3 rounded-xl bg-black/40 border-l-4 border-rose-500 text-xs text-rose-200 space-y-1">
+                      <p className="font-semibold text-slate-300 text-[11px]">{lang === 'en' ? 'Studio Verification Note:' : 'ማብራሪያ:'}</p>
+                      <p className="text-white font-medium">{trackedOrder.rejection_reason || (lang === 'en' ? 'Payment receipt could not be verified on bank records and was flagged for forgery.' : 'የተላከው የባንክ ደረሰኝ ከባንክ ሂሳብ መግለጫ ጋር አልተገናኘም፤ የተጭበረበረ ሆኖ ተገኝቷል።')}</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/25 text-[11px] text-rose-200 leading-relaxed">
+                      <p className="font-bold text-rose-300">
+                        {lang === 'en' ? '⚠️ Action Required: Start from Scratch' : '⚠️ ትዕዛዝዎን ከመጀመሪያው ይጀምሩ'}
+                      </p>
+                      <p className="mt-0.5 text-rose-200/90">
+                        {lang === 'en' 
+                          ? 'This order has been permanently cancelled. You must start a new order from scratch with a valid payment.' 
+                          : 'ይህ ትዕዛዝ ሙሉ በሙሉ ተሰርዟል። ትክክለኛ የህትመት ትዕዛዝ ለማስገባት ከመጀመሪያው አዲስ ትዕዛዝ መጀመር አለብዎት።'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep(0);
+                        setActiveTab('catalog');
+                      }}
+                      className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center space-x-2 transition active:scale-95 shadow-md cursor-pointer"
+                    >
+                      <ShoppingBag className="w-4 h-4" />
+                      <span>{lang === 'en' ? 'Start New Order From Scratch' : 'አዲስ ትዕዛዝ ከመጀመሪያው ጀምር'}</span>
+                    </button>
+                  </div>
+                ) : (
+                  /* Progress Steps: Accept -> Under work -> Ready -> Done */
+                  <div className="space-y-2 pt-1">
+                    {[
+                      { label: lang === 'en' ? '1. Accept (50% Deposit Verified)' : '1. ተቀባይነት አግኝቷል (50% ተረጋግጧል)', done: trackedOrder.payment_status === 'approved' || trackedOrder.status !== 'pending' },
+                      { label: lang === 'en' ? '2. Under Work (Printing & Finishing)' : '2. በስራ ላይ (በህትመት ዝግጅት ላይ)', done: trackedOrder.status === 'in_production' || trackedOrder.status === 'ready' || trackedOrder.status === 'completed' },
+                      { label: lang === 'en' ? '3. Ready for Pickup / Delivery' : '3. ለመረከብ ዝግጁ / በመንገድ ላይ', done: trackedOrder.status === 'ready' || trackedOrder.status === 'completed' },
+                      { label: lang === 'en' ? '4. Done' : '4. ተጠናቋል', done: trackedOrder.status === 'completed' }
+                    ].map((st, idx) => (
+                      <div key={idx} className="flex items-center space-x-2 text-xs">
+                        {st.done ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full border border-slate-600 shrink-0" />
+                        )}
+                        <span className={st.done ? 'text-white font-medium' : 'text-slate-500'}>{st.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Order Details Breakdown */}
                 <div className="bg-black/30 rounded-xl p-3 space-y-1.5 text-xs text-slate-300">

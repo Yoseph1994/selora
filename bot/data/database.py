@@ -456,7 +456,25 @@ def init_db():
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_type TEXT DEFAULT '';
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS deadline_date TEXT;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS transaction_ref TEXT;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS verified_txn_id TEXT;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS verified_bank TEXT;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS verified_amount NUMERIC;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS verified_at TEXT;
             ALTER TABLE customers ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'en';
+
+            CREATE TABLE IF NOT EXISTS bank_transactions (
+                id SERIAL PRIMARY KEY,
+                bank TEXT,
+                txn_id TEXT UNIQUE,
+                amount NUMERIC,
+                sender_name TEXT,
+                sender_phone TEXT,
+                raw_sms TEXT,
+                matched_order_code TEXT,
+                status TEXT DEFAULT 'unmatched',
+                created_at TEXT
+            );
         """)
         conn.commit()
     else:
@@ -533,6 +551,20 @@ def init_db():
                 created_at TEXT
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bank_transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                bank TEXT,
+                txn_id TEXT UNIQUE,
+                amount REAL,
+                sender_name TEXT,
+                sender_phone TEXT,
+                raw_sms TEXT,
+                matched_order_code TEXT,
+                status TEXT DEFAULT 'unmatched',
+                created_at TEXT
+            )
+        """)
         conn.commit()
 
         # Migration: check if new columns exist for existing tables
@@ -549,7 +581,12 @@ def init_db():
             "customer_files": "TEXT DEFAULT '[]'",
             "rejection_reason": "TEXT",
             "rejection_type": "TEXT DEFAULT ''",
-            "deadline_date": "TEXT"
+            "deadline_date": "TEXT",
+            "transaction_ref": "TEXT",
+            "verified_txn_id": "TEXT",
+            "verified_bank": "TEXT",
+            "verified_amount": "REAL",
+            "verified_at": "TEXT"
         }
 
         for col, col_type in new_cols.items():
@@ -914,7 +951,8 @@ def save_order(
     status: str = "pending",
     phone: Optional[str] = None,
     recipient_name: Optional[str] = None,
-    customer_files: Optional[str] = "[]"
+    customer_files: Optional[str] = "[]",
+    transaction_ref: Optional[str] = None
 ) -> str:
     """Save order to database and return generated order code (e.g. SP-1001)."""
     conn, is_pg = get_connection()
@@ -922,21 +960,29 @@ def save_order(
     created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     deadline_iso = normalize_deadline_to_iso(deadline)
 
+    # Extract transaction_ref from notes if not explicitly passed
+    clean_ref = (transaction_ref or "").strip()
+    if not clean_ref and notes:
+        m = re.search(r"Ref:\s*([A-Za-z0-9_-]+)", notes, re.IGNORECASE)
+        if m:
+            clean_ref = m.group(1).strip()
+
     insert_sql = """
         INSERT INTO orders (
             user_id, full_name, username, items, deadline, deadline_date,
             delivery_type, delivery_location, notes, has_attachment,
             payment_screenshot_file_id, payment_screenshot_filename,
             payment_status, status, created_at, updated_at,
-            phone, recipient_name, customer_files
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            phone, recipient_name, customer_files, transaction_ref
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     params = (
         user_id, full_name, username or "", items, deadline, deadline_iso,
         delivery_type, delivery_location, notes, 1 if has_attachment else 0,
         payment_screenshot_file_id, payment_screenshot_filename,
         payment_status, status, created_at, created_at,
-        phone or "", recipient_name or full_name, customer_files or "[]"
+        phone or "", recipient_name or full_name, customer_files or "[]",
+        clean_ref
     )
 
     if is_pg:
@@ -1785,6 +1831,116 @@ def delete_order(order_code: str) -> bool:
     conn.commit()
     conn.close()
     return success
+
+# ─── BANK SMS VERIFICATION ENGINE DATABASE HELPERS ─────────────
+
+def get_pending_verification_orders() -> List[Dict[str, Any]]:
+    """Retrieve orders where payment is pending review or reuploaded, for bank SMS verification."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(q("""
+        SELECT * FROM orders 
+        WHERE payment_status IN ('pending_review', 'reuploaded')
+          AND status NOT IN ('cancelled', 'completed')
+        ORDER BY id DESC
+    """, is_pg))
+    rows = fetch_all(cursor, is_pg)
+    conn.close()
+    return rows
+
+def record_bank_transaction(
+    bank: str,
+    txn_id: str,
+    amount: float,
+    sender_name: Optional[str] = None,
+    sender_phone: Optional[str] = None,
+    raw_sms: Optional[str] = None,
+    matched_order_code: Optional[str] = None,
+    status: str = "unmatched"
+) -> int:
+    """Record incoming bank transaction for audit trail and replay-attack prevention."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # If transaction with this txn_id already recorded, return its ID
+    if txn_id:
+        cursor.execute(q("SELECT id, matched_order_code, status FROM bank_transactions WHERE txn_id = ?", is_pg), (txn_id,))
+        existing = fetch_one(cursor, is_pg)
+        if existing:
+            conn.close()
+            return existing["id"]
+
+    insert_sql = """
+        INSERT INTO bank_transactions (
+            bank, txn_id, amount, sender_name, sender_phone, raw_sms, matched_order_code, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    params = (
+        bank, txn_id or "", amount, sender_name or "", sender_phone or "",
+        raw_sms or "", matched_order_code, status, created_at
+    )
+    if is_pg:
+        cursor.execute(q(insert_sql, True) + " RETURNING id", params)
+        tx_id = cursor.fetchone()[0]
+    else:
+        cursor.execute(insert_sql, params)
+        tx_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return tx_id
+
+def get_bank_transaction_by_ref(txn_id: str) -> Optional[Dict[str, Any]]:
+    """Find a recorded bank transaction by its reference ID."""
+    if not txn_id:
+        return None
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(q("SELECT * FROM bank_transactions WHERE txn_id = ?", is_pg), (txn_id,))
+    row = fetch_one(cursor, is_pg)
+    conn.close()
+    return row
+
+def verify_order_with_bank_transaction(order_code: str, txn_id: str, bank: str, amount: float) -> bool:
+    """Mark order verified via matched bank SMS transaction."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    verified_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cursor.execute(q("""
+        UPDATE orders
+        SET payment_status = 'approved',
+            status = 'in_production',
+            verified_txn_id = ?,
+            verified_bank = ?,
+            verified_amount = ?,
+            verified_at = ?,
+            rejection_reason = NULL,
+            updated_at = ?
+        WHERE order_code = ?
+    """, is_pg), (txn_id or "", bank or "CBE", amount, verified_at, verified_at, order_code))
+    order_updated = cursor.rowcount > 0
+
+    if txn_id:
+        cursor.execute(q("""
+            UPDATE bank_transactions
+            SET matched_order_code = ?,
+                status = 'matched'
+            WHERE txn_id = ?
+        """, is_pg), (order_code, txn_id))
+
+    conn.commit()
+    conn.close()
+    return order_updated
+
+def get_recent_bank_transactions(limit: int = 25) -> List[Dict[str, Any]]:
+    """Get recent recorded bank transactions."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(q(f"SELECT * FROM bank_transactions ORDER BY id DESC LIMIT {limit}", is_pg))
+    rows = fetch_all(cursor, is_pg)
+    conn.close()
+    return rows
 
 # Initialize DB on import
 init_db()
