@@ -29,6 +29,7 @@ from keyboards.reply_markup import (
 )
 from data import database
 import config
+from services.image_preflight import inspect_image_metadata
 
 logger = logging.getLogger(__name__)
 router = Router(name="order_router")
@@ -943,8 +944,10 @@ async def process_photo_upload(message: types.Message, state: FSMContext):
             file_type = f"Photo ({best_photo.width}x{best_photo.height})"
 
         dest_path = CUSTOMER_UPLOADS_DIR / filename
+        meta = {}
         try:
             await message.bot.download(file_id, destination=dest_path)
+            meta = inspect_image_metadata(dest_path)
         except Exception as err:
             logger.warning(f"Could not download artwork locally: {err}")
 
@@ -953,7 +956,15 @@ async def process_photo_upload(message: types.Message, state: FSMContext):
             "filename": filename,
             "original_name": orig_name,
             "file_type": file_type,
-            "url": f"/customer-uploads/{filename}"
+            "url": f"/customer-uploads/{filename}",
+            "width": meta.get("width"),
+            "height": meta.get("height"),
+            "megapixels": meta.get("megapixels"),
+            "format": meta.get("format"),
+            "mode": meta.get("mode"),
+            "size_kb": meta.get("size_kb"),
+            "quality_rating": meta.get("quality_rating"),
+            "quality_label": meta.get("quality_label")
         }
         customer_files.append(file_entry)
 
@@ -963,13 +974,20 @@ async def process_photo_upload(message: types.Message, state: FSMContext):
                 file_type="document" if message.document else "photo",
                 customer_files=customer_files
             )
-            await message.answer(f"✓ *Artwork received!* ({file_type})", parse_mode="Markdown")
-            if not message.document:
+            q_rating = meta.get("quality_rating")
+            if q_rating == "low":
                 await message.answer(
-                    "⚠️ *Print Quality Notice:*\n"
-                    "_This was received as a standard compressed photo. For maximum print sharpness, you can tap 📎 and re-send as File/Document. Our team will review image resolution before printing._",
+                    f"⚠️ *Low Print Resolution Notice:*\n"
+                    f"_This image is {meta.get('width')}x{meta.get('height')} px ({meta.get('size_kb')} KB). It may appear blurry or pixelated when printed. For best results, tap 📎 and send as an uncompressed File/Document._",
                     parse_mode="Markdown"
                 )
+            elif q_rating == "sharp":
+                await message.answer(
+                    f"✓ *Artwork received!* (High Resolution Sharp Print • {meta.get('width')}x{meta.get('height')} px ✨)",
+                    parse_mode="Markdown"
+                )
+            else:
+                await message.answer(f"✓ *Artwork received!* ({file_type})", parse_mode="Markdown")
             await advance_to_deadline_picker(message, state)
             return
 
@@ -2010,8 +2028,10 @@ async def process_reupload_artwork(message: types.Message, state: FSMContext):
             file_type = f"Photo ({best_photo.width}x{best_photo.height})"
 
         dest_path = CUSTOMER_UPLOADS_DIR / filename
+        meta = {}
         try:
             await message.bot.download(file_id, destination=dest_path)
+            meta = inspect_image_metadata(dest_path)
         except Exception as err:
             logger.warning(f"Could not download re-uploaded artwork: {err}")
 
@@ -2020,7 +2040,15 @@ async def process_reupload_artwork(message: types.Message, state: FSMContext):
             "filename": filename,
             "original_name": orig_name,
             "file_type": file_type,
-            "url": f"/customer-uploads/{filename}"
+            "url": f"/customer-uploads/{filename}",
+            "width": meta.get("width"),
+            "height": meta.get("height"),
+            "megapixels": meta.get("megapixels"),
+            "format": meta.get("format"),
+            "mode": meta.get("mode"),
+            "size_kb": meta.get("size_kb"),
+            "quality_rating": meta.get("quality_rating"),
+            "quality_label": meta.get("quality_label")
         }
         reupload_files.append(file_entry)
         reupload_photos.append(file_id)

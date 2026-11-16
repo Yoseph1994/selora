@@ -791,6 +791,21 @@
                     <i class="fa-solid fa-circle-check"></i>
                     <span id="artwork-filename-txt">File ready</span>
                   </div>
+                  <!-- Pre-flight Resolution & Quality Pill -->
+                  <div id="artwork-preflight-badge" class="hidden inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border">
+                    <i id="artwork-preflight-icon" class="fa-solid text-[10px]"></i>
+                    <span id="artwork-preflight-text"></span>
+                  </div>
+                  <!-- Pre-flight Warning Notice -->
+                  <div id="artwork-preflight-warning" class="hidden w-full text-left p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs">
+                    <div class="flex items-center space-x-1.5 font-bold text-rose-200">
+                      <i class="fa-solid fa-triangle-exclamation text-rose-400 text-xs"></i>
+                      <span>Low Print Resolution Notice</span>
+                    </div>
+                    <p class="text-[11px] text-rose-200/80 mt-1 leading-snug">
+                      This photo is small or compressed (<span id="artwork-preflight-dims"></span>) and may print blurry. For best quality, consider choosing an uncompressed photo or document.
+                    </p>
+                  </div>
                   <span class="text-[11px] text-slate-400">Tap to replace file</span>
                 </div>
                 <div id="artwork-placeholder-container" class="flex flex-col items-center space-y-1.5">
@@ -825,6 +840,10 @@
               <!-- Multi-photo Thumbnails Grid -->
               <div id="multi-photo-preview-grid" class="grid grid-cols-4 gap-2.5 pt-2 max-h-48 overflow-y-auto hide-scrollbar">
                 <!-- Injected via JS -->
+              </div>
+              <div id="multi-preflight-warning" class="hidden p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs">
+                <i class="fa-solid fa-triangle-exclamation text-rose-400 text-xs mr-1"></i>
+                <span class="text-[11px]">Notice: One or more photos are below 600px and may print blurry.</span>
               </div>
             </div>
           </div>
@@ -2432,6 +2451,12 @@
       // Reset file containers
       document.getElementById('artwork-preview-container').classList.add('hidden');
       document.getElementById('artwork-placeholder-container').classList.remove('hidden');
+      const pfBadge = document.getElementById('artwork-preflight-badge');
+      if (pfBadge) pfBadge.classList.add('hidden');
+      const pfWarn = document.getElementById('artwork-preflight-warning');
+      if (pfWarn) pfWarn.classList.add('hidden');
+      const multiWarn = document.getElementById('multi-preflight-warning');
+      if (multiWarn) multiWarn.classList.add('hidden');
       document.getElementById('receipt-preview-container').classList.add('hidden');
       document.getElementById('receipt-placeholder-container').classList.remove('hidden');
       document.getElementById('order-notes-input').value = '';
@@ -2835,8 +2860,54 @@
       });
     }
 
+    // ─── PRE-FLIGHT IMAGE RESOLUTION INSPECTOR ──────────────────────
+    function inspectImageFile(file) {
+      return new Promise((resolve) => {
+        if (!file || !file.type.startsWith('image/')) {
+          resolve({ isImage: false, rating: 'unknown', label: 'Document / File', badgeClass: 'text-slate-400 bg-slate-500/10 border-slate-500/20' });
+          return;
+        }
+        const img = new Image();
+        const objUrl = URL.createObjectURL(file);
+        img.onload = () => {
+          const w = img.naturalWidth || img.width;
+          const h = img.naturalHeight || img.height;
+          const minDim = Math.min(w, h);
+          const sizeKb = Math.round(file.size / 1024);
+          let rating = 'sharp';
+          let label = `${w}×${h} px • Sharp 300+ DPI ✨`;
+          let icon = 'fa-circle-check text-emerald-400';
+          let badgeClass = 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30';
+
+          if (minDim >= 1000) {
+            rating = 'sharp';
+            label = `${w}×${h} px • Sharp 300+ DPI ✨`;
+            icon = 'fa-circle-check text-emerald-400';
+            badgeClass = 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30';
+          } else if (minDim >= 600) {
+            rating = 'medium';
+            label = `${w}×${h} px • Standard Quality`;
+            icon = 'fa-circle-info text-amber-400';
+            badgeClass = 'text-amber-400 bg-amber-500/15 border-amber-500/30';
+          } else {
+            rating = 'low';
+            label = `${w}×${h} px • Low Res / Blurry ⚠️`;
+            icon = 'fa-triangle-exclamation text-rose-400';
+            badgeClass = 'text-rose-400 bg-rose-500/15 border-rose-500/30';
+          }
+          URL.revokeObjectURL(objUrl);
+          resolve({ isImage: true, width: w, height: h, sizeKb, rating, label, icon, badgeClass });
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(objUrl);
+          resolve({ isImage: false, rating: 'unknown', label: 'Image file', badgeClass: 'text-slate-400 bg-slate-500/10 border-slate-500/20' });
+        };
+        img.src = objUrl;
+      });
+    }
+
     // ─── FILE UPLOADS (SINGLE & MULTI) ─────────────────────────────
-    function handleArtworkFileSelect(e) {
+    async function handleArtworkFileSelect(e) {
       const file = e.target.files?.[0];
       if (!file) return;
       haptic('success');
@@ -2851,6 +2922,30 @@
 
       document.getElementById('artwork-placeholder-container').classList.add('hidden');
       document.getElementById('artwork-preview-container').classList.remove('hidden');
+
+      // Instant Pre-flight Resolution Check
+      const pf = await inspectImageFile(file);
+      const badge = document.getElementById('artwork-preflight-badge');
+      const icon = document.getElementById('artwork-preflight-icon');
+      const text = document.getElementById('artwork-preflight-text');
+      const warningBox = document.getElementById('artwork-preflight-warning');
+      const dimsSpan = document.getElementById('artwork-preflight-dims');
+
+      if (badge && pf.isImage) {
+        badge.className = `inline-flex items-center space-x-1 px-3 py-1 rounded-full text-[11px] font-semibold border ${pf.badgeClass}`;
+        icon.className = `fa-solid ${pf.icon} text-[10px]`;
+        text.textContent = pf.label;
+        badge.classList.remove('hidden');
+      }
+
+      if (warningBox) {
+        if (pf.isImage && pf.rating === 'low') {
+          if (dimsSpan) dimsSpan.textContent = `${pf.width}×${pf.height} px`;
+          warningBox.classList.remove('hidden');
+        } else {
+          warningBox.classList.add('hidden');
+        }
+      }
     }
 
     function handleMultiPhotoSelect(e) {
@@ -2869,23 +2964,44 @@
       renderMultiPhotoPreviews();
     }
 
-    function renderMultiPhotoPreviews() {
+    async function renderMultiPhotoPreviews() {
       const container = document.getElementById('multi-photo-preview-grid');
       container.innerHTML = '';
       document.getElementById('multi-photo-counter').textContent = `${multiUploadedFiles.length} / ${currentQuantity} photos`;
 
-      multiUploadedFiles.forEach((file, idx) => {
+      let hasAnyLowRes = false;
+      for (let idx = 0; idx < multiUploadedFiles.length; idx++) {
+        const file = multiUploadedFiles[idx];
         const thumb = document.createElement('div');
         thumb.className = "relative aspect-square rounded-xl overflow-hidden border border-surface-border bg-slate-900 group";
         const url = URL.createObjectURL(file);
+
+        let badgeHtml = '';
+        if (file.type && file.type.startsWith('image/')) {
+          const pf = await inspectImageFile(file);
+          if (pf.rating === 'low') {
+            hasAnyLowRes = true;
+            badgeHtml = `<span class="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-rose-600/90 text-white text-[9px] font-bold">Low Res</span>`;
+          } else if (pf.rating === 'sharp') {
+            badgeHtml = `<span class="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-emerald-600/90 text-white text-[9px] font-bold">HD</span>`;
+          }
+        }
+
         thumb.innerHTML = `
           <img src="${url}" class="w-full h-full object-cover">
+          ${badgeHtml}
           <button type="button" onclick="removeMultiPhoto(${idx})" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px]">
             <i class="fa-solid fa-xmark"></i>
           </button>
         `;
         container.appendChild(thumb);
-      });
+      }
+
+      const multiWarn = document.getElementById('multi-preflight-warning');
+      if (multiWarn) {
+        if (hasAnyLowRes) multiWarn.classList.remove('hidden');
+        else multiWarn.classList.add('hidden');
+      }
     }
 
     function handleReceiptFileSelect(e) {
@@ -3378,7 +3494,7 @@
       document.getElementById('reupload-modal').classList.add('hidden');
     }
 
-    function handleReuploadFileChange(input) {
+    async function handleReuploadFileChange(input) {
       if (!input.files || !input.files[0]) return;
       const file = input.files[0];
       reuploadSelectedFile = file;
@@ -3388,10 +3504,26 @@
       const errBox = document.getElementById('reupload-error-box');
       errBox.classList.add('hidden');
 
+      let preflightInfo = '';
+      if (reuploadTargetType === 'artwork' && file.type && file.type.startsWith('image/')) {
+        const pf = await inspectImageFile(file);
+        if (pf.rating === 'low') {
+          preflightInfo = `<div class="mt-2 text-[11px] text-rose-300 bg-rose-500/20 border border-rose-500/30 rounded-lg p-2 text-left">
+            <i class="fa-solid fa-triangle-exclamation text-rose-400 mr-1"></i>
+            <span>Warning: ${pf.width}×${pf.height} px is low resolution and may print blurry.</span>
+          </div>`;
+        } else if (pf.rating === 'sharp') {
+          preflightInfo = `<div class="mt-1 text-[11px] text-emerald-400 font-semibold">
+            <i class="fa-solid fa-circle-check mr-1"></i>${pf.width}×${pf.height} px • Sharp High-Res ✨
+          </div>`;
+        }
+      }
+
       dropzone.innerHTML = `
         <i class="fa-solid fa-circle-check text-2xl text-emerald-400"></i>
         <div class="text-xs text-white font-bold truncate max-w-xs mx-auto">${file.name}</div>
         <div class="text-[10px] text-emerald-300 font-semibold">${(file.size / (1024 * 1024)).toFixed(2)} MB Ready</div>
+        ${preflightInfo}
       `;
     }
 

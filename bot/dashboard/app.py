@@ -18,6 +18,7 @@ import aiohttp
 
 from data import database
 import config
+from services.image_preflight import inspect_image_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -467,12 +468,21 @@ async def webapp_reupload_artwork(
         content = await f.read()
         with open(art_path, "wb") as out_f:
             out_f.write(content)
+        meta = inspect_image_metadata(art_path)
         new_files_list.append({
             "filename": art_name,
             "file_id": None,
             "type": "customer_artwork",
             "original_name": f.filename,
-            "url": f"/customer-uploads/{art_name}"
+            "url": f"/customer-uploads/{art_name}",
+            "width": meta.get("width"),
+            "height": meta.get("height"),
+            "megapixels": meta.get("megapixels"),
+            "format": meta.get("format"),
+            "mode": meta.get("mode"),
+            "size_kb": meta.get("size_kb"),
+            "quality_rating": meta.get("quality_rating"),
+            "quality_label": meta.get("quality_label")
         })
 
     database.update_order_artwork(clean_code, customer_files=json.dumps(new_files_list))
@@ -564,12 +574,21 @@ async def webapp_submit_order_full(
                 content = await f.read()
                 with open(art_path, "wb") as out_f:
                     out_f.write(content)
+                meta = inspect_image_metadata(art_path)
                 customer_files_list.append({
                     "filename": art_name,
                     "file_id": None,
                     "type": "customer_artwork",
                     "original_name": f.filename,
-                    "url": f"/customer-uploads/{art_name}"
+                    "url": f"/customer-uploads/{art_name}",
+                    "width": meta.get("width"),
+                    "height": meta.get("height"),
+                    "megapixels": meta.get("megapixels"),
+                    "format": meta.get("format"),
+                    "mode": meta.get("mode"),
+                    "size_kb": meta.get("size_kb"),
+                    "quality_rating": meta.get("quality_rating"),
+                    "quality_label": meta.get("quality_label")
                 })
                 has_attachment = True
             except Exception as e:
@@ -878,13 +897,14 @@ def enrich_order_data(o: dict) -> dict:
     else:
         o["balance_etb"] = None
 
-    # 5. Customer uploaded artwork files list
+    # 5. Customer uploaded artwork files list & preflight quality check
     cust_files_raw = o.get("customer_files") or "[]"
     try:
         f_list = json.loads(cust_files_raw)
         o["artwork_files"] = f_list if isinstance(f_list, list) else []
     except Exception:
         o["artwork_files"] = []
+    o["has_low_res_artwork"] = any(f.get("quality_rating") == "low" for f in o["artwork_files"])
 
     # 6. GPS Pin URL
     gps_m = re.search(r"GPS:\s*(https?://[^\s|]+)", cleaned_notes)

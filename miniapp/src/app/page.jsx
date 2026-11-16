@@ -359,6 +359,7 @@ export default function SeloraMiniApp() {
   const [customNotes, setCustomNotes] = useState('');
   const [artworkFile, setArtworkFile] = useState(null);
   const [artworkPreview, setArtworkPreview] = useState(null);
+  const [artworkPreflight, setArtworkPreflight] = useState(null);
   const artworkInputRef = useRef(null);
 
   // Step 3: Schedule & Delivery
@@ -495,6 +496,7 @@ export default function SeloraMiniApp() {
     setDeliveryAddress('');
     setArtworkFile(null);
     setArtworkPreview(null);
+    setArtworkPreflight(null);
     setReceiptFile(null);
     setReceiptPreview(null);
     setTransactionRef('');
@@ -506,13 +508,45 @@ export default function SeloraMiniApp() {
     setDesignMode(matched ? 'ready' : 'upload');
   }
 
-  // File Handlers with Preview
+  // File Handlers with Preview & Pre-flight Inspection
   function handleArtworkSelect(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     triggerHaptic('success');
     setArtworkFile(file);
     setArtworkPreview(URL.createObjectURL(file));
+
+    if (file.type && file.type.startsWith('image/')) {
+      const img = new Image();
+      const objUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const minDim = Math.min(w, h);
+        const sizeKb = Math.round(file.size / 1024);
+        let rating = 'sharp';
+        let label = `${w}×${h} px • High Res Sharp ✨`;
+        if (minDim >= 1000) {
+          rating = 'sharp';
+          label = `${w}×${h} px • High Res Sharp ✨`;
+        } else if (minDim >= 600) {
+          rating = 'medium';
+          label = `${w}×${h} px • Standard Quality`;
+        } else {
+          rating = 'low';
+          label = `${w}×${h} px • Low Resolution ⚠️`;
+        }
+        setArtworkPreflight({ width: w, height: h, rating, label, sizeKb });
+        URL.revokeObjectURL(objUrl);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objUrl);
+        setArtworkPreflight(null);
+      };
+      img.src = objUrl;
+    } else {
+      setArtworkPreflight(null);
+    }
   }
 
   function handleReceiptSelect(e) {
@@ -1429,6 +1463,30 @@ export default function SeloraMiniApp() {
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               <span>{artworkFile?.name}</span>
                             </div>
+                            {artworkPreflight && (
+                              <div className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                                artworkPreflight.rating === 'sharp' 
+                                  ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30' 
+                                  : artworkPreflight.rating === 'medium'
+                                  ? 'text-amber-400 bg-amber-500/15 border-amber-500/30'
+                                  : 'text-rose-400 bg-rose-500/15 border-rose-500/30'
+                              }`}>
+                                <span>{artworkPreflight.label}</span>
+                              </div>
+                            )}
+                            {artworkPreflight?.rating === 'low' && (
+                              <div className="w-full text-left p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs">
+                                <div className="flex items-center space-x-1.5 font-bold text-rose-200">
+                                  <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                                  <span>{lang === 'en' ? 'Low Resolution Notice' : 'ዝቅተኛ ጥራት ማሳሰቢያ'}</span>
+                                </div>
+                                <p className="text-[10px] text-rose-200/80 mt-1 leading-snug">
+                                  {lang === 'en' 
+                                    ? `This image is ${artworkPreflight.width}×${artworkPreflight.height} px and may look blurry when printed. For best results, consider choosing an uncompressed photo.`
+                                    : `ይህ ፎቶ ${artworkPreflight.width}×${artworkPreflight.height} ፒክስል በመሆኑ ሲታተም ጥራቱ ሊቀንስ ይችላል። የተሻለ ጥራት ያለው ፎቶ እንዲመርጡ ይመከራል።`}
+                                </p>
+                              </div>
+                            )}
                             <span className="text-[10px] text-slate-400">
                               {(artworkFile?.size / (1024 * 1024)).toFixed(2)} MB • Tap to replace
                             </span>
