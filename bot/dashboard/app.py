@@ -241,7 +241,7 @@ async def webapp_submit_order(payload: WebappOrderRequest):
         phone_line = f"\n📞 *Driver Contact Phone:* [{payload.phone}](tel:{payload.phone})" if payload.phone else ""
         recip_line = f"\n📦 *Recipient:* *{payload.recipient_name}*" if payload.recipient_name else ""
         admin_text = (
-            f"🚨 *NEW APP ORDER RECEIVED! — {order_code}*\n"
+            f"🚨 *NEW APP ORDER RECEIVED! : {order_code}*\n"
             f"👤 *Customer:* {payload.full_name} (@{payload.username or 'none'})\n"
             f"🆔 *User ID:* `{payload.user_id}`{recip_line}{phone_line}\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
@@ -307,6 +307,36 @@ async def webapp_track_order(order_code: str):
         }
     }
 
+@app.get("/api/webapp/my-orders/{user_id}")
+async def webapp_my_orders(user_id: int):
+    """Retrieve active (non-completed) orders for the customer."""
+    try:
+        user_orders = database.get_orders_by_user(user_id)
+        active_list = []
+        for o in user_orders:
+            enrich_order_data(o)
+            st = (o.get("status") or "pending").lower()
+            # Ignore completed or cancelled orders
+            if st in ("completed", "cancelled"):
+                continue
+            active_list.append({
+                "order_code": o.get("order_code"),
+                "status": o.get("status", "pending"),
+                "payment_status": o.get("payment_status", "pending_review"),
+                "items": o.get("items", ""),
+                "deadline": o.get("deadline", ""),
+                "delivery_type": o.get("delivery_type", ""),
+                "delivery_location": o.get("delivery_location", ""),
+                "total_price": o.get("total_price", 0),
+                "deposit_amount": o.get("deposit_amount", 0),
+                "rejection_reason": o.get("rejection_reason") or "",
+                "created_at": o.get("created_at", "")
+            })
+        return {"ok": True, "orders": active_list[:10]}
+    except Exception as e:
+        logger.error(f"Error fetching user active orders: {e}")
+        return {"ok": False, "orders": []}
+
 @app.post("/api/webapp/order/{order_code}/reupload-receipt")
 async def webapp_reupload_receipt(
     order_code: str,
@@ -331,7 +361,7 @@ async def webapp_reupload_receipt(
     # Notify admin with new receipt photo and approval buttons
     if config.ADMIN_CHAT_ID:
         admin_text = (
-            f"🔄 *UPDATED PAYMENT RECEIPT RE-UPLOADED! — {clean_code}*\n"
+            f"🔄 *UPDATED PAYMENT RECEIPT RE-UPLOADED! : {clean_code}*\n"
             f"👤 *Customer:* {order.get('full_name')} (@{order.get('username') or 'none'})\n"
             f"🏷 *Items:* {order.get('items')}\n"
             f"📞 *Phone:* {order.get('phone')}\n"
@@ -407,7 +437,7 @@ async def webapp_reupload_artwork(
     # Notify admin
     if config.ADMIN_CHAT_ID:
         admin_text = (
-            f"🔄 *UPDATED ARTWORK RE-UPLOADED! — {clean_code}*\n"
+            f"🔄 *UPDATED ARTWORK RE-UPLOADED! : {clean_code}*\n"
             f"👤 *Customer:* {order.get('full_name')} (@{order.get('username') or 'none'})\n"
             f"🏷 *Items:* {order.get('items')}\n"
             f"📎 *Files:* {len(new_files_list)} new file(s) attached\n"
@@ -557,7 +587,7 @@ async def webapp_submit_order_full(
             f"▸ *Delivery:* {delivery_type} ({loc_disp})\n\n"
             "─────────────────────\n"
             "Status: *Pending Review*\n"
-            "_We're verifying your deposit — you'll be notified once approved and production begins._"
+            "_We're verifying your deposit; you'll be notified once approved and production begins._"
         )
         if config.ADMIN_USERNAME:
             customer_msg += f"\n\nQuestions? @{config.ADMIN_USERNAME}"
@@ -581,7 +611,7 @@ async def webapp_submit_order_full(
         username_str = f"@{username}" if username else "no username"
 
         admin_text = (
-            f"🚨 *NEW ORDER & PAYMENT SUBMITTED! — {order_code}*{rush_badge}{design_badge}\n"
+            f"🚨 *NEW ORDER & PAYMENT SUBMITTED! : {order_code}*{rush_badge}{design_badge}\n"
             f"⏰ *Time:* {timestamp}\n"
             f"👤 *Customer:* [{full_name}](tg://user?id={user_id}) ({username_str})\n"
             f"🆔 *Telegram ID:* `{user_id}`\n"

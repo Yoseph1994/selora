@@ -256,6 +256,23 @@
         <p class="text-xs text-slate-400 leading-relaxed" id="track-desc">Enter your order code (e.g. SLR-1004) to view live progress.</p>
       </div>
 
+      <!-- Recent Active Orders Section (Auto-shown when user returns) -->
+      <div id="active-orders-section" class="space-y-2.5 hidden">
+        <div class="flex items-center justify-between px-1">
+          <div class="flex items-center space-x-2">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
+            </span>
+            <span class="text-xs font-bold text-slate-200 uppercase tracking-wider" id="active-orders-label">Active Orders In Progress</span>
+          </div>
+          <span id="active-orders-count-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">0 Active</span>
+        </div>
+        <div id="active-orders-list" class="space-y-2">
+          <!-- Dynamically populated via loadActiveOrders() -->
+        </div>
+      </div>
+
       <form onsubmit="handleTrackQuery(event)" class="flex space-x-2.5">
         <input 
           type="text" 
@@ -266,7 +283,7 @@
         <button 
           type="submit" 
           id="btn-track-submit"
-          class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition active:scale-95 shadow-md"
+          class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition active:scale-95 shadow-md cursor-pointer"
         >
           Track
         </button>
@@ -326,12 +343,12 @@
               <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
               <span class="text-xs sm:text-[13px] font-bold text-white">Commercial Bank of Ethiopia (CBE)</span>
             </div>
-            <div class="font-mono text-sm sm:text-base font-bold text-amber-300 tracking-wider">
-              1000492813589
+            <div id="display-tab-cbe-acc" class="font-mono text-sm sm:text-base font-bold text-amber-300 tracking-wider">
+              {{ cbe_account }}
             </div>
-            <div class="text-[11px] text-slate-400">KEBROM HAILU</div>
+            <div id="display-tab-cbe-name" class="text-[11px] text-slate-400 font-medium">{{ cbe_name }}</div>
           </div>
-          <button onclick="copyToClipboard('1000492813589', 'cbe')" id="btn-copy-cbe" class="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-slate-300 active:scale-95 transition">
+          <button onclick="copyToClipboard(STORE_CONFIG.cbeAccount, 'cbe')" id="btn-copy-cbe" class="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-slate-300 active:scale-95 transition cursor-pointer">
             <i class="fa-regular fa-copy text-sm"></i>
           </button>
         </div>
@@ -343,12 +360,12 @@
               <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
               <span class="text-xs sm:text-[13px] font-bold text-white">Telebirr</span>
             </div>
-            <div class="font-mono text-sm sm:text-base font-bold text-amber-300 tracking-wider">
-              0947702896
+            <div id="display-tab-tele-acc" class="font-mono text-sm sm:text-base font-bold text-amber-300 tracking-wider">
+              {{ telebirr }}
             </div>
-            <div class="text-[11px] text-slate-400">KEBROM HAILU</div>
+            <div id="display-tab-tele-name" class="text-[11px] text-slate-400 font-medium">{{ telebirr_name }}</div>
           </div>
-          <button onclick="copyToClipboard('0947702896', 'telebirr')" id="btn-copy-telebirr" class="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-slate-300 active:scale-95 transition">
+          <button onclick="copyToClipboard(STORE_CONFIG.telebirr, 'telebirr')" id="btn-copy-telebirr" class="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-surface-border text-slate-300 active:scale-95 transition cursor-pointer">
             <i class="fa-regular fa-copy text-sm"></i>
           </button>
         </div>
@@ -866,10 +883,10 @@
             <div id="box-cbe-details" class="bg-surface-card border border-surface-border rounded-xl p-3.5 flex items-center justify-between shadow-sm">
               <div class="space-y-1">
                 <span class="text-[11px] text-slate-400">CBE Account Number</span>
-                <div class="font-mono text-sm sm:text-base font-bold text-amber-300">1000492813589</div>
-                <span class="text-xs text-slate-300">KEBROM HAILU</span>
+                <div id="display-step4-cbe-acc" class="font-mono text-sm sm:text-base font-bold text-amber-300">{{ cbe_account }}</div>
+                <span id="display-step4-cbe-name" class="text-xs text-slate-300 font-medium">{{ cbe_name }}</span>
               </div>
-              <button type="button" onclick="copyToClipboard('1000492813589', 'cbe-step4')" id="btn-copy-cbe-step4" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 active:scale-95 transition shadow-sm">
+              <button type="button" onclick="copyToClipboard(STORE_CONFIG.cbeAccount, 'cbe-step4')" id="btn-copy-cbe-step4" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 active:scale-95 transition shadow-sm cursor-pointer">
                 <i class="fa-regular fa-copy text-xs"></i>
                 <span>Copy</span>
               </button>
@@ -879,10 +896,10 @@
             <div id="box-telebirr-details" class="bg-surface-card border border-surface-border rounded-xl p-3.5 flex items-center justify-between shadow-sm hidden">
               <div class="space-y-1">
                 <span class="text-[11px] text-slate-400">Telebirr Mobile Number</span>
-                <div class="font-mono text-sm sm:text-base font-bold text-amber-300">0947702896</div>
-                <span class="text-xs text-slate-300">KEBROM HAILU</span>
+                <div id="display-step4-tele-acc" class="font-mono text-sm sm:text-base font-bold text-amber-300">{{ telebirr }}</div>
+                <span id="display-step4-tele-name" class="text-xs text-slate-300 font-medium">{{ telebirr_name }}</span>
               </div>
-              <button type="button" onclick="copyToClipboard('0947702896', 'telebirr-step4')" id="btn-copy-telebirr-step4" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 active:scale-95 transition shadow-sm">
+              <button type="button" onclick="copyToClipboard(STORE_CONFIG.telebirr, 'telebirr-step4')" id="btn-copy-telebirr-step4" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 active:scale-95 transition shadow-sm cursor-pointer">
                 <i class="fa-regular fa-copy text-xs"></i>
                 <span>Copy</span>
               </button>
@@ -1185,6 +1202,15 @@
       }
     };
 
+    // ─── DASHBOARD & .ENV CONFIG SYNC ──────────────────────────────
+    const STORE_CONFIG = {
+      cbeAccount: {{ cbe_account | default("1000056873639") | tojson }},
+      cbeName: {{ cbe_name | default("Nani Asmelash") | tojson }},
+      telebirr: {{ telebirr | default("0906287728") | tojson }},
+      telebirrName: {{ telebirr_name | default("Kebron Girma") | tojson }},
+      storeName: {{ store_name | default("Selora Prints") | tojson }}
+    };
+
     // ─── DASHBOARD SYNC (JINJA2 + REALTIME API) ────────────────────
     const RAW_SERVER_PRODUCTS = {{ products | default([]) | tojson }};
     const RAW_SERVER_DESIGNS = {{ designs | default([]) | tojson }};
@@ -1344,6 +1370,33 @@
         .then(res => res.json())
         .then(data => {
           if (data && data.ok) {
+            if (data.store) {
+              if (data.store.cbe_account) STORE_CONFIG.cbeAccount = data.store.cbe_account;
+              if (data.store.cbe_name) STORE_CONFIG.cbeName = data.store.cbe_name;
+              if (data.store.telebirr) STORE_CONFIG.telebirr = data.store.telebirr;
+              if (data.store.telebirr_name) STORE_CONFIG.telebirrName = data.store.telebirr_name;
+              if (data.store.store_name) STORE_CONFIG.storeName = data.store.store_name;
+
+              const elTabCbe = document.getElementById('display-tab-cbe-acc');
+              if (elTabCbe) elTabCbe.textContent = STORE_CONFIG.cbeAccount;
+              const elTabCbeName = document.getElementById('display-tab-cbe-name');
+              if (elTabCbeName) elTabCbeName.textContent = STORE_CONFIG.cbeName;
+
+              const elTabTele = document.getElementById('display-tab-tele-acc');
+              if (elTabTele) elTabTele.textContent = STORE_CONFIG.telebirr;
+              const elTabTeleName = document.getElementById('display-tab-tele-name');
+              if (elTabTeleName) elTabTeleName.textContent = STORE_CONFIG.telebirrName;
+
+              const elStep4Cbe = document.getElementById('display-step4-cbe-acc');
+              if (elStep4Cbe) elStep4Cbe.textContent = STORE_CONFIG.cbeAccount;
+              const elStep4CbeName = document.getElementById('display-step4-cbe-name');
+              if (elStep4CbeName) elStep4CbeName.textContent = STORE_CONFIG.cbeName;
+
+              const elStep4Tele = document.getElementById('display-step4-tele-acc');
+              if (elStep4Tele) elStep4Tele.textContent = STORE_CONFIG.telebirr;
+              const elStep4TeleName = document.getElementById('display-step4-tele-name');
+              if (elStep4TeleName) elStep4TeleName.textContent = STORE_CONFIG.telebirrName;
+            }
             if (data.products && data.products.length) {
               PRODUCTS = normalizeProducts(data.products);
               renderProducts(PRODUCTS);
@@ -1359,6 +1412,9 @@
           }
         })
         .catch(err => console.log('Loaded server catalog.'));
+
+      // Check and render recent active orders in background
+      loadActiveOrders();
     });
 
     // ─── HAPTIC FEEDBACK ───────────────────────────────────────────
@@ -1592,6 +1648,9 @@
     function switchTab(tab) {
       haptic('selection');
       currentTab = tab;
+      if (tab === 'track') {
+        loadActiveOrders();
+      }
       ['catalog', 'portfolio', 'designs', 'track', 'info'].forEach(t => {
         const sec = document.getElementById(`tab-${t}`);
         const nav = document.getElementById(`nav-${t}`);
@@ -2398,6 +2457,7 @@
         const code = data?.order_code || `SLR-${Math.floor(1000 + Math.random() * 9000)}`;
 
         haptic('success');
+        saveOrderToLocalHistory(code);
         confirmedOrderData = {
           orderCode: code,
           items: itemsText,
@@ -2422,6 +2482,7 @@
         console.error('Order submission error:', err);
         const mockCode = `SLR-${Math.floor(1000 + Math.random() * 9000)}`;
         haptic('success');
+        saveOrderToLocalHistory(mockCode);
         confirmedOrderData = {
           orderCode: mockCode,
           items: itemsText,
@@ -2452,6 +2513,128 @@
       switchTab('track');
       document.getElementById('track-code-input').value = confirmedOrderData.orderCode;
       queryTrackOrder(confirmedOrderData.orderCode);
+      loadActiveOrders();
+    }
+
+    // ─── LOCAL ORDER HISTORY & ACTIVE ORDERS TRACKER ────────────────
+    function saveOrderToLocalHistory(code) {
+      if (!code) return;
+      try {
+        let list = JSON.parse(localStorage.getItem('selora_user_orders') || '[]');
+        if (!list.includes(code)) list.unshift(code);
+        list = list.slice(0, 10);
+        localStorage.setItem('selora_user_orders', JSON.stringify(list));
+      } catch (e) {}
+    }
+
+    async function loadActiveOrders() {
+      const section = document.getElementById('active-orders-section');
+      const listEl = document.getElementById('active-orders-list');
+      const badge = document.getElementById('active-orders-count-badge');
+      if (!section || !listEl) return;
+
+      let activeOrdersMap = new Map();
+
+      // 1. Fetch from server by Telegram user ID if available
+      if (tgUser && tgUser.id) {
+        try {
+          const res = await fetch(`/api/webapp/my-orders/${tgUser.id}`);
+          const data = await res.json();
+          if (data && data.ok && Array.isArray(data.orders)) {
+            data.orders.forEach(o => {
+              const st = (o.status || '').toLowerCase();
+              if (st !== 'completed' && st !== 'cancelled') {
+                activeOrdersMap.set(o.order_code, o);
+              }
+            });
+          }
+        } catch (e) {}
+      }
+
+      // 2. Also check any local storage saved orders
+      let localCodes = [];
+      try {
+        localCodes = JSON.parse(localStorage.getItem('selora_user_orders') || '[]');
+      } catch (e) { localCodes = []; }
+
+      for (const code of localCodes) {
+        if (!activeOrdersMap.has(code)) {
+          try {
+            const res = await fetch(`/api/webapp/track/${encodeURIComponent(code)}`);
+            const data = await res.json();
+            if (data && data.ok && data.order) {
+              const st = (data.order.status || '').toLowerCase();
+              if (st !== 'completed' && st !== 'cancelled') {
+                activeOrdersMap.set(code, data.order);
+              } else {
+                localCodes = localCodes.filter(c => c !== code);
+                try { localStorage.setItem('selora_user_orders', JSON.stringify(localCodes)); } catch(e){}
+              }
+            }
+          } catch(e) {}
+        }
+      }
+
+      const activeOrders = Array.from(activeOrdersMap.values());
+      if (activeOrders.length === 0) {
+        section.classList.add('hidden');
+        return;
+      }
+
+      if (badge) {
+        badge.textContent = `${activeOrders.length} ${currentLang === 'am' ? 'በሂደት ላይ' : 'Active'}`;
+      }
+      listEl.innerHTML = '';
+
+      activeOrders.forEach(o => {
+        const isRejected = (o.status === 'rejected' || o.payment_status === 'rejected');
+        let statusBadgeClass = 'bg-amber-500/10 text-amber-300 border-amber-500/25';
+        let statusText = currentLang === 'am' ? 'በግምገማ ላይ' : 'Pending Review';
+
+        if (isRejected) {
+          statusBadgeClass = 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+          statusText = currentLang === 'am' ? 'ማስተካከያ ይፈልጋል' : 'Action Required';
+        } else if (o.status === 'in_production') {
+          statusBadgeClass = 'bg-blue-500/15 text-blue-300 border-blue-500/30';
+          statusText = currentLang === 'am' ? 'በህትመት ላይ' : 'In Production';
+        } else if (o.status === 'ready' || o.status === 'ready_for_delivery') {
+          statusBadgeClass = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+          statusText = currentLang === 'am' ? 'ዝግጁ ነው' : 'Ready';
+        }
+
+        const itemCard = document.createElement('div');
+        itemCard.className = "p-3 rounded-xl bg-surface-card border border-surface-border hover:border-amber-400/50 transition cursor-pointer flex items-center justify-between group shadow-sm";
+        itemCard.onclick = () => {
+          document.getElementById('track-code-input').value = o.order_code;
+          queryTrackOrder(o.order_code);
+        };
+
+        itemCard.innerHTML = `
+          <div class="space-y-1 min-w-0 flex-1 pr-3">
+            <div class="flex items-center space-x-2">
+              <span class="font-mono text-xs sm:text-sm font-bold text-amber-300 tracking-wider">${o.order_code}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusBadgeClass}">
+                ${statusText}
+              </span>
+            </div>
+            <div class="text-[11px] text-slate-300 font-medium truncate">${o.items || 'Custom Order'}</div>
+            <div class="text-[10px] text-slate-400">${o.deadline ? (currentLang === 'am' ? 'የመድረሻ ቀን: ' : 'Target: ') + o.deadline : ''}</div>
+          </div>
+          <button type="button" class="p-2 rounded-lg bg-white/[0.04] group-hover:bg-amber-400/20 text-slate-400 group-hover:text-amber-300 transition">
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+          </button>
+        `;
+        listEl.appendChild(itemCard);
+      });
+
+      section.classList.remove('hidden');
+
+      // Auto-display live tracker if exactly 1 active order and tracker not already showing
+      const currentInput = document.getElementById('track-code-input').value.trim();
+      if (!currentInput && activeOrders.length === 1) {
+        document.getElementById('track-code-input').value = activeOrders[0].order_code;
+        queryTrackOrder(activeOrders[0].order_code);
+      }
     }
 
     // ─── TRACK ORDER QUERY ─────────────────────────────────────────
@@ -2585,6 +2768,7 @@
           haptic('success');
           closeReuploadModal();
           queryTrackOrder(reuploadOrderCode);
+          loadActiveOrders();
         } else {
           haptic('error');
           const errBox = document.getElementById('reupload-error-box');
@@ -2620,6 +2804,13 @@
         if (data?.ok && data?.order) {
           haptic('success');
           const o = data.order;
+          if (o.status === 'completed') {
+            try {
+              let localCodes = JSON.parse(localStorage.getItem('selora_user_orders') || '[]');
+              localCodes = localCodes.filter(c => c !== o.order_code);
+              localStorage.setItem('selora_user_orders', JSON.stringify(localCodes));
+            } catch(e) {}
+          }
           const isRejected = o.status === 'rejected' || o.payment_status === 'rejected';
           const statusUpper = isRejected ? 'REJECTED' : (o.status || 'pending').toUpperCase();
           const isDepositDone = o.payment_status === 'approved' || (o.status !== 'pending' && !isRejected);

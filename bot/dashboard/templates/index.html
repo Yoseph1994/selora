@@ -336,7 +336,11 @@
                   <div class="font-medium text-slate-900 leading-snug">
                     <span class="line-clamp-2">{{ o['items'] }}</span>
                     {% if o['items']|length > 45 %}
-                    <button type="button" onclick="openDetailModal('Ordered Items & Specifications', {{ o['items']|tojson }}, '{{ o.order_code }}', 'items')" class="text-[10px] font-semibold text-amber-700 hover:text-amber-900 hover:underline mt-0.5 inline-flex items-center space-x-0.5 cursor-pointer">
+                    <button type="button" 
+                            data-text="{{ o['items']|e }}" 
+                            data-code="{{ o.order_code }}" 
+                            onclick="openDetailModal('Ordered Items & Specifications', this.getAttribute('data-text'), this.getAttribute('data-code'), 'items')" 
+                            class="text-[10px] font-semibold text-amber-700 hover:text-amber-900 hover:underline mt-0.5 inline-flex items-center space-x-0.5 cursor-pointer">
                       <span>View full specs</span>
                       <i class="fa-solid fa-chevron-right text-[8px]"></i>
                     </button>
@@ -356,7 +360,11 @@
 
                   {% if o.artwork_files and o.artwork_files|length > 0 %}
                   <div class="{% if o.design_name %}mt-1{% endif %}">
-                    <button onclick='viewCustomerArtwork({{ o.artwork_files|tojson }}, "{{ o.order_code }}")' class="px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-medium transition inline-flex items-center space-x-1">
+                    <button type="button" 
+                            data-files='{{ o.artwork_files|tojson }}' 
+                            data-code="{{ o.order_code }}" 
+                            onclick="try { viewCustomerArtwork(JSON.parse(this.getAttribute('data-files') || '[]'), this.getAttribute('data-code')); } catch(e) {}" 
+                            class="px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-medium transition inline-flex items-center space-x-1 cursor-pointer">
                       <i class="fa-solid fa-images text-[11px]"></i>
                       <span>Files ({{ o.artwork_files|length }})</span>
                     </button>
@@ -369,7 +377,11 @@
                 <!-- Customer Customization Notes -->
                 <td class="py-3.5 px-3.5 whitespace-nowrap">
                   {% if o.custom_instructions %}
-                  <button type="button" onclick="viewCustomerNote({{ o.custom_instructions|tojson }}, '{{ o.order_code }}')" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-medium transition cursor-pointer">
+                  <button type="button" 
+                          data-note="{{ o.custom_instructions|e }}" 
+                          data-code="{{ o.order_code }}" 
+                          onclick="viewCustomerNote(this.getAttribute('data-note'), this.getAttribute('data-code'))" 
+                          class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-medium transition cursor-pointer">
                     <i class="fa-solid fa-note-sticky text-amber-600 text-xs"></i>
                     <span>Note</span>
                   </button>
@@ -458,7 +470,11 @@
                     </span>
                     {% if o.rejection_reason %}
                     <div>
-                      <button type="button" onclick="openDetailModal('Prior Rejection Reason', {{ o.rejection_reason|tojson }}, '{{ o.order_code }}', 'rejection')" class="mt-1 inline-flex items-center space-x-1 text-[10px] text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 px-2 py-0.5 rounded border border-rose-200 transition cursor-pointer">
+                      <button type="button" 
+                              data-text="{{ o.rejection_reason|e }}" 
+                              data-code="{{ o.order_code }}" 
+                              onclick="openDetailModal('Prior Rejection Reason', this.getAttribute('data-text'), this.getAttribute('data-code'), 'rejection')" 
+                              class="mt-1 inline-flex items-center space-x-1 text-[10px] text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 px-2 py-0.5 rounded border border-rose-200 transition cursor-pointer">
                         <i class="fa-solid fa-clock-rotate-left text-[9px]"></i>
                         <span>Prior Reject Note</span>
                       </button>
@@ -486,7 +502,11 @@
                     </span>
                     {% if o.rejection_reason %}
                     <div>
-                      <button type="button" onclick="openDetailModal('Rejection Reason', {{ o.rejection_reason|tojson }}, '{{ o.order_code }}', 'rejection')" class="mt-1.5 inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-[11px] font-medium transition cursor-pointer">
+                      <button type="button" 
+                              data-text="{{ o.rejection_reason|e }}" 
+                              data-code="{{ o.order_code }}" 
+                              onclick="openDetailModal('Rejection Reason', this.getAttribute('data-text'), this.getAttribute('data-code'), 'rejection')" 
+                              class="mt-1.5 inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-[11px] font-medium transition cursor-pointer">
                         <i class="fa-solid fa-circle-exclamation text-rose-500 text-[10px]"></i>
                         <span>View Reason</span>
                         <i class="fa-solid fa-up-right-from-square text-[9px] ml-0.5 opacity-60"></i>
@@ -995,7 +1015,7 @@
   </div>
 
   <!-- Modal: Details / Full Text Viewer (Customer Notes, Rejection Reasons, Full Specs) -->
-  <div id="order-detail-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+  <div id="order-detail-modal" onclick="if(event.target === this) closeDetailModal()" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100">
         <div class="flex items-center space-x-2.5">
@@ -1437,11 +1457,15 @@
         subtitle.textContent = 'Customer customization note for production:';
       }
 
-      document.getElementById('order-detail-modal').classList.remove('hidden');
+      const modal = document.getElementById('order-detail-modal');
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
     }
 
     function closeDetailModal() {
-      document.getElementById('order-detail-modal').classList.add('hidden');
+      const modal = document.getElementById('order-detail-modal');
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
     }
 
     function viewCustomerNote(noteText, orderCode) {
