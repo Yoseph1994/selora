@@ -1,9 +1,10 @@
 import os
+import re
 import json
 import sqlite3
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import List, Dict, Any, Optional
 
 try:
@@ -453,6 +454,7 @@ def init_db():
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS recipient_name TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_files TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS deadline_date TEXT;
             ALTER TABLE customers ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'en';
         """)
         conn.commit()
@@ -544,7 +546,8 @@ def init_db():
             "phone": "TEXT",
             "recipient_name": "TEXT",
             "customer_files": "TEXT DEFAULT '[]'",
-            "rejection_reason": "TEXT"
+            "rejection_reason": "TEXT",
+            "deadline_date": "TEXT"
         }
 
         for col, col_type in new_cols.items():
@@ -773,6 +776,126 @@ def update_admin_credentials(new_username: str, new_password: str):
         except Exception as e:
             logger.warning(f"Could not update .env file: {e}")
 
+def normalize_deadline_to_iso(val: str) -> str:
+    """Normalize arbitrary deadline strings to ISO YYYY-MM-DD."""
+    if not val:
+        return ""
+    val = val.strip()
+    m = re.search(r"(\d{4}-\d{2}-\d{2})", val)
+    if m:
+        return m.group(1)
+
+    clean_val = val.split("(")[0].strip()
+    now = datetime.now()
+    cur_year = now.year
+
+    for fmt in ["%b %d, %Y", "%Y-%m-%d", "%Y/%m/%d", "%a, %d %b %Y"]:
+        try:
+            return datetime.strptime(clean_val, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    for fmt in ["%a, %b %d", "%b %d"]:
+        try:
+            dt = datetime.strptime(f"{cur_year} {clean_val}", f"%Y {fmt}")
+            if dt.date() < now.date() - timedelta(days=30):
+                dt = dt.replace(year=cur_year + 1)
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    return ""
+
+def get_daily_booked_capacities() -> Dict[str, Dict[str, int]]:
+    """Return dictionary of ISO date (YYYY-MM-DD) -> {'total': int, 'rush': int} for all active orders."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT deadline, deadline_date, notes, status, payment_status
+            FROM orders
+            WHERE status NOT IN ('completed', 'cancelled')
+        """)
+        rows = cursor.fetchall()
+        capacities: Dict[str, Dict[str, int]] = {}
+        for row in rows:
+            r = dict(row) if hasattr(row, "keys") else (row if isinstance(row, dict) else {})
+            dl = r.get("deadline") if r else (row[0] if len(row) > 0 else "")
+            dl_date = (r.get("deadline_date") if r else (row[1] if len(row) > 1 else "")) or ""
+            notes = ((r.get("notes") if r else (row[2] if len(row) > 2 else "")) or "").lower()
+
+            iso_date = dl_date or normalize_deadline_to_iso(dl)
+            if not iso_date:
+                continue
+
+            if iso_date not in capacities:
+                capacities[iso_date] = {"total": 0, "rush": 0}
+
+            capacities[iso_date]["total"] += 1
+            if "rush" in notes or "urgent" in notes or "200 etb" in notes or "2-day" in notes:
+                capacities[iso_date]["rush"] += 1
+
+        return capacities
+    except Exception as e:
+        logger.error(f"Error fetching daily booked capacities: {e}")
+        return {}
+    finally:
+        conn.close()
+
+def check_date_capacity(target_date_iso: str, is_rush: bool = False, max_daily: int = 100, max_rush: int = 50) -> tuple[bool, str]:
+    """Validate whether a target date is available, not Sunday, and within capacity limits."""
+    try:
+        target_d = datetime.strptime(target_date_iso, "%Y-%m-%d").date()
+    except Exception:
+        return False, "Invalid date format."
+
+    # Sunday is studio rest day (no production or completion scheduled)
+    if target_d.weekday() == 6:
+        return False, "Sunday is our studio rest day. We do not schedule production or completion on Sundays."
+
+    today = date.today()
+    if target_d <= today:
+        return False, "Past and same-day deadlines are not allowed. Please select an upcoming working day."
+
+    capacities = get_daily_booked_capacities()
+    day_stats = capacities.get(target_date_iso, {"total": 0, "rush": 0})
+
+    if day_stats["total"] >= max_daily:
+        return False, f"This date is fully booked ({day_stats['total']}/{max_daily} orders reached). Please choose the next open day."
+
+    if is_rush and day_stats["rush"] >= max_rush:
+        return False, f"Urgent rush capacity for this date is full ({day_stats['rush']}/{max_rush} rush orders). Please select standard turnaround or the next available rush slot."
+
+    return True, "Available"
+
+def get_earliest_available_date(is_rush: bool = False, max_daily: int = 100, max_rush: int = 50) -> date:
+    """Find the earliest available production completion date skipping Sundays and full days."""
+    today = date.today()
+    capacities = get_daily_booked_capacities()
+
+    working_days = []
+    curr = today
+    # Buffer: tomorrow (working day +1) is file prep/drying buffer
+    while len(working_days) < 35:
+        curr += timedelta(days=1)
+        if curr.weekday() != 6: # Skip Sunday
+            working_days.append(curr)
+
+    # For Urgent Rush: starts from 2nd working day (index 1)
+    # For Standard: starts from 3rd working day (index 2)
+    start_idx = 1 if is_rush else 2
+
+    for d in working_days[start_idx:]:
+        iso = d.isoformat()
+        stats = capacities.get(iso, {"total": 0, "rush": 0})
+        if stats["total"] >= max_daily:
+            continue
+        if is_rush and stats["rush"] >= max_rush:
+            continue
+        return d
+
+    return working_days[start_idx]
+
 def save_order(
     user_id: int,
     full_name: str,
@@ -795,18 +918,19 @@ def save_order(
     conn, is_pg = get_connection()
     cursor = conn.cursor()
     created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    deadline_iso = normalize_deadline_to_iso(deadline)
 
     insert_sql = """
         INSERT INTO orders (
-            user_id, full_name, username, items, deadline,
+            user_id, full_name, username, items, deadline, deadline_date,
             delivery_type, delivery_location, notes, has_attachment,
             payment_screenshot_file_id, payment_screenshot_filename,
             payment_status, status, created_at, updated_at,
             phone, recipient_name, customer_files
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     params = (
-        user_id, full_name, username or "", items, deadline,
+        user_id, full_name, username or "", items, deadline, deadline_iso,
         delivery_type, delivery_location, notes, 1 if has_attachment else 0,
         payment_screenshot_file_id, payment_screenshot_filename,
         payment_status, status, created_at, created_at,

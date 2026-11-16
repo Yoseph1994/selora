@@ -650,6 +650,46 @@
 
         <!-- STEP 3: PICK DATE & DELIVERY -->
         <div id="order-step-3" class="space-y-4 hidden">
+          <!-- Two Paths: Standard vs Urgent Rush -->
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-200">
+              Production Turnaround Speed <span class="text-rose-500 font-bold">*</span>:
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <button 
+                type="button" 
+                id="btn-track-std"
+                onclick="setProductionTrack('standard')"
+                class="p-3 rounded-2xl border border-amber-400 bg-amber-400/10 text-left transition flex flex-col justify-between cursor-pointer shadow-sm"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-white flex items-center space-x-1.5">
+                    <i class="fa-regular fa-calendar-check text-amber-400"></i>
+                    <span>Standard</span>
+                  </span>
+                  <span class="text-[10px] font-bold text-emerald-300 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/30">Included</span>
+                </div>
+                <span class="text-[11px] text-slate-300 mt-1">3+ work days turnaround</span>
+              </button>
+
+              <button 
+                type="button" 
+                id="btn-track-rush"
+                onclick="setProductionTrack('urgent')"
+                class="p-3 rounded-2xl border border-surface-border bg-surface-card hover:border-amber-400/40 text-left transition flex flex-col justify-between cursor-pointer shadow-sm"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-white flex items-center space-x-1.5">
+                    <i class="fa-solid fa-bolt text-amber-400"></i>
+                    <span>⚡ Urgent Rush</span>
+                  </span>
+                  <span class="text-[10px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30">+200 ETB</span>
+                </div>
+                <span class="text-[11px] text-slate-300 mt-1">2 work days priority turnaround</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Calendar Date Picker (Exact Mirror of Bot build_calendar_keyboard) -->
           <div class="space-y-2.5">
             <div class="flex items-center justify-between">
@@ -661,22 +701,28 @@
               </span>
             </div>
 
+            <!-- Auto-shift / Capacity Notice Banner -->
+            <div id="calendar-capacity-banner" class="hidden p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-200 flex items-center space-x-2">
+              <i class="fa-solid fa-circle-info text-amber-400 text-xs shrink-0"></i>
+              <span id="calendar-capacity-msg"></span>
+            </div>
+
             <!-- Month View Calendar -->
             <div class="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-2.5 shadow-sm">
               <!-- Calendar Navigation -->
               <div class="flex items-center justify-between px-1">
-                <button type="button" onclick="navigateCalendar(-1)" id="cal-btn-prev" class="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-xs text-slate-300 transition">
+                <button type="button" onclick="navigateCalendar(-1)" id="cal-btn-prev" class="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-xs text-slate-300 transition cursor-pointer">
                   <i class="fa-solid fa-chevron-left text-[11px]"></i>
                 </button>
                 <span id="cal-month-title" class="text-xs sm:text-sm font-bold text-white tracking-wide">November 2026</span>
-                <button type="button" onclick="navigateCalendar(1)" id="cal-btn-next" class="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-xs text-slate-300 transition">
+                <button type="button" onclick="navigateCalendar(1)" id="cal-btn-next" class="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-xs text-slate-300 transition cursor-pointer">
                   <i class="fa-solid fa-chevron-right text-[11px]"></i>
                 </button>
               </div>
 
               <!-- Day of week headers -->
               <div class="grid grid-cols-7 gap-1.5 text-center text-[11px] font-bold text-slate-400 pb-2 border-b border-surface-border">
-                <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
+                <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span class="text-rose-400">Su</span>
               </div>
 
               <!-- Calendar Day Grid -->
@@ -685,14 +731,22 @@
               </div>
             </div>
 
-            <div class="flex items-center justify-between text-[11px] text-slate-400 px-1 pt-0.5">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] text-slate-400 px-1 pt-0.5">
               <span class="flex items-center space-x-1.5">
                 <span class="w-2.5 h-2.5 rounded-full border border-dashed border-amber-400"></span>
-                <span>⚡ Rush Day (+200 ETB)</span>
+                <span>⚡ Rush (+200 ETB)</span>
               </span>
               <span class="flex items-center space-x-1.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-white/20"></span>
-                <span>Standard (Included)</span>
+                <span>Standard (Free)</span>
+              </span>
+              <span class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500/20 text-rose-400 font-bold flex items-center justify-center text-[8px]">✕</span>
+                <span>Sunday (Rest Day)</span>
+              </span>
+              <span class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-700 font-bold flex items-center justify-center text-[8px]">🔒</span>
+                <span>Fully Booked</span>
               </span>
             </div>
           </div>
@@ -1138,6 +1192,9 @@
     let currentCalMonth = new Date().getMonth() + 1; // 1-12
     let selectedDeadlineDate = '';
     let selectedDeadlineRushFee = 0; // 0 or 200
+    let currentProductionTrack = 'standard'; // 'standard' | 'urgent'
+    let calendarCapacities = {};
+    let calendarAvailabilityData = null;
     
     // Delivery & Location
     let currentDelivery = 'pickup'; // 'pickup' | 'yango'
@@ -1208,7 +1265,10 @@
       cbeName: {{ cbe_name | default("Nani Asmelash") | tojson }},
       telebirr: {{ telebirr | default("0906287728") | tojson }},
       telebirrName: {{ telebirr_name | default("Kebron Girma") | tojson }},
-      storeName: {{ store_name | default("Selora Prints") | tojson }}
+      storeName: {{ store_name | default("Selora Prints") | tojson }},
+      maxDailyOrders: {{ max_daily_orders | default(100) | tojson }},
+      maxDailyRushOrders: {{ max_daily_rush_orders | default(50) | tojson }},
+      rushOrderFee: {{ rush_order_fee | default(200) | tojson }}
     };
 
     // ─── DASHBOARD SYNC (JINJA2 + REALTIME API) ────────────────────
@@ -1348,10 +1408,11 @@
         }
       }
 
-      // Initialize calendar month
+      // Initialize calendar month and capacity sync
       const now = new Date();
       currentCalYear = now.getFullYear();
       currentCalMonth = now.getMonth() + 1;
+      fetchCalendarCapacities();
       renderCalendar(currentCalYear, currentCalMonth);
 
       // Render server catalog
@@ -1376,6 +1437,9 @@
               if (data.store.telebirr) STORE_CONFIG.telebirr = data.store.telebirr;
               if (data.store.telebirr_name) STORE_CONFIG.telebirrName = data.store.telebirr_name;
               if (data.store.store_name) STORE_CONFIG.storeName = data.store.store_name;
+              if (data.store.max_daily_orders) STORE_CONFIG.maxDailyOrders = data.store.max_daily_orders;
+              if (data.store.max_daily_rush_orders) STORE_CONFIG.maxDailyRushOrders = data.store.max_daily_rush_orders;
+              if (data.store.rush_order_fee) STORE_CONFIG.rushOrderFee = data.store.rush_order_fee;
 
               const elTabCbe = document.getElementById('display-tab-cbe-acc');
               if (elTabCbe) elTabCbe.textContent = STORE_CONFIG.cbeAccount;
@@ -1666,10 +1730,153 @@
       });
     }
 
+    // ─── WORKING DAYS & CAPACITY HELPERS ─────────────────────────
+    function getUpcomingWorkingDays(count = 35) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const list = [];
+      let curr = new Date(today);
+      while (list.length < count) {
+        curr.setDate(curr.getDate() + 1);
+        if (curr.getDay() !== 0) { // 0 = Sunday (rest day)
+          list.push(new Date(curr));
+        }
+      }
+      return list;
+    }
+
+    function toIsoDate(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatDisplayDate(d, isRush) {
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const fee = STORE_CONFIG.rushOrderFee || 200;
+      const base = `${dayNames[d.getDay()]}, ${monthNames[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+      return isRush ? `${base} (⚡ 2-Day Rush +${fee} ETB)` : `${base} (Standard)`;
+    }
+
+    function findEarliestAvailableDate(isRush) {
+      const maxDaily = STORE_CONFIG.maxDailyOrders || 100;
+      const maxRush = STORE_CONFIG.maxDailyRushOrders || 50;
+      const workingDays = getUpcomingWorkingDays(35);
+      const startIdx = isRush ? 1 : 2;
+
+      for (let i = startIdx; i < workingDays.length; i++) {
+        const d = workingDays[i];
+        const iso = toIsoDate(d);
+        const stats = calendarCapacities[iso] || { total: 0, rush: 0 };
+        if (stats.total >= maxDaily) continue;
+        if (isRush && stats.rush >= maxRush) continue;
+        return d;
+      }
+      return workingDays[startIdx];
+    }
+
+    async function fetchCalendarCapacities() {
+      try {
+        const res = await fetch('/api/webapp/calendar-availability');
+        const data = await res.json();
+        if (data && data.ok) {
+          calendarAvailabilityData = data;
+          calendarCapacities = data.capacities || {};
+          if (data.max_daily_orders) STORE_CONFIG.maxDailyOrders = data.max_daily_orders;
+          if (data.max_daily_rush_orders) STORE_CONFIG.maxDailyRushOrders = data.max_daily_rush_orders;
+          if (data.rush_order_fee) STORE_CONFIG.rushOrderFee = data.rush_order_fee;
+          renderCalendar(currentCalYear, currentCalMonth);
+        }
+      } catch (err) {
+        console.warn('Calendar capacity fetch error:', err);
+      }
+    }
+
+    function setProductionTrack(track) {
+      haptic('light');
+      currentProductionTrack = track;
+      const isRush = (track === 'urgent');
+
+      const btnStd = document.getElementById('btn-track-std');
+      const btnRush = document.getElementById('btn-track-rush');
+      const banner = document.getElementById('calendar-capacity-banner');
+      const bannerMsg = document.getElementById('calendar-capacity-msg');
+
+      if (btnStd && btnRush) {
+        if (isRush) {
+          btnRush.className = "p-3 rounded-2xl border border-amber-400 bg-amber-400/10 text-left transition flex flex-col justify-between cursor-pointer shadow-sm";
+          btnStd.className = "p-3 rounded-2xl border border-surface-border bg-surface-card hover:border-amber-400/40 text-left transition flex flex-col justify-between cursor-pointer shadow-sm";
+        } else {
+          btnStd.className = "p-3 rounded-2xl border border-amber-400 bg-amber-400/10 text-left transition flex flex-col justify-between cursor-pointer shadow-sm";
+          btnRush.className = "p-3 rounded-2xl border border-surface-border bg-surface-card hover:border-amber-400/40 text-left transition flex flex-col justify-between cursor-pointer shadow-sm";
+        }
+      }
+
+      // Check whether current selected date is valid under this track
+      let needsShift = false;
+      let shiftReason = '';
+      if (!selectedDeadlineDate) {
+        needsShift = true;
+      } else {
+        const parts = selectedDeadlineDate.split('-').map(Number);
+        const selectedD = new Date(parts[0], parts[1] - 1, parts[2]);
+        if (selectedD.getDay() === 0) {
+          needsShift = true;
+          shiftReason = 'Sunday is studio rest day';
+        } else {
+          const stats = calendarCapacities[selectedDeadlineDate] || { total: 0, rush: 0 };
+          const maxDaily = STORE_CONFIG.maxDailyOrders || 100;
+          const maxRush = STORE_CONFIG.maxDailyRushOrders || 50;
+          if (stats.total >= maxDaily) {
+            needsShift = true;
+            shiftReason = 'Date is fully booked (100 orders)';
+          } else if (isRush && stats.rush >= maxRush) {
+            needsShift = true;
+            shiftReason = 'Urgent rush capacity full for this date (50 orders)';
+          } else {
+            const workingDays = getUpcomingWorkingDays(35);
+            const prepDayIso = toIsoDate(workingDays[0]);
+            const rushEarliestIso = toIsoDate(workingDays[1]);
+            if (selectedDeadlineDate === prepDayIso) {
+              needsShift = true;
+              shiftReason = 'Next-day turnaround requires drying buffer';
+            } else if (!isRush && selectedDeadlineDate === rushEarliestIso) {
+              needsShift = true;
+              shiftReason = '2-day turnaround requires Urgent Rush track';
+            }
+          }
+        }
+      }
+
+      if (needsShift) {
+        const earliest = findEarliestAvailableDate(isRush);
+        const iso = toIsoDate(earliest);
+        const fee = isRush ? (STORE_CONFIG.rushOrderFee || 200) : 0;
+        selectDeadline(iso, fee, formatDisplayDate(earliest, isRush));
+        if (banner && bannerMsg && shiftReason) {
+          bannerMsg.textContent = `Auto-shifted to earliest open date (${iso}): ${shiftReason}.`;
+          banner.classList.remove('hidden');
+        } else if (banner) {
+          banner.classList.add('hidden');
+        }
+      } else {
+        const fee = isRush ? (STORE_CONFIG.rushOrderFee || 200) : 0;
+        const parts = selectedDeadlineDate.split('-').map(Number);
+        const selectedD = new Date(parts[0], parts[1] - 1, parts[2]);
+        selectDeadline(selectedDeadlineDate, fee, formatDisplayDate(selectedD, isRush));
+        if (banner) banner.classList.add('hidden');
+      }
+
+      renderCalendar(currentCalYear, currentCalMonth);
+    }
+
     // ─── INTERACTIVE CALENDAR DATE PICKER (EXACT BOT LOGIC) ────────
     function renderCalendar(year, month) {
       const grid = document.getElementById('cal-days-grid');
       const title = document.getElementById('cal-month-title');
+      if (!grid || !title) return;
       grid.innerHTML = '';
 
       const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -1678,18 +1885,22 @@
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-
-      const rushDay = new Date(today);
-      rushDay.setDate(today.getDate() + 2);
-
       const maxDate = new Date(today);
-      maxDate.setDate(today.getDate() + 60); // 2 months out
+      maxDate.setDate(today.getDate() + 60);
 
-      // Determine day of week of 1st day of month (Monday = 0)
+      const workingDays = getUpcomingWorkingDays(35);
+      const prepDay = workingDays[0];
+      const prepIso = toIsoDate(prepDay);
+      const rushDay = workingDays[1];
+      const rushIso = toIsoDate(rushDay);
+
+      const maxDaily = STORE_CONFIG.maxDailyOrders || 100;
+      const maxRush = STORE_CONFIG.maxDailyRushOrders || 50;
+      const isUrgentTrack = (currentProductionTrack === 'urgent');
+
+      // Determine day of week of 1st day of month (Monday = 0, Sunday = 6)
       const firstDayOfMonth = new Date(year, month - 1, 1);
-      let startingDay = firstDayOfMonth.getDay() - 1; // 0 = Mon, 6 = Sun
+      let startingDay = firstDayOfMonth.getDay() - 1;
       if (startingDay === -1) startingDay = 6;
 
       const daysInMonth = new Date(year, month, 0).getDate();
@@ -1707,6 +1918,10 @@
         const cellDate = new Date(year, month - 1, d);
         cellDate.setHours(0, 0, 0, 0);
         const iso = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const dayOfWeek = cellDate.getDay(); // 0 = Sunday
+        const stats = calendarCapacities[iso] || { total: 0, rush: 0 };
+        const isFull = stats.total >= maxDaily;
+        const isRushFull = stats.rush >= maxRush;
 
         const cell = document.createElement('div');
 
@@ -1714,25 +1929,63 @@
           // Past or today blocked
           cell.className = "cal-cell disabled text-slate-600";
           cell.textContent = "·";
-        } else if (cellDate.getTime() === tomorrow.getTime()) {
-          // Tomorrow blocked (min 2-day turnaround)
-          cell.className = "cal-cell disabled text-slate-600";
+          cell.title = "Past and same-day orders not available";
+        } else if (dayOfWeek === 0) {
+          // Sunday is studio rest day
+          cell.className = "cal-cell disabled rest-day text-rose-400/60";
           cell.textContent = "✕";
-          cell.title = "Next-day rush is not available to guarantee print quality";
+          cell.title = "Sunday is our studio rest day (no production or completion)";
+        } else if (iso === prepIso) {
+          // Next working day prep buffer
+          cell.className = "cal-cell disabled text-slate-600";
+          cell.textContent = "✖";
+          cell.title = "Drying & ink preparation buffer day (cannot be scheduled)";
         } else if (cellDate > maxDate) {
           // Beyond 60 days
           cell.className = "cal-cell disabled text-slate-600";
           cell.textContent = "·";
-        } else if (cellDate.getTime() === rushDay.getTime()) {
-          // Rush day (+200 ETB)
-          cell.className = `cal-cell selectable rush ${selectedDeadlineDate === iso ? 'selected' : ''}`;
-          cell.innerHTML = `⚡${d}`;
-          cell.onclick = () => selectDeadline(iso, 200, `${monthNames[month-1]} ${d}, ${year} (⚡ 2-Day Rush +200 ETB)`);
+        } else if (isFull) {
+          // Fully booked
+          cell.className = "cal-cell disabled full-day text-slate-500";
+          cell.textContent = "🔒";
+          cell.title = `Fully booked (${stats.total}/${maxDaily} orders)`;
+        } else if (iso === rushIso) {
+          // Earliest 2-day priority rush slot
+          if (isRushFull) {
+            cell.className = "cal-cell disabled text-slate-500";
+            cell.textContent = "✕";
+            cell.title = `Rush orders cap reached for this date (${stats.rush}/${maxRush})`;
+          } else {
+            cell.className = `cal-cell selectable rush ${selectedDeadlineDate === iso ? 'selected' : ''}`;
+            cell.innerHTML = `⚡${d}`;
+            cell.title = `⚡ 2-Day Urgent Rush (+${STORE_CONFIG.rushOrderFee || 200} ETB)`;
+            cell.onclick = () => {
+              if (currentProductionTrack !== 'urgent') {
+                setProductionTrack('urgent');
+              }
+              selectDeadline(iso, STORE_CONFIG.rushOrderFee || 200, formatDisplayDate(cellDate, true));
+            };
+          }
         } else {
-          // Standard day (3+ days)
-          cell.className = `cal-cell selectable ${selectedDeadlineDate === iso ? 'selected' : ''}`;
-          cell.textContent = d;
-          cell.onclick = () => selectDeadline(iso, 0, `${monthNames[month-1]} ${d}, ${year}`);
+          // 3+ working days out
+          if (isUrgentTrack) {
+            if (isRushFull) {
+              cell.className = "cal-cell disabled text-slate-500";
+              cell.textContent = "✕";
+              cell.title = `Urgent rush capacity full for this date (${stats.rush}/${maxRush})`;
+            } else {
+              cell.className = `cal-cell selectable rush ${selectedDeadlineDate === iso ? 'selected' : ''}`;
+              cell.innerHTML = `⚡${d}`;
+              cell.title = `Urgent Rush (+${STORE_CONFIG.rushOrderFee || 200} ETB)`;
+              cell.onclick = () => selectDeadline(iso, STORE_CONFIG.rushOrderFee || 200, formatDisplayDate(cellDate, true));
+            }
+          } else {
+            // Standard turnaround
+            cell.className = `cal-cell selectable ${selectedDeadlineDate === iso ? 'selected' : ''}`;
+            cell.textContent = d;
+            cell.title = "Standard Turnaround (Free)";
+            cell.onclick = () => selectDeadline(iso, 0, formatDisplayDate(cellDate, false));
+          }
         }
 
         grid.appendChild(cell);
@@ -1757,10 +2010,13 @@
       selectedDeadlineDate = isoDate;
       selectedDeadlineRushFee = rushFee;
       
-      document.getElementById('selected-deadline-badge').textContent = label;
-      document.getElementById('selected-deadline-badge').className = rushFee > 0 
-        ? "text-[10px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40"
-        : "text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/40";
+      const badge = document.getElementById('selected-deadline-badge');
+      if (badge) {
+        badge.textContent = label;
+        badge.className = rushFee > 0 
+          ? "text-[10px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40"
+          : "text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/40";
+      }
       
       renderCalendar(currentCalYear, currentCalMonth);
       hideValidationError();
@@ -1787,12 +2043,21 @@
       hideValidationError();
       clearFieldErrors();
 
-      // Pre-select default deadline (standard: today + 3 days)
-      const defDate = new Date();
-      defDate.setDate(defDate.getDate() + 3);
-      const isoDef = `${defDate.getFullYear()}-${String(defDate.getMonth()+1).padStart(2, '0')}-${String(defDate.getDate()).padStart(2, '0')}`;
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      selectDeadline(isoDef, 0, `${monthNames[defDate.getMonth()]} ${defDate.getDate()}, ${defDate.getFullYear()}`);
+      // Default track and auto-select earliest available working date
+      currentProductionTrack = 'standard';
+      const btnStd = document.getElementById('btn-track-std');
+      const btnRush = document.getElementById('btn-track-rush');
+      if (btnStd && btnRush) {
+        btnStd.className = "p-3 rounded-2xl border border-amber-400 bg-amber-400/10 text-left transition flex flex-col justify-between cursor-pointer shadow-sm";
+        btnRush.className = "p-3 rounded-2xl border border-surface-border bg-surface-card hover:border-amber-400/40 text-left transition flex flex-col justify-between cursor-pointer shadow-sm";
+      }
+      const banner = document.getElementById('calendar-capacity-banner');
+      if (banner) banner.classList.add('hidden');
+
+      fetchCalendarCapacities();
+      const earliest = findEarliestAvailableDate(false);
+      const isoDef = toIsoDate(earliest);
+      selectDeadline(isoDef, 0, formatDisplayDate(earliest, false));
 
       // Reset file containers
       document.getElementById('artwork-preview-container').classList.add('hidden');
@@ -2057,6 +2322,26 @@
         // Validate required completion date
         if (!selectedDeadlineDate) {
           showValidationError('Please tap a date on the calendar for your deadline.');
+          return;
+        }
+
+        const parts = selectedDeadlineDate.split('-').map(Number);
+        const selD = new Date(parts[0], parts[1] - 1, parts[2]);
+        if (selD.getDay() === 0) {
+          showValidationError('Sunday is our studio rest day. Please choose Monday through Saturday.');
+          return;
+        }
+
+        const stats = calendarCapacities[selectedDeadlineDate] || { total: 0, rush: 0 };
+        const maxDaily = STORE_CONFIG.maxDailyOrders || 100;
+        const maxRush = STORE_CONFIG.maxDailyRushOrders || 50;
+
+        if (stats.total >= maxDaily) {
+          showValidationError(`The selected date is fully booked (${stats.total}/${maxDaily} orders). Please choose another date.`);
+          return;
+        }
+        if (selectedDeadlineRushFee > 0 && stats.rush >= maxRush) {
+          showValidationError(`Urgent rush capacity for this date is full (${stats.rush}/${maxRush} orders). Please select standard turnaround or another date.`);
           return;
         }
 
@@ -2454,6 +2739,14 @@
         });
 
         const data = await res.json();
+        if (!res.ok) {
+          const errMsg = data?.detail || 'Date capacity limit reached or order could not be processed. Please check deadline.';
+          showValidationError(errMsg);
+          btnNext.disabled = false;
+          btnNext.textContent = I18N[currentLang].submitOrder;
+          return;
+        }
+
         const code = data?.order_code || `SLR-${Math.floor(1000 + Math.random() * 9000)}`;
 
         haptic('success');

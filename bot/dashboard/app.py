@@ -196,13 +196,28 @@ async def webapp_store(request: Request):
             "cbe_account": config.PAYMENT_CBE_ACCOUNT,
             "cbe_name": config.PAYMENT_CBE_NAME,
             "telebirr": config.PAYMENT_TELEBIRR,
-            "telebirr_name": config.PAYMENT_TELEBIRR_NAME
+            "telebirr_name": config.PAYMENT_TELEBIRR_NAME,
+            "max_daily_orders": getattr(config, "MAX_DAILY_ORDERS", 100),
+            "max_daily_rush_orders": getattr(config, "MAX_DAILY_RUSH_ORDERS", 50),
+            "rush_order_fee": getattr(config, "RUSH_ORDER_FEE", 200)
         }
     )
 
 @app.post("/api/webapp/order")
 async def webapp_submit_order(payload: WebappOrderRequest):
     """Handle orders submitted via Telegram Mini App."""
+    deadline_iso = database.normalize_deadline_to_iso(payload.deadline)
+    if deadline_iso:
+        is_rush = "rush" in (payload.notes or "").lower() or "urgent" in (payload.notes or "").lower()
+        is_valid, msg = database.check_date_capacity(
+            deadline_iso,
+            is_rush=is_rush,
+            max_daily=getattr(config, "MAX_DAILY_ORDERS", 100),
+            max_rush=getattr(config, "MAX_DAILY_RUSH_ORDERS", 50)
+        )
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=msg)
+
     order_code = database.save_order(
         user_id=payload.user_id,
         full_name=payload.full_name,
@@ -272,11 +287,35 @@ async def webapp_get_config():
             "telebirr": config.PAYMENT_TELEBIRR,
             "telebirr_name": config.PAYMENT_TELEBIRR_NAME,
             "location": "Ledeta, Addis Ababa",
-            "support_username": "Yosef_selora"
+            "support_username": "Yosef_selora",
+            "max_daily_orders": getattr(config, "MAX_DAILY_ORDERS", 100),
+            "max_daily_rush_orders": getattr(config, "MAX_DAILY_RUSH_ORDERS", 50),
+            "rush_order_fee": getattr(config, "RUSH_ORDER_FEE", 200)
         },
         "products": products_data.get("products", []),
         "designs": designs_data.get("designs", []),
         "portfolio": portfolio_data
+    }
+
+@app.get("/api/webapp/calendar-availability")
+async def webapp_calendar_availability():
+    """Retrieve date capacities, Sunday rest day status, and earliest available production dates."""
+    max_daily = getattr(config, "MAX_DAILY_ORDERS", 100)
+    max_rush = getattr(config, "MAX_DAILY_RUSH_ORDERS", 50)
+    rush_fee = getattr(config, "RUSH_ORDER_FEE", 200)
+
+    capacities = database.get_daily_booked_capacities()
+    std_earliest = database.get_earliest_available_date(is_rush=False, max_daily=max_daily, max_rush=max_rush)
+    rush_earliest = database.get_earliest_available_date(is_rush=True, max_daily=max_daily, max_rush=max_rush)
+
+    return {
+        "ok": True,
+        "capacities": capacities,
+        "max_daily_orders": max_daily,
+        "max_daily_rush_orders": max_rush,
+        "rush_order_fee": rush_fee,
+        "earliest_standard_iso": std_earliest.isoformat(),
+        "earliest_rush_iso": rush_earliest.isoformat()
     }
 
 @app.get("/api/webapp/track/{order_code}")
@@ -489,6 +528,18 @@ async def webapp_submit_order_full(
     receipt_file: Optional[UploadFile] = File(None)
 ):
     """Handle full order submission with in-app artwork and receipt proof uploads matching bot business logic."""
+    deadline_iso = database.normalize_deadline_to_iso(deadline)
+    if deadline_iso:
+        is_rush = bool(rush_fee and rush_fee > 0)
+        is_valid, msg = database.check_date_capacity(
+            deadline_iso,
+            is_rush=is_rush,
+            max_daily=getattr(config, "MAX_DAILY_ORDERS", 100),
+            max_rush=getattr(config, "MAX_DAILY_RUSH_ORDERS", 50)
+        )
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=msg)
+
     customer_files_list = []
     has_attachment = False
 

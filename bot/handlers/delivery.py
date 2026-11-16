@@ -8,7 +8,7 @@ router = Router(name="delivery_router")
 DELIVERY_TEXT = (
     "╭─── 📍 Delivery & Pickup ───╮\n"
     "│\n"
-    "│  *🏪 Store Pickup — Free*\n"
+    "│  *🏪 Store Pickup - Free*\n"
     "│  Ledeta (near Balcha), Addis Ababa\n"
     "│  Mon – Sat: 9:00 AM – 6:00 PM\n"
     "│\n"

@@ -93,7 +93,7 @@ def get_delivery_choice_keyboard() -> InlineKeyboardMarkup:
     """Delivery method selection keyboard."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🏪 Store Pickup — Ledeta (Free)", callback_data="delivery_choice:pickup")
+            InlineKeyboardButton(text="🏪 Store Pickup - Ledeta (Free)", callback_data="delivery_choice:pickup")
         ],
         [
             InlineKeyboardButton(text="🚚 Doorstep Taxi Delivery (300-1,000 ETB)", callback_data="delivery_choice:yango")

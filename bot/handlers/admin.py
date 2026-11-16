@@ -129,7 +129,7 @@ async def handle_payment_rejection(callback: types.CallbackQuery):
     try:
         owner_link = f"@{config.ADMIN_USERNAME}" if config.ADMIN_USERNAME else "our team"
         customer_msg = (
-            "⚠️ *Payment Receipt Notice — Selora Prints*\n\n"
+            "⚠️ *Payment Receipt Notice - Selora Prints*\n\n"
             f"🔖 *Order Code:* `{order_code}`\n\n"
             "We were unable to verify your 50% deposit payment screenshot.\n\n"
             "Possible reasons:\n"
@@ -156,7 +156,7 @@ async def admin_dashboard_menu(message: types.Message):
 
     stats = database.get_stats()
     menu_text = (
-        "👑 *Selora Prints — Owner Control Center*\n"
+        "👑 *Selora Prints - Owner Control Center*\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         f"📦 *Total Orders:* `{stats['total_orders']}`\n"
         f"⏳ *Pending 50% Review:* `{stats['pending_approvals']}`\n"
@@ -198,7 +198,7 @@ async def cb_admin_orders(callback: types.CallbackQuery):
     for o in orders:
         pay_badge = "⏳ Review Pending" if o.get('payment_status') == 'pending_review' else f"✅ {o.get('payment_status', '').upper()}"
         text += (
-            f"🔖 *{o['order_code']}* — `{o['status'].upper()}`\n"
+            f"🔖 *{o['order_code']}* - `{o['status'].upper()}`\n"
             f"💳 *Payment:* {pay_badge}\n"
             f"👤 *Customer:* {o['full_name']} (@{o['username'] or 'no_user'})\n"
             f"🏷 *Items:* {o['items']}\n"
@@ -216,7 +216,7 @@ async def cb_admin_stats(callback: types.CallbackQuery):
         return
     stats = database.get_stats()
     text = (
-        "📊 *Selora Prints — Business Statistics*\n"
+        "📊 *Selora Prints - Business Statistics*\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         f"📦 *Total Orders Received:* `{stats['total_orders']}`\n"
         f"⏳ *Pending Payment Approvals:* `{stats['pending_approvals']}`\n"
@@ -284,7 +284,7 @@ async def admin_orders(message: types.Message):
     for o in orders:
         pay_badge = "⏳ Review Pending" if o.get('payment_status') == 'pending_review' else f"✅ {o.get('payment_status', '').upper()}"
         text += (
-            f"🔖 *{o['order_code']}* — `{o['status'].upper()}`\n"
+            f"🔖 *{o['order_code']}* - `{o['status'].upper()}`\n"
             f"💳 *Payment:* {pay_badge}\n"
             f"👤 *Customer:* {o['full_name']} (@{o['username'] or 'no_user'})\n"
             f"🏷 *Items:* {o['items']}\n"
@@ -306,7 +306,7 @@ async def admin_stats(message: types.Message):
 
     stats = database.get_stats()
     text = (
-        "📊 *Selora Prints — Business Statistics*\n"
+        "📊 *Selora Prints - Business Statistics*\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         f"📦 *Total Orders Received:* `{stats['total_orders']}`\n"
         f"⏳ *Pending Payment Approvals:* `{stats['pending_approvals']}`\n"

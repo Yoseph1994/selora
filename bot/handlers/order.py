@@ -72,14 +72,14 @@ async def check_and_reject_media_group(message: types.Message, purpose: str = "p
     if not already_warned:
         if purpose == "receipt":
             await message.reply(
-                "❌ *Multiple files sent at once — REJECTED!* ⚠️\n\n"
+                "❌ *Multiple files sent at once - REJECTED!* ⚠️\n\n"
                 "Please send only **ONE single screenshot** of your payment receipt.\n"
                 "Batch or album uploads cannot be verified.",
                 parse_mode="Markdown"
             )
         else:
             await message.reply(
-                "❌ *Multiple photos sent at once — REJECTED!* ⚠️\n\n"
+                "❌ *Multiple photos sent at once - REJECTED!* ⚠️\n\n"
                 "To ensure maximum print sharpness and prevent upload corruption, please send your photos **ONE BY ONE**.\n\n"
                 "👉 *How to upload correctly:*\n"
                 "1. Tap 📎 (Paperclip)\n"
@@ -138,12 +138,12 @@ def get_product_picker_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="📖 Photo Books & Minibooks ▾", callback_data="sel_cat:books")
         ],
         [
-            InlineKeyboardButton(text="📓 Mini Notebook — 200 ETB", callback_data="sel_prod:mini_notebook"),
-            InlineKeyboardButton(text="📔 Notebook — 500 ETB", callback_data="sel_prod:notebook")
+            InlineKeyboardButton(text="📓 Mini Notebook - 200 ETB", callback_data="sel_prod:mini_notebook"),
+            InlineKeyboardButton(text="📔 Notebook - 500 ETB", callback_data="sel_prod:notebook")
         ],
         [
-            InlineKeyboardButton(text="☕ Custom Mug — 1,500 ETB", callback_data="sel_prod:mug"),
-            InlineKeyboardButton(text="🧩 Photo Puzzle — 1,500 ETB", callback_data="sel_prod:puzzle")
+            InlineKeyboardButton(text="☕ Custom Mug - 1,500 ETB", callback_data="sel_prod:mug"),
+            InlineKeyboardButton(text="🧩 Photo Puzzle - 1,500 ETB", callback_data="sel_prod:puzzle")
         ],
         [
             InlineKeyboardButton(text="▪ Poster A5  (min 10)", callback_data="sel_prod:sticker_poster_a5"),
@@ -162,11 +162,11 @@ def get_product_picker_keyboard() -> InlineKeyboardMarkup:
 
 def get_books_picker_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📖 Mini White Cover — 600 ETB", callback_data="sel_prod:minibook_white")],
-        [InlineKeyboardButton(text="📖 Mini Black Cover — 700 ETB", callback_data="sel_prod:minibook_black")],
-        [InlineKeyboardButton(text="📖 Medium Photo Book — 800 ETB", callback_data="sel_prod:book_medium")],
-        [InlineKeyboardButton(text="📖 A5 Photo Book — 1,000 ETB", callback_data="sel_prod:book_a5")],
-        [InlineKeyboardButton(text="📖 A4 Luxury Photo Book — 1,500 ETB", callback_data="sel_prod:book_a4")],
+        [InlineKeyboardButton(text="📖 Mini White Cover - 600 ETB", callback_data="sel_prod:minibook_white")],
+        [InlineKeyboardButton(text="📖 Mini Black Cover - 700 ETB", callback_data="sel_prod:minibook_black")],
+        [InlineKeyboardButton(text="📖 Medium Photo Book - 800 ETB", callback_data="sel_prod:book_medium")],
+        [InlineKeyboardButton(text="📖 A5 Photo Book - 1,000 ETB", callback_data="sel_prod:book_a5")],
+        [InlineKeyboardButton(text="📖 A4 Luxury Photo Book - 1,500 ETB", callback_data="sel_prod:book_a4")],
         [InlineKeyboardButton(text="◀ Back to All Products", callback_data="sel_cat:all")]
     ])
 
@@ -238,11 +238,28 @@ def get_template_gallery_keyboard() -> InlineKeyboardMarkup:
 # ─── INLINE CALENDAR DATE PICKER ─────────────────────────────
 
 def build_calendar_keyboard(year: int, month: int) -> InlineKeyboardMarkup:
-    """Build a month-view inline calendar grid."""
+    """Build a month-view inline calendar grid with Sunday rest days and dynamic capacity limits."""
     today = date.today()
-    tomorrow = today + timedelta(days=1)
-    rush_day = today + timedelta(days=2)
     max_date = today + timedelta(days=60)  # ~2 months
+
+    # Calculate earliest candidate working days (skipping Sundays)
+    working_days = []
+    curr = today
+    while len(working_days) < 30:
+        curr += timedelta(days=1)
+        if curr.weekday() != 6:
+            working_days.append(curr)
+
+    prep_day = working_days[0] if working_days else today + timedelta(days=1)
+
+    # Capacity lookup
+    capacities = database.get_daily_booked_capacities()
+    max_daily = getattr(config, "MAX_DAILY_ORDERS", 100)
+    max_rush = getattr(config, "MAX_DAILY_RUSH_ORDERS", 50)
+    rush_fee = getattr(config, "RUSH_ORDER_FEE", 200)
+
+    # Earliest rush slot that has open capacity
+    rush_target = database.get_earliest_available_date(is_rush=True, max_daily=max_daily, max_rush=max_rush)
 
     month_name = calendar.month_name[month]
     rows: list[list[InlineKeyboardButton]] = []
@@ -280,24 +297,31 @@ def build_calendar_keyboard(year: int, month: int) -> InlineKeyboardMarkup:
                 continue
 
             d = date(year, month, day_num)
+            iso = d.isoformat()
 
-            if d <= today:
-                # Past or today — show dot
+            if d.weekday() == 6:
+                # Sunday is studio rest day (no production / delivery)
+                row.append(InlineKeyboardButton(text="·" if d <= today else "✕", callback_data="cal_rest"))
+            elif d <= today:
+                # Past or today
                 row.append(InlineKeyboardButton(text="·", callback_data="noop"))
-            elif d == tomorrow:
-                # Tomorrow blocked
-                row.append(InlineKeyboardButton(text="✖", callback_data="noop"))
+            elif d == prep_day:
+                # Next working day blocked for drying time & file prep
+                row.append(InlineKeyboardButton(text="✖", callback_data="cal_prep"))
             elif d > max_date:
                 # Beyond 2 months
                 row.append(InlineKeyboardButton(text="·", callback_data="noop"))
-            elif d == rush_day:
-                # Rush day (+200 ETB)
-                iso = d.isoformat()
-                row.append(InlineKeyboardButton(text=f"⚡{day_num}", callback_data=f"cal_day:{iso}:200"))
             else:
-                # Normal selectable day
-                iso = d.isoformat()
-                row.append(InlineKeyboardButton(text=str(day_num), callback_data=f"cal_day:{iso}:0"))
+                day_stats = capacities.get(iso, {"total": 0, "rush": 0})
+                if day_stats["total"] >= max_daily:
+                    # Date is at max capacity
+                    row.append(InlineKeyboardButton(text="🔒", callback_data=f"cal_full:{iso}"))
+                elif d == rush_target and day_stats["rush"] < max_rush:
+                    # Rush priority turnaround slot
+                    row.append(InlineKeyboardButton(text=f"⚡{day_num}", callback_data=f"cal_day:{iso}:{rush_fee}"))
+                else:
+                    # Normal standard date
+                    row.append(InlineKeyboardButton(text=str(day_num), callback_data=f"cal_day:{iso}:0"))
         rows.append(row)
 
     # ── Cancel row
@@ -558,8 +582,8 @@ async def callback_quantity_confirm(callback: types.CallbackQuery, state: FSMCon
             "│\n"
             f"│  Ordering: *{qty} Business Cards*\n"
             "│\n"
-            "│  ▸ My own ready design — Free\n"
-            "│  ▸ Selora custom design — +100 ETB\n"
+            "│  ▸ My own ready design - Free\n"
+            "│  ▸ Selora custom design - +100 ETB\n"
             "│\n"
             "╰──────────────────────────────╯",
             parse_mode="Markdown",
@@ -884,7 +908,7 @@ async def handle_text_during_photo_upload(message: types.Message, state: FSMCont
         await cancel_order(message, state)
         return
     await message.answer(
-        "📸 _Please send a photo or document file — not text._\n"
+        "📸 _Please send a photo or document file - not text._\n"
         "_Tap 📎 to attach your artwork, or type /cancel to quit._",
         parse_mode="Markdown"
     )
@@ -1037,19 +1061,39 @@ async def advance_to_deadline_picker(message: types.Message, state: FSMContext):
     today = date.today()
     cal_kb = build_calendar_keyboard(today.year, today.month)
 
+    max_daily = getattr(config, "MAX_DAILY_ORDERS", 100)
+    max_rush = getattr(config, "MAX_DAILY_RUSH_ORDERS", 50)
+    rush_fee = getattr(config, "RUSH_ORDER_FEE", 200)
+
+    std_earliest = database.get_earliest_available_date(is_rush=False, max_daily=max_daily, max_rush=max_rush)
+    rush_earliest = database.get_earliest_available_date(is_rush=True, max_daily=max_daily, max_rush=max_rush)
+
     text = (
         _step_header(4, "Completion Date", "🗓") + "\n"
         "─────────────────────\n"
-        "▸ Standard: 3+ days (normal pricing)\n"
-        "▸ ⚡ Urgent Rush (2 days): +200 ETB\n"
-        "▸ ✖ Tomorrow: unavailable (drying time)\n"
+        f"▸ *Standard Track:* From *{std_earliest.strftime('%a, %b %d')}* (Included)\n"
+        f"▸ *⚡ Urgent Rush:* From *{rush_earliest.strftime('%a, %b %d')}* (+{rush_fee} ETB)\n"
+        "▸ *Sunday:* Studio rest day (no production/completion)\n"
+        f"▸ *Capacity:* Max {max_daily} orders/day (🔒 = Full)\n"
         "─────────────────────\n"
-        "Tap a date on the calendar below:"
+        "👉 *Tap an available date on the calendar below:*"
     )
     if isinstance(message, types.CallbackQuery):
         await message.message.edit_text(text, parse_mode="Markdown", reply_markup=cal_kb)
     else:
         await message.answer(text, parse_mode="Markdown", reply_markup=cal_kb)
+
+@router.callback_query(OrderFSM.waiting_for_deadline, F.data == "cal_rest")
+async def callback_cal_rest(callback: types.CallbackQuery):
+    await callback.answer("Sunday is our studio rest day. We don't produce or deliver on Sundays. Please pick a working day!", show_alert=True)
+
+@router.callback_query(OrderFSM.waiting_for_deadline, F.data == "cal_prep")
+async def callback_cal_prep(callback: types.CallbackQuery):
+    await callback.answer("Tomorrow is reserved for printing, drying time, and file preparation.", show_alert=True)
+
+@router.callback_query(OrderFSM.waiting_for_deadline, F.data.startswith("cal_full:"))
+async def callback_cal_full(callback: types.CallbackQuery):
+    await callback.answer("This date has reached maximum studio capacity (100 orders). Please choose another date!", show_alert=True)
 
 @router.callback_query(OrderFSM.waiting_for_deadline, F.data.startswith("cal_nav:"))
 async def callback_cal_nav(callback: types.CallbackQuery, state: FSMContext):
@@ -1058,14 +1102,22 @@ async def callback_cal_nav(callback: types.CallbackQuery, state: FSMContext):
     year, month = int(ym.split("-")[0]), int(ym.split("-")[1])
     cal_kb = build_calendar_keyboard(year, month)
 
+    max_daily = getattr(config, "MAX_DAILY_ORDERS", 100)
+    max_rush = getattr(config, "MAX_DAILY_RUSH_ORDERS", 50)
+    rush_fee = getattr(config, "RUSH_ORDER_FEE", 200)
+
+    std_earliest = database.get_earliest_available_date(is_rush=False, max_daily=max_daily, max_rush=max_rush)
+    rush_earliest = database.get_earliest_available_date(is_rush=True, max_daily=max_daily, max_rush=max_rush)
+
     text = (
         _step_header(4, "Completion Date", "🗓") + "\n"
         "─────────────────────\n"
-        "▸ Standard: 3+ days (normal pricing)\n"
-        "▸ ⚡ Urgent Rush (2 days): +200 ETB\n"
-        "▸ ✖ Tomorrow: unavailable (drying time)\n"
+        f"▸ *Standard Track:* From *{std_earliest.strftime('%a, %b %d')}* (Included)\n"
+        f"▸ *⚡ Urgent Rush:* From *{rush_earliest.strftime('%a, %b %d')}* (+{rush_fee} ETB)\n"
+        "▸ *Sunday:* Studio rest day (no production/completion)\n"
+        f"▸ *Capacity:* Max {max_daily} orders/day (🔒 = Full)\n"
         "─────────────────────\n"
-        "Tap a date on the calendar below:"
+        "👉 *Tap an available date on the calendar below:*"
     )
     try:
         await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=cal_kb)
@@ -1080,6 +1132,21 @@ async def callback_cal_day(callback: types.CallbackQuery, state: FSMContext):
     iso_date = parts[1]   # YYYY-MM-DD
     rush_fee = int(parts[2])
 
+    max_daily = getattr(config, "MAX_DAILY_ORDERS", 100)
+    max_rush = getattr(config, "MAX_DAILY_RUSH_ORDERS", 50)
+
+    # Concurrency capacity check
+    is_valid, msg = database.check_date_capacity(iso_date, is_rush=(rush_fee > 0), max_daily=max_daily, max_rush=max_rush)
+    if not is_valid:
+        await callback.answer(msg, show_alert=True)
+        selected = datetime.strptime(iso_date, "%Y-%m-%d")
+        cal_kb = build_calendar_keyboard(selected.year, selected.month)
+        try:
+            await callback.message.edit_reply_markup(reply_markup=cal_kb)
+        except Exception:
+            pass
+        return
+
     selected = datetime.strptime(iso_date, "%Y-%m-%d")
     date_label = selected.strftime("%a, %b %d")
 
@@ -1087,7 +1154,7 @@ async def callback_cal_day(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(OrderFSM.waiting_for_recipient_name)
 
     if rush_fee > 0:
-        confirm_text = f"✓ Completion Date: *{date_label}* _(⚡ Urgent Rush +200 ETB)_"
+        confirm_text = f"✓ Completion Date: *{date_label}* _(⚡ Urgent Rush +{rush_fee} ETB)_"
     else:
         confirm_text = f"✓ Completion Date: *{date_label}* _(Standard)_"
 
@@ -1367,10 +1434,10 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         customer_files=json.dumps(data.get('customer_files', []))
     )
 
-    # 1. Customer confirmation — celebration message
+    # 1. Customer confirmation - celebration message
     loc_disp = data.get('delivery_location', '')
     if data.get('delivery_maps_url'):
-        loc_disp += f" — [GPS Pin]({data.get('delivery_maps_url')})"
+        loc_disp += f" - [GPS Pin]({data.get('delivery_maps_url')})"
 
     phone_disp = data.get('phone', 'N/A')
     recip_disp = data.get('recipient_name', user.full_name)
@@ -1389,7 +1456,7 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         f"▸ *Delivery:* {data.get('delivery_type')} ({loc_disp})\n\n"
         "─────────────────────\n"
         "Status: *Pending Review*\n"
-        "_We're verifying your deposit — you'll be notified once approved and production begins._"
+        "_We're verifying your deposit - you'll be notified once approved and production begins._"
     )
     if config.ADMIN_USERNAME:
         customer_msg += f"\n\nQuestions? @{config.ADMIN_USERNAME}"
@@ -1408,7 +1475,7 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
             nav_line = f"\n🗺️ *Driver Navigation Link (RIDE / Yango / Feres):*\n[📍 Open GPS Coordinates in Google Maps]({maps_val})" if maps_val else ""
 
             admin_text = (
-                f"🚨 *NEW ORDER & PAYMENT SUBMITTED! — {order_code}*{rush_badge}{design_badge}\n"
+                f"🚨 *NEW ORDER & PAYMENT SUBMITTED! - {order_code}*{rush_badge}{design_badge}\n"
                 f"⏰ *Time:* {timestamp}\n"
                 f"👤 *Customer:* [{user.full_name}](tg://user?id={user.id}) ({username_str})\n"
                 f"🆔 *Telegram ID:* `{user.id}`\n"
@@ -1563,7 +1630,7 @@ async def callback_post_del_pickup(callback: types.CallbackQuery, state: FSMCont
             await callback.bot.send_message(
                 chat_id=config.ADMIN_CHAT_ID,
                 text=(
-                    f"🏪 *STORE PICKUP CONFIRMED — {order_code}*\n"
+                    f"🏪 *STORE PICKUP CONFIRMED - {order_code}*\n"
                     f"👤 *Customer:* {cust_name}\n"
                     f"📞 *Phone:* {cust_phone}\n"
                     f"Order is marked for free in-store pickup at Ledeta."
@@ -1580,7 +1647,7 @@ async def callback_post_del_taxi(callback: types.CallbackQuery, state: FSMContex
     order_code = callback.data.split(":")[2]
 
     text = (
-        f"🚚 *DOORSTEP TAXI DELIVERY — {order_code}*\n"
+        f"🚚 *DOORSTEP TAXI DELIVERY - {order_code}*\n"
         "─────────────────────\n"
         "Where should the driver deliver your package?\n\n"
         "1️⃣ 🎯 *Recommended:* Tap **'Send Exact GPS Pin'** below (best for Yango/Feres navigation)\n"
@@ -1660,7 +1727,7 @@ async def callback_post_set_sub(callback: types.CallbackQuery, state: FSMContext
             await callback.bot.send_message(
                 chat_id=config.ADMIN_CHAT_ID,
                 text=(
-                    f"🚨 *TAXI DELIVERY DISPATCH READY — {order_code}*\n"
+                    f"🚨 *TAXI DELIVERY DISPATCH READY - {order_code}*\n"
                     f"👤 *Recipient:* {cust_name}\n"
                     f"📞 *Driver Call Phone:* [{cust_phone}](tel:{cust_phone})\n"
                     f"📍 *Area:* {loc_text}\n"
@@ -1726,7 +1793,7 @@ async def process_post_location_gps(message: types.Message, state: FSMContext):
             await message.bot.send_message(
                 chat_id=config.ADMIN_CHAT_ID,
                 text=(
-                    f"🚨 *TAXI DELIVERY GPS PIN RECEIVED — {order_code}*\n"
+                    f"🚨 *TAXI DELIVERY GPS PIN RECEIVED - {order_code}*\n"
                     f"👤 *Recipient:* {cust_name}\n"
                     f"📞 *Driver Call Phone:* [{cust_phone}](tel:{cust_phone})\n"
                     f"📍 *GPS Link:* [Google Maps Link]({maps_url})\n"
@@ -1779,7 +1846,7 @@ async def process_post_location_text(message: types.Message, state: FSMContext):
             await message.bot.send_message(
                 chat_id=config.ADMIN_CHAT_ID,
                 text=(
-                    f"🚨 *TAXI DELIVERY ADDRESS RECEIVED — {order_code}*\n"
+                    f"🚨 *TAXI DELIVERY ADDRESS RECEIVED - {order_code}*\n"
                     f"👤 *Recipient:* {cust_name}\n"
                     f"📞 *Call Phone:* [{cust_phone}](tel:{cust_phone})\n"
                     f"📍 *Address:* {loc_text}\n"
@@ -1797,7 +1864,7 @@ async def callback_post_del_change(callback: types.CallbackQuery, state: FSMCont
     order = database.get_order_by_code(order_code)
 
     text = (
-        f"✏️ *CHANGE DELIVERY METHOD / DETAILS — {order_code}*\n"
+        f"✏️ *CHANGE DELIVERY METHOD / DETAILS - {order_code}*\n"
         "─────────────────────\n"
         f"• *Current Method:* {order.get('delivery_type', 'None')}\n"
         f"• *Current Location:* {order.get('delivery_location', 'None')}\n"
@@ -1976,7 +2043,7 @@ async def process_reupload_artwork(message: types.Message, state: FSMContext):
                     await message.bot.send_message(
                         chat_id=config.ADMIN_CHAT_ID,
                         text=(
-                            f"🔄 *ARTWORK RE-UPLOADED (Single Design for {qty} copies) — {order_code}*\n"
+                            f"🔄 *ARTWORK RE-UPLOADED (Single Design for {qty} copies) - {order_code}*\n"
                             f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
                             f"📁 Format: {file_type}\n"
                             "Order status updated to 🔄 Re-uploaded on the dashboard!"
@@ -2010,7 +2077,7 @@ async def process_reupload_artwork(message: types.Message, state: FSMContext):
                     await message.bot.send_message(
                         chat_id=config.ADMIN_CHAT_ID,
                         text=(
-                            f"🔄 *ALL {count}/{qty} ARTWORK RE-UPLOADED — {order_code}*\n"
+                            f"🔄 *ALL {count}/{qty} ARTWORK RE-UPLOADED - {order_code}*\n"
                             f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
                             f"📁 Total: {count} unique photos (1 print each)\n"
                             "Order status updated to 🔄 Re-uploaded on the dashboard!"
@@ -2093,7 +2160,7 @@ async def callback_reupload_distribute(callback: types.CallbackQuery, state: FSM
             await callback.bot.send_message(
                 chat_id=config.ADMIN_CHAT_ID,
                 text=(
-                    f"🔄 *ARTWORK RE-UPLOADED ({dist_note}) — {order_code}*\n"
+                    f"🔄 *ARTWORK RE-UPLOADED ({dist_note}) - {order_code}*\n"
                     f"📁 Received: {count} photos ({qty} prints total)\n"
                     "Order status updated to 🔄 Re-uploaded on the dashboard!"
                 ),
@@ -2163,7 +2230,7 @@ async def process_reupload_receipt(message: types.Message, state: FSMContext):
             await message.bot.send_message(
                 chat_id=config.ADMIN_CHAT_ID,
                 text=(
-                    f"💳 *PAYMENT RECEIPT RE-SUBMITTED — {order_code}*\n"
+                    f"💳 *PAYMENT RECEIPT RE-SUBMITTED - {order_code}*\n"
                     f"👤 Customer: {user.full_name} (@{user.username or 'none'})\n"
                     "Please verify the updated receipt on the dashboard!"
                 ),

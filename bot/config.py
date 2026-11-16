@@ -32,6 +32,11 @@ PAYMENT_TELEBIRR_NAME = os.getenv("PAYMENT_TELEBIRR_NAME", "Kebron Girma").strip
 
 PAYMENT_DEPOSIT_PERCENT = int(os.getenv("PAYMENT_DEPOSIT_PERCENT", "50"))
 
+# Daily Production Capacity & Rush Scheduling (One-man print shop rules)
+MAX_DAILY_ORDERS = int(os.getenv("MAX_DAILY_ORDERS", "100"))
+MAX_DAILY_RUSH_ORDERS = int(os.getenv("MAX_DAILY_RUSH_ORDERS", "50"))
+RUSH_ORDER_FEE = int(os.getenv("RUSH_ORDER_FEE", "200"))
+
 # Dynamic Web Dashboard & Authentication
 DASHBOARD_HOST = os.getenv("DASHBOARD_HOST", "0.0.0.0").strip()
 DASHBOARD_PORT = int(os.getenv("PORT", os.getenv("DASHBOARD_PORT", "8000")))

@@ -114,6 +114,6 @@ async def track_orders_handler(message: types.Message):
     reply_text = "📦 *Your Latest Order*\n\n" + render_status_card(latest)
 
     if len(user_orders) > 1:
-        reply_text += f"\n\n_({len(user_orders)} orders total — type `/track SP-XXXX` to view another)_"
+        reply_text += f"\n\n_({len(user_orders)} orders total - type `/track SP-XXXX` to view another)_"
 
     await message.answer(reply_text, parse_mode="Markdown", reply_markup=get_track_order_keyboard(latest))
