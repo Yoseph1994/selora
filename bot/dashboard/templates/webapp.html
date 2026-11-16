@@ -273,20 +273,66 @@
         <p class="text-xs text-slate-400 leading-relaxed" id="track-desc">Enter your order code (e.g. SLR-1004) to view live progress.</p>
       </div>
 
-      <!-- Recent Active Orders Section (Auto-shown when user returns) -->
-      <div id="active-orders-section" class="space-y-2.5 hidden">
-        <div class="flex items-center justify-between px-1">
+      <!-- Recent Orders Section with Category Filters: All | Accepted | Rejected | Done -->
+      <div id="active-orders-section" class="space-y-3 hidden">
+        <div class="flex items-center justify-between px-0.5">
           <div class="flex items-center space-x-2">
             <span class="relative flex h-2 w-2">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
             </span>
-            <span class="text-xs font-bold text-slate-200 uppercase tracking-wider" id="active-orders-label">Active Orders In Progress</span>
+            <span class="text-xs font-bold text-slate-200 uppercase tracking-wider" id="active-orders-label">My Orders</span>
           </div>
-          <span id="active-orders-count-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">0 Active</span>
+          <span id="active-orders-count-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">0 Orders</span>
         </div>
+
+        <!-- Filter Pills Bar: All | Accepted | Rejected | Done -->
+        <div class="grid grid-cols-4 gap-1 p-1 bg-surface-card border border-surface-border rounded-xl text-[11px] font-semibold select-none shadow-xs">
+          <button 
+            type="button" 
+            id="track-filter-btn-all" 
+            onclick="setTrackFilter('all')" 
+            class="py-1.5 px-1 rounded-lg text-center transition flex items-center justify-center space-x-1 cursor-pointer bg-amber-400 text-slate-950 font-bold shadow-xs active:scale-95"
+          >
+            <span id="lbl-filter-all">All</span>
+            <span id="track-count-all" class="text-[9px] px-1.5 py-0.2 rounded-full bg-black/20 font-mono">0</span>
+          </button>
+          <button 
+            type="button" 
+            id="track-filter-btn-accepted" 
+            onclick="setTrackFilter('accepted')" 
+            class="py-1.5 px-1 rounded-lg text-center transition flex items-center justify-center space-x-1 cursor-pointer text-slate-400 hover:text-white active:scale-95"
+          >
+            <span id="lbl-filter-accepted">Accepted</span>
+            <span id="track-count-accepted" class="text-[9px] px-1.5 py-0.2 rounded-full bg-white/10 font-mono">0</span>
+          </button>
+          <button 
+            type="button" 
+            id="track-filter-btn-rejected" 
+            onclick="setTrackFilter('rejected')" 
+            class="py-1.5 px-1 rounded-lg text-center transition flex items-center justify-center space-x-1 cursor-pointer text-slate-400 hover:text-white active:scale-95"
+          >
+            <span id="lbl-filter-rejected">Rejected</span>
+            <span id="track-count-rejected" class="text-[9px] px-1.5 py-0.2 rounded-full bg-white/10 font-mono">0</span>
+          </button>
+          <button 
+            type="button" 
+            id="track-filter-btn-done" 
+            onclick="setTrackFilter('done')" 
+            class="py-1.5 px-1 rounded-lg text-center transition flex items-center justify-center space-x-1 cursor-pointer text-slate-400 hover:text-white active:scale-95"
+          >
+            <span id="lbl-filter-done">Done</span>
+            <span id="track-count-done" class="text-[9px] px-1.5 py-0.2 rounded-full bg-white/10 font-mono">0</span>
+          </button>
+        </div>
+
         <div id="active-orders-list" class="space-y-2">
-          <!-- Dynamically populated via loadActiveOrders() -->
+          <!-- Dynamically populated via renderTrackOrdersList() -->
+        </div>
+
+        <div id="track-filter-empty" class="hidden text-center py-6 px-4 rounded-2xl bg-white/[0.02] border border-surface-border text-slate-400 text-xs space-y-1">
+          <i class="fa-solid fa-inbox text-slate-500 text-lg mb-1"></i>
+          <p id="track-filter-empty-msg">No orders match this filter.</p>
         </div>
       </div>
 
@@ -3306,68 +3352,99 @@
       } catch (e) {}
     }
 
-    async function loadActiveOrders() {
-      const section = document.getElementById('active-orders-section');
-      const listEl = document.getElementById('active-orders-list');
-      const badge = document.getElementById('active-orders-count-badge');
-      if (!section || !listEl) return;
+    let trackFilter = 'all'; // 'all' | 'accepted' | 'rejected' | 'done'
+    let myOrdersList = [];
+    let selectedTrackCode = null;
 
-      let activeOrdersMap = new Map();
+    function classifyTrackOrder(o) {
+      const st = (o.status || '').toLowerCase();
+      const ps = (o.payment_status || '').toLowerCase();
+      const rt = (o.rejection_type || '').toLowerCase();
+      const isFraud = (rt === 'fraud' || ps === 'fraud');
+      const isRejected = (st === 'rejected' || ps === 'rejected' || rt === 'artwork' || isFraud);
 
-      // 1. Fetch from server by Telegram user ID if available
-      if (tgUser && tgUser.id) {
-        try {
-          const res = await fetch(`/api/webapp/my-orders/${tgUser.id}`);
-          const data = await res.json();
-          if (data && data.ok && Array.isArray(data.orders)) {
-            data.orders.forEach(o => {
-              const st = (o.status || '').toLowerCase();
-              const isFraud = (o.rejection_type === 'fraud' || o.payment_status === 'fraud');
-              if (st !== 'completed' && (st !== 'cancelled' || isFraud)) {
-                activeOrdersMap.set(o.order_code, o);
-              }
-            });
-          }
-        } catch (e) {}
+      if (st === 'completed') {
+        return 'done';
       }
+      if (isRejected) {
+        return 'rejected';
+      }
+      return 'accepted';
+    }
 
-      // 2. Also check any local storage saved orders
-      let localCodes = [];
-      try {
-        localCodes = JSON.parse(localStorage.getItem('selora_user_orders') || '[]');
-      } catch (e) { localCodes = []; }
-
-      for (const code of localCodes) {
-        if (!activeOrdersMap.has(code)) {
-          try {
-            const res = await fetch(`/api/webapp/track/${encodeURIComponent(code)}`);
-            const data = await res.json();
-            if (data && data.ok && data.order) {
-              const st = (data.order.status || '').toLowerCase();
-              const isFraud = (data.order.rejection_type === 'fraud' || data.order.payment_status === 'fraud');
-              if (st !== 'completed' && (st !== 'cancelled' || isFraud)) {
-                activeOrdersMap.set(code, data.order);
-              } else {
-                localCodes = localCodes.filter(c => c !== code);
-                try { localStorage.setItem('selora_user_orders', JSON.stringify(localCodes)); } catch(e){}
-              }
-            }
-          } catch(e) {}
+    function setTrackFilter(f) {
+      trackFilter = f;
+      ['all', 'accepted', 'rejected', 'done'].forEach(key => {
+        const btn = document.getElementById(`track-filter-btn-${key}`);
+        const badge = document.getElementById(`track-count-${key}`);
+        if (!btn) return;
+        if (key === f) {
+          btn.className = "py-1.5 px-1 rounded-lg text-center transition flex items-center justify-center space-x-1 cursor-pointer bg-amber-400 text-slate-950 font-bold shadow-xs active:scale-95";
+          if (badge) badge.className = "text-[9px] px-1.5 py-0.2 rounded-full bg-black/20 font-mono";
+        } else {
+          btn.className = "py-1.5 px-1 rounded-lg text-center transition flex items-center justify-center space-x-1 cursor-pointer text-slate-400 hover:text-white active:scale-95";
+          if (badge) badge.className = "text-[9px] px-1.5 py-0.2 rounded-full bg-white/10 font-mono";
         }
+      });
+      renderTrackOrdersList();
+    }
+
+    function renderTrackOrdersList() {
+      const listEl = document.getElementById('active-orders-list');
+      const emptyEl = document.getElementById('track-filter-empty');
+      const emptyMsgEl = document.getElementById('track-filter-empty-msg');
+      if (!listEl) return;
+
+      // Update pill count badges
+      const counts = { all: myOrdersList.length, accepted: 0, rejected: 0, done: 0 };
+      myOrdersList.forEach(o => {
+        const cat = classifyTrackOrder(o);
+        if (counts[cat] !== undefined) counts[cat]++;
+      });
+
+      const countAll = document.getElementById('track-count-all');
+      const countAccepted = document.getElementById('track-count-accepted');
+      const countRejected = document.getElementById('track-count-rejected');
+      const countDone = document.getElementById('track-count-done');
+      if (countAll) countAll.textContent = counts.all;
+      if (countAccepted) countAccepted.textContent = counts.accepted;
+      if (countRejected) countRejected.textContent = counts.rejected;
+      if (countDone) countDone.textContent = counts.done;
+
+      const badge = document.getElementById('active-orders-count-badge');
+      if (badge) {
+        badge.textContent = `${myOrdersList.length} ${currentLang === 'am' ? 'ትዕዛዞች' : 'Orders'}`;
       }
 
-      const activeOrders = Array.from(activeOrdersMap.values());
-      if (activeOrders.length === 0) {
-        section.classList.add('hidden');
+      // Filter list
+      const filtered = myOrdersList.filter(o => {
+        if (trackFilter === 'all') return true;
+        return classifyTrackOrder(o) === trackFilter;
+      });
+
+      listEl.innerHTML = '';
+
+      if (filtered.length === 0) {
+        if (emptyEl) {
+          emptyEl.classList.remove('hidden');
+          if (emptyMsgEl) {
+            if (trackFilter === 'rejected') {
+              emptyMsgEl.textContent = currentLang === 'am' ? 'ምንም ውድቅ የተደረገ ትዕዛዝ የለም። ሁሉም ትዕዛዞችዎ በጥሩ ሁኔታ ላይ ናቸው!' : 'No rejected orders. All your prints are running smoothly!';
+            } else if (trackFilter === 'accepted') {
+              emptyMsgEl.textContent = currentLang === 'am' ? 'በስራ ላይ ያለ ትዕዛዝ የለም።' : 'No active orders in production.';
+            } else if (trackFilter === 'done') {
+              emptyMsgEl.textContent = currentLang === 'am' ? 'ምንም የተጠናቀቀ ትዕዛዝ የለም።' : 'No completed orders yet.';
+            } else {
+              emptyMsgEl.textContent = currentLang === 'am' ? 'ምንም ትዕዛዝ አልተገኘም።' : 'No orders found.';
+            }
+          }
+        }
         return;
       }
 
-      if (badge) {
-        badge.textContent = `${activeOrders.length} ${currentLang === 'am' ? 'በሂደት ላይ' : 'Active'}`;
-      }
-      listEl.innerHTML = '';
+      if (emptyEl) emptyEl.classList.add('hidden');
 
-      activeOrders.forEach(o => {
+      filtered.forEach(o => {
         const isFraud = (o.rejection_type === 'fraud' || o.payment_status === 'fraud');
         const isRejected = (o.status === 'rejected' || o.payment_status === 'rejected' || o.rejection_type === 'artwork');
         let statusBadgeClass = 'bg-amber-500/10 text-amber-300 border-amber-500/25';
@@ -3377,20 +3454,30 @@
           statusBadgeClass = 'bg-rose-900/40 text-rose-300 border-rose-700/60 font-bold';
           statusText = currentLang === 'am' ? 'ተሰርዟል (ማጭበርበር) ⚠️' : 'Flagged: Forgery ⚠️';
         } else if (isRejected) {
-          statusBadgeClass = 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+          statusBadgeClass = 'bg-rose-500/15 text-rose-300 border-rose-500/30 font-bold';
           statusText = currentLang === 'am' ? 'ማስተካከያ ይፈልጋል' : 'Revision Required';
         } else if (o.status === 'in_production') {
-          statusBadgeClass = 'bg-blue-500/15 text-blue-300 border-blue-500/30';
-          statusText = currentLang === 'am' ? 'በህትመት ላይ' : 'In Production';
+          statusBadgeClass = 'bg-blue-500/15 text-blue-300 border-blue-500/30 font-bold';
+          statusText = currentLang === 'am' ? 'በህትመት ላይ (ስራ ላይ)' : 'Under Work';
         } else if (o.status === 'ready' || o.status === 'ready_for_delivery') {
-          statusBadgeClass = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+          statusBadgeClass = 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30 font-bold';
           statusText = currentLang === 'am' ? 'ዝግጁ ነው' : 'Ready';
+        } else if (o.status === 'completed') {
+          statusBadgeClass = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 font-bold';
+          statusText = currentLang === 'am' ? 'ተጠናቋል ✓' : 'Done ✓';
         }
 
+        const isSelected = (selectedTrackCode && selectedTrackCode === o.order_code);
         const itemCard = document.createElement('div');
-        itemCard.className = "p-3.5 sm:p-4 rounded-2xl bg-surface-card border border-surface-border hover:border-amber-400/50 transition cursor-pointer flex items-center justify-between group shadow-sm";
+        itemCard.className = `p-3.5 sm:p-4 rounded-2xl transition cursor-pointer flex items-center justify-between group shadow-sm ${
+          isSelected 
+            ? 'bg-amber-400/[0.08] border-2 border-amber-400 shadow-amber-400/10 ring-1 ring-amber-400/30' 
+            : 'bg-surface-card border border-surface-border hover:border-amber-400/50'
+        }`;
         itemCard.onclick = () => {
+          selectedTrackCode = o.order_code;
           document.getElementById('track-code-input').value = o.order_code;
+          renderTrackOrdersList();
           queryTrackOrder(o.order_code);
         };
 
@@ -3414,14 +3501,69 @@
         `;
         listEl.appendChild(itemCard);
       });
+    }
+
+    async function loadActiveOrders() {
+      const section = document.getElementById('active-orders-section');
+      if (!section) return;
+
+      let activeOrdersMap = new Map();
+
+      // 1. Fetch from server by Telegram user ID if available
+      if (tgUser && tgUser.id) {
+        try {
+          const res = await fetch(`/api/webapp/my-orders/${tgUser.id}`);
+          const data = await res.json();
+          if (data && data.ok && Array.isArray(data.orders)) {
+            data.orders.forEach(o => {
+              const st = (o.status || '').toLowerCase();
+              const isFraud = (o.rejection_type === 'fraud' || o.payment_status === 'fraud');
+              if (st !== 'cancelled' || isFraud) {
+                activeOrdersMap.set(o.order_code, o);
+              }
+            });
+          }
+        } catch (e) {}
+      }
+
+      // 2. Also check any local storage saved orders
+      let localCodes = [];
+      try {
+        localCodes = JSON.parse(localStorage.getItem('selora_user_orders') || '[]');
+      } catch (e) { localCodes = []; }
+
+      for (const code of localCodes) {
+        if (!activeOrdersMap.has(code)) {
+          try {
+            const res = await fetch(`/api/webapp/track/${encodeURIComponent(code)}`);
+            const data = await res.json();
+            if (data && data.ok && data.order) {
+              const st = (data.order.status || '').toLowerCase();
+              const isFraud = (data.order.rejection_type === 'fraud' || data.order.payment_status === 'fraud');
+              if (st !== 'cancelled' || isFraud) {
+                activeOrdersMap.set(code, data.order);
+              }
+            }
+          } catch(e) {}
+        }
+      }
+
+      myOrdersList = Array.from(activeOrdersMap.values());
+      if (myOrdersList.length === 0) {
+        section.classList.add('hidden');
+        return;
+      }
 
       section.classList.remove('hidden');
+      renderTrackOrdersList();
 
-      // Auto-display live tracker if exactly 1 active order and tracker not already showing
+      // Auto-display live tracker if exactly 1 order and tracker not already showing
       const currentInput = document.getElementById('track-code-input').value.trim();
-      if (!currentInput && activeOrders.length === 1) {
-        document.getElementById('track-code-input').value = activeOrders[0].order_code;
-        queryTrackOrder(activeOrders[0].order_code);
+      if (!currentInput && myOrdersList.length === 1) {
+        selectedTrackCode = myOrdersList[0].order_code;
+        document.getElementById('track-code-input').value = myOrdersList[0].order_code;
+        queryTrackOrder(myOrdersList[0].order_code);
+        renderTrackOrdersList();
       }
     }
 
@@ -4023,6 +4165,18 @@
       if (pTitle) pTitle.textContent = I18N[currentLang].portfolioTitle;
       const pDesc = document.getElementById('portfolio-desc');
       if (pDesc) pDesc.textContent = I18N[currentLang].portfolioDesc;
+
+      const fAll = document.getElementById('lbl-filter-all');
+      if (fAll) fAll.textContent = currentLang === 'am' ? 'ሁሉም' : 'All';
+      const fAcc = document.getElementById('lbl-filter-accepted');
+      if (fAcc) fAcc.textContent = currentLang === 'am' ? 'ተቀባይነት' : 'Accepted';
+      const fRej = document.getElementById('lbl-filter-rejected');
+      if (fRej) fRej.textContent = currentLang === 'am' ? 'ውድቅ' : 'Rejected';
+      const fDone = document.getElementById('lbl-filter-done');
+      if (fDone) fDone.textContent = currentLang === 'am' ? 'ተጠናቋል' : 'Done';
+      if (myOrdersList && myOrdersList.length) {
+        renderTrackOrdersList();
+      }
 
       renderProducts(PRODUCTS);
       if (PORTFOLIO && PORTFOLIO.length) {

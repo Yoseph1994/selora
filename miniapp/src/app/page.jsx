@@ -388,6 +388,57 @@ export default function SeloraMiniApp() {
   const [trackedOrder, setTrackedOrder] = useState(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackingError, setTrackingError] = useState('');
+  const [userOrders, setUserOrders] = useState([]);
+  const [ordersFilter, setOrdersFilter] = useState('all');
+
+  function classifyOrder(o) {
+    if (!o) return 'accepted';
+    const st = (o.status || '').toLowerCase();
+    const ps = (o.payment_status || '').toLowerCase();
+    const rt = (o.rejection_type || '').toLowerCase();
+    const isFraud = (rt === 'fraud' || ps === 'fraud');
+    const isRejected = (st === 'rejected' || ps === 'rejected' || rt === 'artwork' || isFraud);
+
+    if (st === 'completed') return 'done';
+    if (isRejected) return 'rejected';
+    return 'accepted';
+  }
+
+  const loadMyOrders = React.useCallback(async () => {
+    let ordersMap = new Map();
+    if (user?.id) {
+      try {
+        const res = await fetch(`/api/webapp/my-orders/${user.id}`);
+        const data = await res.json();
+        if (data?.ok && Array.isArray(data.orders)) {
+          data.orders.forEach(o => {
+            const st = (o.status || '').toLowerCase();
+            const isFraud = (o.rejection_type === 'fraud' || o.payment_status === 'fraud');
+            if (st !== 'cancelled' || isFraud) {
+              ordersMap.set(o.order_code, o);
+            }
+          });
+        }
+      } catch (e) {}
+    }
+    let localCodes = [];
+    try {
+      localCodes = JSON.parse(localStorage.getItem('selora_user_orders') || '[]');
+    } catch(e) {}
+    for (const code of localCodes) {
+      if (!ordersMap.has(code)) {
+        try {
+          const res = await fetch(`/api/webapp/track/${encodeURIComponent(code)}`);
+          const data = await res.json();
+          if (data?.ok && data.order) {
+            ordersMap.set(code, data.order);
+          }
+        } catch(e) {}
+      }
+    }
+    const list = Array.from(ordersMap.values());
+    setUserOrders(list);
+  }, [user]);
 
   // Initialize Telegram WebApp
   useEffect(() => {
@@ -438,6 +489,12 @@ export default function SeloraMiniApp() {
         // Offline / dev fallback
       });
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'track') {
+      loadMyOrders();
+    }
+  }, [activeTab, loadMyOrders]);
 
   // Sync Telegram MainButton when order sheet is open
   useEffect(() => {
@@ -685,6 +742,13 @@ export default function SeloraMiniApp() {
       const data = await res.json();
       if (data?.ok && data?.order_code) {
         triggerHaptic('success');
+        try {
+          const prev = JSON.parse(localStorage.getItem('selora_user_orders') || '[]');
+          if (!prev.includes(data.order_code)) {
+            prev.unshift(data.order_code);
+            localStorage.setItem('selora_user_orders', JSON.stringify(prev.slice(0, 15)));
+          }
+        } catch (e) {}
         setConfirmedOrder({
           orderCode: data.order_code,
           items: itemsText,
@@ -996,6 +1060,140 @@ export default function SeloraMiniApp() {
                 {lang === 'en' ? 'Enter your Selora order code (e.g. SP-1004) to view live progress.' : 'የትዕዛዝ መለያ ቁጥርዎን (ምሳሌ፡ SP-1004) በማስገባት ያለበትን ደረጃ ይከታተሉ።'}
               </p>
             </div>
+
+            {/* Recent Orders Section with Category Filters: All | Accepted | Rejected | Done */}
+            {userOrders.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-0.5">
+                  <div className="flex items-center space-x-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
+                    </span>
+                    <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                      {lang === 'en' ? 'My Orders' : 'የእኔ ትዕዛዞች'}
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    {userOrders.length} {lang === 'en' ? 'Orders' : 'ትዕዛዞች'}
+                  </span>
+                </div>
+
+                {/* Filter Pills Bar */}
+                <div className="grid grid-cols-4 gap-1 p-1 bg-white/[0.04] border border-white/10 rounded-xl text-[11px] font-semibold select-none shadow-xs">
+                  {[
+                    { id: 'all', label: lang === 'en' ? 'All' : 'ሁሉም', count: userOrders.length },
+                    { id: 'accepted', label: lang === 'en' ? 'Accepted' : 'ተቀባይነት', count: userOrders.filter(o => classifyOrder(o) === 'accepted').length },
+                    { id: 'rejected', label: lang === 'en' ? 'Rejected' : 'ውድቅ', count: userOrders.filter(o => classifyOrder(o) === 'rejected').length },
+                    { id: 'done', label: lang === 'en' ? 'Done' : 'ተጠናቋል', count: userOrders.filter(o => classifyOrder(o) === 'done').length }
+                  ].map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('selection');
+                        setOrdersFilter(f.id);
+                      }}
+                      className={`py-1.5 px-1 rounded-lg text-center transition flex items-center justify-center space-x-1 cursor-pointer active:scale-95 ${
+                        ordersFilter === f.id
+                          ? 'bg-amber-400 text-slate-950 font-bold shadow-xs'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>{f.label}</span>
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono ${
+                        ordersFilter === f.id ? 'bg-black/20 text-slate-950 font-bold' : 'bg-white/10 text-slate-400'
+                      }`}>
+                        {f.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Filtered Order Cards List */}
+                <div className="space-y-2">
+                  {userOrders
+                    .filter(o => ordersFilter === 'all' || classifyOrder(o) === ordersFilter)
+                    .map(o => {
+                      const cat = classifyOrder(o);
+                      const isSelected = trackedOrder?.order_code === o.order_code;
+                      const isFraud = (o.rejection_type === 'fraud' || o.payment_status === 'fraud');
+                      const isRejected = (o.status === 'rejected' || o.payment_status === 'rejected' || o.rejection_type === 'artwork');
+                      return (
+                        <div
+                          key={o.order_code}
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setTrackingInput(o.order_code);
+                            setTrackedOrder(o);
+                          }}
+                          className={`p-3.5 rounded-2xl transition cursor-pointer flex items-center justify-between group shadow-sm ${
+                            isSelected
+                              ? 'bg-amber-400/[0.08] border-2 border-amber-400 shadow-amber-400/10 ring-1 ring-amber-400/30'
+                              : 'bg-white/[0.03] border border-white/10 hover:border-amber-400/50'
+                          }`}
+                        >
+                          <div className="space-y-1.5 min-w-0 flex-1 pr-3">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-mono text-sm font-bold text-amber-300 tracking-wider">{o.order_code}</span>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                cat === 'done'
+                                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 font-bold'
+                                  : (isFraud
+                                      ? 'bg-rose-900/40 text-rose-300 border-rose-700/60 font-bold'
+                                      : (isRejected
+                                          ? 'bg-rose-500/15 text-rose-300 border-rose-500/30 font-bold'
+                                          : (o.status === 'in_production'
+                                              ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 font-bold'
+                                              : (o.status === 'ready' || o.status === 'ready_for_delivery'
+                                                  ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30 font-bold'
+                                                  : 'bg-amber-500/10 text-amber-300 border-amber-500/25 font-bold'))))
+                              }`}>
+                                {cat === 'done'
+                                  ? (lang === 'en' ? 'Done ✓' : 'ተጠናቋል ✓')
+                                  : (isFraud
+                                      ? (lang === 'en' ? 'Flagged: Forgery ⚠️' : 'ተሰርዟል ⚠️')
+                                      : (isRejected
+                                          ? (lang === 'en' ? 'Revision Required' : 'ማስተካከያ ይፈልጋል')
+                                          : (o.status === 'in_production'
+                                              ? (lang === 'en' ? 'Under Work' : 'በህትመት ላይ')
+                                              : (o.status === 'ready' || o.status === 'ready_for_delivery'
+                                                  ? (lang === 'en' ? 'Ready' : 'ዝግጁ ነው')
+                                                  : (lang === 'en' ? 'Pending Review' : 'በግምገማ ላይ')))))}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-200 font-semibold truncate">{o.items || 'Custom Order'}</div>
+                            <div className="text-[11px] text-slate-400 flex items-center space-x-2">
+                              {o.deadline && <span>{lang === 'en' ? 'Target: ' : 'የመድረሻ ቀን: '} {o.deadline}</span>}
+                              {o.delivery_type && (
+                                <>
+                                  <span className="text-slate-600">•</span>
+                                  <span>{o.delivery_type}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-300 transition shrink-0" />
+                        </div>
+                      );
+                    })}
+
+                  {userOrders.filter(o => ordersFilter === 'all' || classifyOrder(o) === ordersFilter).length === 0 && (
+                    <div className="text-center py-6 px-4 rounded-2xl bg-white/[0.02] border border-white/5 text-slate-400 text-xs space-y-1">
+                      <p>
+                        {ordersFilter === 'rejected'
+                          ? (lang === 'en' ? 'No rejected orders. Everything is progressing smoothly!' : 'ምንም ውድቅ የተደረገ ትዕዛዝ የለም።')
+                          : (ordersFilter === 'accepted'
+                              ? (lang === 'en' ? 'No active orders in production.' : 'በስራ ላይ ያለ ትዕዛዝ የለም።')
+                              : (ordersFilter === 'done'
+                                  ? (lang === 'en' ? 'No completed orders yet.' : 'ምንም የተጠናቀቀ ትዕዛዝ የለም።')
+                                  : (lang === 'en' ? 'No orders found.' : 'ምንም ትዕዛዝ አልተገኘም።')))}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleTrackOrder} className="flex space-x-2">
               <input 

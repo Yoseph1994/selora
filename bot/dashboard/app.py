@@ -363,7 +363,7 @@ async def webapp_track_order(order_code: str):
 
 @app.get("/api/webapp/my-orders/{user_id}")
 async def webapp_my_orders(user_id: int):
-    """Retrieve active orders for the customer, including recent forgery-flagged orders."""
+    """Retrieve orders for the customer (accepted, in-progress, rejected, and completed)."""
     try:
         user_orders = database.get_orders_by_user(user_id)
         active_list = []
@@ -371,9 +371,7 @@ async def webapp_my_orders(user_id: int):
             enrich_order_data(o)
             st = (o.get("status") or "pending").lower()
             is_fraud = o.get("rejection_type") == "fraud" or o.get("payment_status") == "fraud"
-            # Ignore completed orders, and normal cancelled orders unless flagged for fraud
-            if st == "completed":
-                continue
+            # Ignore standard cancelled orders unless flagged for fraud
             if st == "cancelled" and not is_fraud:
                 continue
             active_list.append({
@@ -390,7 +388,7 @@ async def webapp_my_orders(user_id: int):
                 "rejection_reason": o.get("rejection_reason") or "",
                 "created_at": o.get("created_at", "")
             })
-        return {"ok": True, "orders": active_list[:10]}
+        return {"ok": True, "orders": active_list[:30]}
     except Exception as e:
         logger.error(f"Error fetching user active orders: {e}")
         return {"ok": False, "orders": []}
