@@ -167,6 +167,8 @@ class PriceUpdateRequest(BaseModel):
 
 class RejectRequest(BaseModel):
     reason: str
+    rejection_type: Optional[str] = "artwork"
+    delete_order: Optional[bool] = False
 
 class WebappOrderRequest(BaseModel):
     user_id: int
@@ -342,6 +344,7 @@ async def webapp_track_order(order_code: str):
             "notes": order.get("notes") or "",
             "created_at": order["created_at"],
             "rejection_reason": order.get("rejection_reason") or "",
+            "rejection_type": order.get("rejection_type") or "",
             "custom_instructions": order.get("custom_instructions") or "",
             "artwork_files": order.get("artwork_files") or []
         }
@@ -1058,30 +1061,58 @@ async def reject_order_api(order_code: str, payload: RejectRequest):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    reason = payload.reason.strip() or "Artwork is low resolution or compressed. Please upload an uncompressed File/Document (📎)."
-    database.update_order_rejection(order_code, reason)
+    reason = payload.reason.strip() or "Image resolution is too low or blurry. Please upload an uncompressed File/Document (📎)."
+    rej_type = (payload.rejection_type or "artwork").lower()
 
-    dm_text = (
-        "⚠️ *Update Regarding Your Selora Prints Order*\n\n"
-        f"🔖 *Order Code:* `{order_code}`\n"
-        f"🏷 *Items:* {order.get('items', '')}\n"
-        "─────────────────────\n"
-        "Our production team reviewed your order and submitted files:\n\n"
-        f"❌ *Reason:* {reason}\n\n"
-        "👉 *Please tap below to send a revised high-resolution file:*"
-    )
-    markup = {
-        "inline_keyboard": [
-            [{"text": "📎 Re-upload Artwork (File/Doc)", "callback_data": f"reupload_art:{order_code}"}],
-            [{"text": "💳 Re-upload Payment Receipt", "callback_data": f"reupload_rcpt:{order_code}"}]
-        ]
-    }
-    if config.ADMIN_USERNAME:
-        markup["inline_keyboard"].append([
-            {"text": "💬 Contact Support", "url": f"https://t.me/{config.ADMIN_USERNAME}"}
-        ])
-    await send_telegram_notification(order["user_id"], dm_text, reply_markup=markup)
-    return {"success": True, "message": f"Order {order_code} rejected and customer notified via DM"}
+    if rej_type == "artwork":
+        database.update_order_rejection(order_code, reason, rejection_type="artwork")
+        dm_text = (
+            "⚠️ *Artwork Issue with Order* `" + order_code + "`\n\n"
+            f"🏷 *Items:* {order.get('items', '')}\n"
+            "─────────────────────\n"
+            "Our production team reviewed your files:\n\n"
+            f"❌ *Issue:* {reason}\n\n"
+            "✅ *Payment Status:* Your 50% deposit has been verified and is safe!\n\n"
+            "👉 *Please tap below to send revised replacement print images only (no receipt needed):*"
+        )
+        markup = {
+            "inline_keyboard": [
+                [{"text": "📎 Re-upload Artwork (File/Doc)", "callback_data": f"reupload_art:{order_code}"}]
+            ]
+        }
+        if config.ADMIN_USERNAME:
+            markup["inline_keyboard"].append([
+                {"text": "💬 Contact Support", "url": f"https://t.me/{config.ADMIN_USERNAME}"}
+            ])
+        await send_telegram_notification(order["user_id"], dm_text, reply_markup=markup)
+        return {"success": True, "message": f"Order {order_code} marked for artwork re-upload and customer notified via DM"}
+
+    else:
+        # Fraudulent / Fake receipt: cancel order completely
+        dm_text = (
+            "🚨 *Order Cancelled: Payment Receipt Verification Failed*\n\n"
+            f"🔖 *Order Code:* `{order_code}`\n"
+            f"🏷 *Items:* {order.get('items', '')}\n"
+            "─────────────────────\n"
+            f"❌ *Reason:* {reason}\n\n"
+            "Your order has been cancelled due to an unverified or fraudulent payment receipt.\n\n"
+            "If you would like to proceed with a genuine order, please start fresh from scratch in our Mini App or via /start."
+        )
+        markup = {
+            "inline_keyboard": []
+        }
+        if config.ADMIN_USERNAME:
+            markup["inline_keyboard"].append([
+                {"text": "💬 Contact Support", "url": f"https://t.me/{config.ADMIN_USERNAME}"}
+            ])
+        await send_telegram_notification(order["user_id"], dm_text, reply_markup=markup)
+
+        if payload.delete_order:
+            database.delete_order(order_code)
+            return {"success": True, "message": f"Order {order_code} cancelled for fraud and completely deleted from database"}
+        else:
+            database.update_order_rejection(order_code, reason, rejection_type="fraud")
+            return {"success": True, "message": f"Order {order_code} cancelled for fraud"}
 
 @app.post("/api/products/add", dependencies=[Depends(require_api_auth)])
 async def add_product_api(

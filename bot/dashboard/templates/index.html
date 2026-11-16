@@ -217,13 +217,13 @@
             Re-uploaded
           </button>
           <button onclick="filterByStatus('in_production')" data-status="in_production" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap">
-            In Production
+            Under work
           </button>
           <button onclick="filterByStatus('ready_for_delivery')" data-status="ready_for_delivery" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap">
-            Ready to Ship
+            Ready
           </button>
           <button onclick="filterByStatus('completed')" data-status="completed" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap">
-            Completed
+            Done
           </button>
           <button onclick="filterByStatus('rejected')" data-status="rejected" class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition whitespace-nowrap">
             Rejected
@@ -288,20 +288,18 @@
               {% for o in orders %}
               {% if o.status == 'reuploaded' or o.payment_status == 'reuploaded' %}
                 {% set row_status = 'reuploaded' %}
-              {% elif o.status == 'rejected' or o.payment_status == 'rejected' %}
+              {% elif o.status in ['rejected', 'rejected_artwork'] or o.payment_status == 'rejected' %}
                 {% set row_status = 'rejected' %}
-              {% elif o.payment_status == 'pending_review' %}
-                {% set row_status = 'pending_review' %}
               {% elif o.status == 'ready_for_delivery' %}
                 {% set row_status = 'ready_for_delivery' %}
               {% elif o.status == 'completed' %}
                 {% set row_status = 'completed' %}
-              {% elif o.status == 'cancelled' %}
+              {% elif o.status in ['cancelled', 'fraud'] or o.payment_status == 'fraud' %}
                 {% set row_status = 'cancelled' %}
-              {% elif o.payment_status == 'approved' or o.status == 'in_production' %}
+              {% elif o.status == 'in_production' or o.payment_status == 'approved' %}
                 {% set row_status = 'in_production' %}
               {% else %}
-                {% set row_status = 'pending' %}
+                {% set row_status = 'pending_review' %}
               {% endif %}
               <tr class="hover:bg-slate-50/60 transition" id="row-{{ o.order_code }}" data-status="{{ row_status }}">
 
@@ -486,19 +484,19 @@
                     </span>
                   {% elif o.status == 'ready_for_delivery' %}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
-                      Ready to Ship
+                      Ready
                     </span>
                   {% elif o.payment_status == 'approved' and o.status != 'completed' %}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-                      In Production
+                      Under work
                     </span>
                   {% elif o.status == 'completed' %}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                      Completed
+                      Done
                     </span>
-                  {% elif o.status == 'rejected' or o.payment_status == 'rejected' %}
+                  {% elif o.status in ['rejected', 'rejected_artwork'] or o.payment_status == 'rejected' %}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200">
-                      Rejected
+                      Artwork Rejected
                     </span>
                     {% if o.rejection_reason %}
                     <div>
@@ -513,9 +511,9 @@
                       </button>
                     </div>
                     {% endif %}
-                  {% elif o.status == 'cancelled' %}
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
-                      Cancelled
+                  {% elif o.status in ['cancelled', 'fraud'] or o.payment_status == 'fraud' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                      Cancelled (Fraud)
                     </span>
                   {% else %}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
@@ -546,13 +544,13 @@
                       <i class="fa-solid fa-print text-xs"></i>
                     </button>
 
-                    <!-- Context-specific Workflow Actions -->
+                    <!-- Context-specific Workflow Actions: Accept -> Under work -> Ready -> Done -->
                     {% if row_status in ['pending_review', 'reuploaded'] %}
-                      <!-- Pending or Re-uploaded: Approve Deposit or Reject -->
-                      <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-2xs" title="Approve 50% Deposit & Start Production">
-                        Approve
+                      <!-- Pending or Re-uploaded: Accept or Reject -->
+                      <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-2xs" title="Accept Order & Move to Under Work">
+                        Accept
                       </button>
-                      <button type="button" onclick="openRejectModal('{{ o.order_code }}')" class="px-2 py-1 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-xs transition" title="Reject Payment or Files">
+                      <button type="button" onclick="openRejectModal('{{ o.order_code }}')" class="px-2 py-1 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-xs transition" title="Reject Artwork or Fake Receipt">
                         Reject
                       </button>
                       <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'cancel')" class="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-400 transition" title="Cancel Order">
@@ -560,38 +558,43 @@
                       </button>
 
                     {% elif row_status == 'in_production' %}
-                      <!-- In Production: Ready & DM customer with shipping choices -->
-                      <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'ready')" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition shadow-2xs" title="Mark Printed & Notify Customer to Choose Delivery/Pickup">
-                        Ready & DM
+                      <!-- Under Work: Mark Ready -->
+                      <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'ready')" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition shadow-2xs" title="Mark Ready for Delivery/Pickup">
+                        Ready
                       </button>
                       <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'cancel')" class="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-400 transition" title="Cancel Order">
                         <i class="fa-solid fa-xmark text-xs"></i>
                       </button>
 
                     {% elif row_status == 'ready_for_delivery' %}
-                      <!-- Ready for Delivery: Fulfill when customer picks up or taxi delivers -->
-                      <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'complete')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-2xs" title="Mark Fulfilled & Completed">
-                        Fulfill
+                      <!-- Ready: Mark Done when picked up or delivered -->
+                      <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'complete')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-2xs" title="Mark Fulfilled & Done">
+                        Done
                       </button>
                       <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'cancel')" class="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-400 transition" title="Cancel Order">
                         <i class="fa-solid fa-xmark text-xs"></i>
                       </button>
 
                     {% elif row_status == 'rejected' %}
-                      <!-- Rejected: Option to Re-approve if resolved with customer, or edit rejection reason -->
-                      <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-2xs" title="Override / Re-approve Order into Production">
-                        Approve
+                      <!-- Rejected: Option to Accept if customer resolved artwork -->
+                      <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-2xs" title="Accept Order into Production">
+                        Accept
                       </button>
                       <button type="button" onclick="openRejectModal('{{ o.order_code }}')" class="px-2 py-1 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-xs transition" title="Update Rejection Reason">
-                        Update Reject
+                        Reject
                       </button>
                       <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'cancel')" class="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-400 transition" title="Cancel Order">
                         <i class="fa-solid fa-xmark text-xs"></i>
                       </button>
 
-                    {% elif row_status == 'pending' %}
-                      <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-2xs" title="Approve Order">
-                        Approve
+                    {% elif row_status == 'completed' %}
+                      <span class="inline-flex items-center text-xs font-semibold text-emerald-600">
+                        <i class="fa-solid fa-circle-check text-xs mr-1"></i> Done
+                      </span>
+
+                    {% else %}
+                      <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'approve')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-2xs" title="Accept Order">
+                        Accept
                       </button>
                       <button type="button" onclick="updateOrderStatus('{{ o.order_code }}', 'cancel')" class="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-400 transition" title="Cancel Order">
                         <i class="fa-solid fa-xmark text-xs"></i>
@@ -1049,34 +1052,70 @@
     </div>
   </div>
 
-  <!-- Modal: Rejection Reason Dialog -->
+  <!-- Modal: Rejection Reason & Fraud Cancellation Dialog -->
   <div id="modal-reject" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-slate-200 space-y-3.5">
       <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-        <h3 class="font-bold text-slate-900 text-sm">Reject Order & Request Re-upload</h3>
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm">Order Review Action</h3>
+          <p class="text-xs text-slate-500">Order: <strong id="reject-modal-order-code" class="text-slate-900 font-mono"></strong></p>
+        </div>
         <button onclick="closeRejectModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <p class="text-xs text-slate-600">
-        Order: <strong id="reject-modal-order-code" class="text-slate-900 font-mono"></strong>. The bot will send a direct message (DM) to the customer with this reason.
-      </p>
+
+      <!-- Action Type Selector: Artwork Re-upload vs Fraud Cancel -->
+      <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+        <button type="button" id="tab-reject-artwork" onclick="setRejectType('artwork')" class="py-2 px-3 rounded-lg bg-white text-slate-900 shadow-xs flex items-center justify-center space-x-1.5 transition">
+          <i class="fa-solid fa-images text-amber-500"></i>
+          <span>Reject Artwork</span>
+        </button>
+        <button type="button" id="tab-reject-fraud" onclick="setRejectType('fraud')" class="py-2 px-3 rounded-lg text-slate-500 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition">
+          <i class="fa-solid fa-ban text-rose-500"></i>
+          <span>Fake Receipt (Fraud)</span>
+        </button>
+      </div>
+
+      <!-- Artwork Explanation Callout -->
+      <div id="reject-artwork-info" class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 space-y-1">
+        <p class="font-semibold flex items-center space-x-1">
+          <i class="fa-solid fa-shield-check text-emerald-600"></i>
+          <span>Deposit is Kept Safe</span>
+        </p>
+        <p class="text-amber-700">Customer will be requested to upload replacement artwork/photos <strong>without having to resend their receipt</strong>.</p>
+      </div>
+
+      <!-- Fraud Explanation Callout -->
+      <div id="reject-fraud-info" class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1 hidden">
+        <p class="font-semibold flex items-center space-x-1">
+          <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
+          <span>Fraudulent / Unverified Receipt</span>
+        </p>
+        <p class="text-rose-700">The order will be cancelled. Customer must start completely fresh from scratch.</p>
+      </div>
+
       <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">Standard Reasons:</label>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Standard Presets:</label>
         <select id="reject-preset" onchange="applyRejectPreset(this.value)" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50">
-          <option value="">-- Choose a standard reason --</option>
-          <option value="Image was sent as a compressed photo and is too blurry for printing. Please re-send as an uncompressed File/Document (📎).">Image compressed / blurry - re-send as File/Document</option>
-          <option value="The image resolution is too low for this print size. Please provide a higher-resolution file.">Image resolution is too low</option>
-          <option value="The payment receipt screenshot is unreadable or the deposit amount does not match 50%. Please re-upload your valid receipt.">Payment receipt illegible / wrong amount</option>
-          <option value="Artwork dimensions / aspect ratio do not fit this product. Please provide updated artwork.">Artwork dimensions don't fit</option>
         </select>
       </div>
+
       <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">Custom Message to Customer:</label>
-        <textarea id="reject-custom-reason" rows="3" class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500" placeholder="Explain why the artwork or receipt was rejected..."></textarea>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Customer Notification Message:</label>
+        <textarea id="reject-custom-reason" rows="3" class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500" placeholder="Explain the issue to the customer..."></textarea>
       </div>
-      <div class="flex justify-end space-x-2 pt-2">
+
+      <!-- Delete Checkbox for Fraud Mode -->
+      <div id="reject-fraud-delete-row" class="hidden flex items-center space-x-2 pt-1">
+        <input type="checkbox" id="reject-delete-order" class="rounded border-slate-300 text-rose-600 focus:ring-rose-500" checked>
+        <label for="reject-delete-order" class="text-xs text-slate-700 font-medium cursor-pointer">
+          Completely delete this order from database (customer must start from scratch)
+        </label>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
         <button onclick="closeRejectModal()" class="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onclick="submitRejectOrder()" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs">
-          Reject & Notify Customer
+        <button id="reject-submit-btn" onclick="submitRejectOrder()" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs">
+          Reject Artwork & Request Files
         </button>
       </div>
     </div>
@@ -1483,14 +1522,72 @@
       });
     }
 
-    // ─── REJECTION MODAL ───
+    // ─── REJECTION & FRAUD MODAL ───
     let currentRejectOrderCode = null;
+    let currentRejectType = 'artwork'; // 'artwork' or 'fraud'
+
+    const ARTWORK_PRESETS = [
+      { text: '-- Choose an artwork issue preset --', value: '' },
+      { text: 'Image compressed / blurry - please send as uncompressed File/Document (📎)', value: 'Image was sent as a compressed photo and is too blurry for printing. Please re-send as an uncompressed File/Document (📎).' },
+      { text: 'Image resolution is too low for this print size', value: 'The image resolution is too low for this print size. Please provide a higher-resolution file.' },
+      { text: 'Artwork dimensions or aspect ratio do not fit product', value: 'Artwork dimensions or aspect ratio do not fit this product. Please provide updated artwork.' },
+      { text: 'Image is too dark or washed out for clean printing', value: 'The image lighting is too dark or saturated for clean print output. Please send a clearer, higher-contrast file.' }
+    ];
+
+    const FRAUD_PRESETS = [
+      { text: '-- Choose a fake receipt issue preset --', value: '' },
+      { text: 'Receipt not found on CBE / Telebirr statement', value: 'The payment receipt screenshot could not be verified on our official bank statement. Order cancelled.' },
+      { text: 'Forged or fake screenshot detected', value: 'Forged or manipulated transaction screenshot detected. Order permanently cancelled.' },
+      { text: 'Transaction reversed or invalid reference', value: 'The bank transaction reference is invalid or has been reversed. Order cancelled.' }
+    ];
+
+    function setRejectType(type) {
+      currentRejectType = type;
+      const tabArt = document.getElementById('tab-reject-artwork');
+      const tabFraud = document.getElementById('tab-reject-fraud');
+      const infoArt = document.getElementById('reject-artwork-info');
+      const infoFraud = document.getElementById('reject-fraud-info');
+      const deleteRow = document.getElementById('reject-fraud-delete-row');
+      const submitBtn = document.getElementById('reject-submit-btn');
+
+      if (type === 'artwork') {
+        tabArt.className = 'py-2 px-3 rounded-lg bg-white text-slate-900 shadow-xs flex items-center justify-center space-x-1.5 transition';
+        tabFraud.className = 'py-2 px-3 rounded-lg text-slate-500 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition';
+        infoArt.classList.remove('hidden');
+        infoFraud.classList.add('hidden');
+        deleteRow.classList.add('hidden');
+        submitBtn.className = 'px-4 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs';
+        submitBtn.textContent = 'Reject Artwork & Request Files';
+        populateRejectPresets(ARTWORK_PRESETS);
+      } else {
+        tabFraud.className = 'py-2 px-3 rounded-lg bg-white text-rose-700 shadow-xs flex items-center justify-center space-x-1.5 transition';
+        tabArt.className = 'py-2 px-3 rounded-lg text-slate-500 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition';
+        infoFraud.classList.remove('hidden');
+        infoArt.classList.add('hidden');
+        deleteRow.classList.remove('hidden');
+        submitBtn.className = 'px-4 py-1.5 rounded-lg text-xs font-semibold bg-rose-800 hover:bg-rose-900 text-white shadow-xs';
+        submitBtn.textContent = 'Cancel Order by Fraud';
+        populateRejectPresets(FRAUD_PRESETS);
+      }
+      document.getElementById('reject-custom-reason').value = '';
+    }
+
+    function populateRejectPresets(presets) {
+      const presetSel = document.getElementById('reject-preset');
+      presetSel.innerHTML = '';
+      presets.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.value;
+        opt.textContent = p.text;
+        presetSel.appendChild(opt);
+      });
+    }
 
     function openRejectModal(orderCode) {
       currentRejectOrderCode = orderCode;
       document.getElementById('reject-modal-order-code').innerText = orderCode;
-      document.getElementById('reject-preset').value = '';
       document.getElementById('reject-custom-reason').value = '';
+      setRejectType('artwork');
       document.getElementById('modal-reject').classList.remove('hidden');
     }
 
@@ -1509,26 +1606,33 @@
       if (!currentRejectOrderCode) return;
       const reason = document.getElementById('reject-custom-reason').value.trim();
       if (!reason) {
-        showToast('Please provide a rejection reason.', 'error');
+        showToast('Please provide a reason message for the customer.', 'error');
         return;
       }
+
+      const isFraud = currentRejectType === 'fraud';
+      const deleteOrder = isFraud && document.getElementById('reject-delete-order').checked;
 
       try {
         const res = await fetch(`/api/orders/${currentRejectOrderCode}/reject`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: reason })
+          body: JSON.stringify({ 
+            reason: reason,
+            rejection_type: currentRejectType,
+            delete_order: deleteOrder
+          })
         });
         const data = await res.json();
         if (data.success) {
-          showToast(`Order ${currentRejectOrderCode} rejected and customer notified.`);
+          showToast(data.message || `Order ${currentRejectOrderCode} processed.`);
           closeRejectModal();
           setTimeout(() => location.reload(), 600);
         } else {
-          showToast(data.detail || 'Rejection failed', 'error');
+          showToast(data.detail || 'Action failed', 'error');
         }
       } catch (err) {
-        showToast('Network error while rejecting', 'error');
+        showToast('Network error while processing rejection', 'error');
       }
     }
 

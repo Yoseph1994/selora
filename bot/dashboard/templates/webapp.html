@@ -3470,18 +3470,50 @@
         if (data?.ok && data?.order) {
           haptic('success');
           const o = data.order;
-          if (o.status === 'completed') {
+          if (o.status === 'completed' || o.status === 'cancelled' || o.payment_status === 'fraud') {
             try {
               let localCodes = JSON.parse(localStorage.getItem('selora_user_orders') || '[]');
               localCodes = localCodes.filter(c => c !== o.order_code);
               localStorage.setItem('selora_user_orders', JSON.stringify(localCodes));
             } catch(e) {}
           }
-          const isRejected = o.status === 'rejected' || o.payment_status === 'rejected';
-          const statusUpper = isRejected ? 'REJECTED' : (o.status || 'pending').toUpperCase();
-          const isDepositDone = o.payment_status === 'approved' || (o.status !== 'pending' && !isRejected);
-          const isPrintingDone = o.status === 'in_production' || o.status === 'ready' || o.status === 'completed';
-          const isReadyDone = o.status === 'ready' || o.status === 'completed';
+
+          const isFraud = o.status === 'cancelled' || o.payment_status === 'fraud' || o.rejection_type === 'fraud';
+          const isArtworkRejected = o.status === 'rejected_artwork' || o.rejection_type === 'artwork' || (o.status === 'rejected' && !isFraud);
+          const isUnderWork = o.status === 'in_production';
+          const isReady = o.status === 'ready' || o.status === 'ready_for_delivery';
+          const isDone = o.status === 'completed';
+
+          let statusDisplay = 'PENDING';
+          let statusBadgeClass = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+          let statusIcon = 'fa-solid fa-clock';
+
+          if (isFraud) {
+            statusDisplay = 'CANCELLED (FRAUD)';
+            statusBadgeClass = 'bg-rose-900/30 text-rose-300 border-rose-700/50';
+            statusIcon = 'fa-solid fa-ban';
+          } else if (isArtworkRejected) {
+            statusDisplay = 'ARTWORK REVISION';
+            statusBadgeClass = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+            statusIcon = 'fa-solid fa-triangle-exclamation';
+          } else if (isDone) {
+            statusDisplay = 'DONE';
+            statusBadgeClass = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+            statusIcon = 'fa-solid fa-check';
+          } else if (isReady) {
+            statusDisplay = 'READY';
+            statusBadgeClass = 'bg-purple-500/15 text-purple-300 border-purple-500/30';
+            statusIcon = 'fa-solid fa-boxes-packing';
+          } else if (isUnderWork) {
+            statusDisplay = 'UNDER WORK';
+            statusBadgeClass = 'bg-blue-500/15 text-blue-300 border-blue-500/30';
+            statusIcon = 'fa-solid fa-gear';
+          }
+
+          const isStep1Done = !isFraud;
+          const isStep2Done = isUnderWork || isReady || isDone;
+          const isStep3Done = isReady || isDone;
+          const isStep4Done = isDone;
 
           card.innerHTML = `
             <!-- Order Header with Status Pill and Copy Button -->
@@ -3495,28 +3527,20 @@
                   </button>
                 </div>
               </div>
-              <span class="px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm ${
-                isRejected 
-                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 flex items-center space-x-1.5' 
-                  : (o.status === 'completed' 
-                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 flex items-center space-x-1.5' 
-                      : (o.status === 'in_production' 
-                          ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 flex items-center space-x-1.5' 
-                          : 'bg-amber-500/15 text-amber-300 border-amber-500/30 flex items-center space-x-1.5'))
-              }">
-                <i class="${isRejected ? 'fa-solid fa-triangle-exclamation text-xs' : (o.status === 'completed' ? 'fa-solid fa-check text-xs' : 'fa-solid fa-clock text-xs')}"></i>
-                <span>${statusUpper}</span>
+              <span class="px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm ${statusBadgeClass} flex items-center space-x-1.5">
+                <i class="${statusIcon} text-xs"></i>
+                <span>${statusDisplay}</span>
               </span>
             </div>
 
-            <!-- Rejection Warning Banner (If Rejected) -->
-            ${isRejected ? `
+            <!-- Branch A: Fraudulent/Fake Receipt Cancellation -->
+            ${isFraud ? `
               <div class="p-4 sm:p-5 rounded-2xl bg-rose-500/15 border border-rose-500/35 space-y-3.5 shadow-md">
                 <div class="flex items-center space-x-2.5 text-rose-300 font-bold text-sm">
                   <div class="w-7 h-7 rounded-full bg-rose-500/25 flex items-center justify-center text-rose-400 shrink-0">
-                    <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                    <i class="fa-solid fa-ban text-xs"></i>
                   </div>
-                  <span>${currentLang === 'am' ? 'ይህ ትዕዛዝ ማስተካከያ ይፈልጋል' : 'Action Required: Revision Needed'}</span>
+                  <span>Order Cancelled: Invalid / Fraudulent Payment Receipt</span>
                 </div>
 
                 <div class="p-3.5 rounded-xl bg-black/50 border-l-4 border-rose-500 text-xs sm:text-[13px] text-rose-200 leading-relaxed space-y-1">
@@ -3524,74 +3548,100 @@
                     <i class="fa-solid fa-message text-rose-400"></i>
                     <span>Studio Operator Note:</span>
                   </span>
-                  <p class="text-white font-medium pt-0.5">${o.rejection_reason || (currentLang === 'am' ? 'የክፍያ ደረሰኝ ወይም የህትመት ፋይል አልተረጋገጠም። እባክዎ እንደገና ይላኩ።' : 'Deposit receipt or artwork file could not be verified by studio admin.')}</p>
+                  <p class="text-white font-medium pt-0.5">${o.rejection_reason || 'Payment receipt could not be verified on CBE or Telebirr account statement.'}</p>
                 </div>
 
                 <p class="text-xs text-rose-200/90 leading-relaxed">
-                  Please tap an option below to submit your corrected file. Once re-uploaded, the studio will immediately resume production.
+                  This order was cancelled due to an unverified transaction. To order custom prints from Selora Prints, please submit a fresh order from scratch with a valid payment.
                 </p>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <div class="pt-1">
+                  <button 
+                    type="button"
+                    onclick="switchTab('catalog')"
+                    class="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-[13px] flex items-center justify-center space-x-2 transition active:scale-95 shadow-md cursor-pointer"
+                  >
+                    <i class="fa-solid fa-cart-plus text-sm"></i>
+                    <span>Start New Order From Scratch</span>
+                  </button>
+                </div>
+              </div>
+            ` : isArtworkRejected ? `
+              <!-- Branch B: Artwork Rejection (Deposit is Safe!) -->
+              <div class="p-4 sm:p-5 rounded-2xl bg-rose-500/15 border border-rose-500/35 space-y-3.5 shadow-md">
+                <div class="flex items-center space-x-2.5 text-rose-300 font-bold text-sm">
+                  <div class="w-7 h-7 rounded-full bg-rose-500/25 flex items-center justify-center text-rose-400 shrink-0">
+                    <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                  </div>
+                  <span>Action Required: Image Revision Needed</span>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-black/50 border-l-4 border-rose-500 text-xs sm:text-[13px] text-rose-200 leading-relaxed space-y-1">
+                  <span class="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+                    <i class="fa-solid fa-message text-rose-400"></i>
+                    <span>Studio Operator Note:</span>
+                  </span>
+                  <p class="text-white font-medium pt-0.5">${o.rejection_reason || 'Artwork file is low resolution or compressed. Please upload replacement print files.'}</p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-300 flex items-center space-x-2">
+                  <i class="fa-solid fa-circle-check text-emerald-400 shrink-0 text-sm"></i>
+                  <span>Your 50% deposit receipt is verified and safe. You only need to upload replacement print images.</span>
+                </div>
+
+                <div class="pt-1">
                   <button 
                     type="button"
                     onclick="openReuploadModal('artwork', '${o.order_code}')"
-                    class="py-3 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-[13px] flex items-center justify-center space-x-2 transition active:scale-95 shadow-md cursor-pointer"
+                    class="w-full py-3.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-[13px] flex items-center justify-center space-x-2 transition active:scale-95 shadow-md cursor-pointer"
                   >
                     <i class="fa-solid fa-file-arrow-up text-sm"></i>
-                    <span>${currentLang === 'am' ? 'የህትመት ፋይል በድጋሚ ላክ' : 'Re-Upload Artwork'}</span>
-                  </button>
-                  <button 
-                    type="button"
-                    onclick="openReuploadModal('receipt', '${o.order_code}')"
-                    class="py-3 px-3.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/10 text-white font-bold text-xs sm:text-[13px] flex items-center justify-center space-x-2 transition active:scale-95 cursor-pointer shadow-sm"
-                  >
-                    <i class="fa-solid fa-receipt text-sm"></i>
-                    <span>${currentLang === 'am' ? 'የክፍያ ደረሰኝ በድጋሚ ላክ' : 'Re-Upload Receipt'}</span>
+                    <span>Upload Replacement Artwork (Images/Docs)</span>
                   </button>
                 </div>
               </div>
             ` : `
-              <!-- Visual Production Milestone Tracker -->
+              <!-- Visual Production Milestone Tracker: Accept -> Under work -> Ready -> Done -->
               <div class="py-2 px-1 space-y-3">
-                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Production Milestone</span>
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Production Lifecycle</span>
                 <div class="space-y-3 text-xs sm:text-[13px]">
                   <div class="flex items-start space-x-3">
-                    <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 border border-emerald-500/30">
-                      <i class="fa-solid fa-check text-xs"></i>
+                    <div class="w-6 h-6 rounded-full ${isStep1Done ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-slate-500 border border-surface-border'} flex items-center justify-center shrink-0 mt-0.5">
+                      <i class="fa-solid ${isStep1Done ? 'fa-check' : 'fa-circle-dot'} text-xs"></i>
                     </div>
                     <div>
-                      <div class="font-bold text-white">1. Order Placed & Intake Verified</div>
-                      <div class="text-[11px] text-slate-400">Order successfully logged in database</div>
+                      <div class="font-bold ${isStep1Done ? 'text-white' : 'text-slate-400'}">1. Accept: Order Placed & Intake Verified</div>
+                      <div class="text-[11px] text-slate-400">Advance deposit verified and order approved</div>
                     </div>
                   </div>
 
                   <div class="flex items-start space-x-3">
-                    <div class="w-6 h-6 rounded-full ${isDepositDone ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-slate-500 border border-surface-border'} flex items-center justify-center shrink-0 mt-0.5">
-                      <i class="fa-solid ${isDepositDone ? 'fa-check' : 'fa-circle-dot'} text-xs"></i>
+                    <div class="w-6 h-6 rounded-full ${isStep2Done ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-slate-500 border border-surface-border'} flex items-center justify-center shrink-0 mt-0.5">
+                      <i class="fa-solid ${isStep2Done ? 'fa-check' : 'fa-circle-dot'} text-xs"></i>
                     </div>
                     <div>
-                      <div class="font-bold ${isDepositDone ? 'text-white' : 'text-slate-400'}">2. 50% Advance Deposit Approved</div>
-                      <div class="text-[11px] text-slate-500">CBE / Telebirr transaction confirmation</div>
+                      <div class="font-bold ${isStep2Done ? 'text-white' : 'text-slate-400'}">2. Under work: Studio Printing & Handcrafting</div>
+                      <div class="text-[11px] text-slate-500">Printing, cutting, lamination, and quality inspection</div>
                     </div>
                   </div>
 
                   <div class="flex items-start space-x-3">
-                    <div class="w-6 h-6 rounded-full ${isPrintingDone ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-slate-500 border border-surface-border'} flex items-center justify-center shrink-0 mt-0.5">
-                      <i class="fa-solid ${isPrintingDone ? 'fa-check' : 'fa-circle-dot'} text-xs"></i>
+                    <div class="w-6 h-6 rounded-full ${isStep3Done ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-slate-500 border border-surface-border'} flex items-center justify-center shrink-0 mt-0.5">
+                      <i class="fa-solid ${isStep3Done ? 'fa-check' : 'fa-circle-dot'} text-xs"></i>
                     </div>
                     <div>
-                      <div class="font-bold ${isPrintingDone ? 'text-white' : 'text-slate-400'}">3. Studio Printing & Handcrafting</div>
-                      <div class="text-[11px] text-slate-500">Drying, cutting, lamination, and quality inspection</div>
-                    </div>
-                  </div>
-
-                  <div class="flex items-start space-x-3">
-                    <div class="w-6 h-6 rounded-full ${isReadyDone ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-slate-500 border border-surface-border'} flex items-center justify-center shrink-0 mt-0.5">
-                      <i class="fa-solid ${isReadyDone ? 'fa-check' : 'fa-circle-dot'} text-xs"></i>
-                    </div>
-                    <div>
-                      <div class="font-bold ${isReadyDone ? 'text-white' : 'text-slate-400'}">4. Ready for Pickup / Taxi Delivery</div>
+                      <div class="font-bold ${isStep3Done ? 'text-white' : 'text-slate-400'}">3. Ready: Ready for Pickup / Taxi Delivery</div>
                       <div class="text-[11px] text-slate-500">Available at Ledeta Studio or dispatched to taxi</div>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 rounded-full ${isStep4Done ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-slate-500 border border-surface-border'} flex items-center justify-center shrink-0 mt-0.5">
+                      <i class="fa-solid ${isStep4Done ? 'fa-check' : 'fa-circle-dot'} text-xs"></i>
+                    </div>
+                    <div>
+                      <div class="font-bold ${isStep4Done ? 'text-white' : 'text-slate-400'}">4. Done: Fulfilled & Delivered</div>
+                      <div class="text-[11px] text-slate-500">Handed over to customer or driver</div>
                     </div>
                   </div>
                 </div>

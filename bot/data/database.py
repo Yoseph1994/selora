@@ -454,6 +454,7 @@ def init_db():
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS recipient_name TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_files TEXT;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_type TEXT DEFAULT '';
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS deadline_date TEXT;
             ALTER TABLE customers ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'en';
         """)
@@ -547,6 +548,7 @@ def init_db():
             "recipient_name": "TEXT",
             "customer_files": "TEXT DEFAULT '[]'",
             "rejection_reason": "TEXT",
+            "rejection_type": "TEXT DEFAULT ''",
             "deadline_date": "TEXT"
         }
 
@@ -1746,20 +1748,39 @@ def get_business_connection() -> Optional[Dict[str, Any]]:
     except Exception:
         return None
 
-# ─── ORDER REJECTION WITH REASON ──────────────────────────────
+# ─── ORDER REJECTION WITH REASON & FRAUD CANCELLATION ─────────
 
-def update_order_rejection(order_code: str, reason: str) -> bool:
-    """Mark order rejected and record reason in rejection_reason column without corrupting customer notes."""
+def update_order_rejection(order_code: str, reason: str, rejection_type: str = "artwork") -> bool:
+    """Mark order rejected with rejection type ('artwork' vs 'fraud')."""
     conn, is_pg = get_connection()
     cursor = conn.cursor()
     updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if rejection_type == "artwork":
+        new_status = "rejected_artwork"
+        new_payment_status = "approved"  # Advance deposit remains safe and verified
+    else:
+        new_status = "cancelled"
+        new_payment_status = "fraud"
+
     cursor.execute(q("""
         UPDATE orders
-        SET status = 'rejected', payment_status = 'rejected',
+        SET status = ?, payment_status = ?,
             rejection_reason = ?,
+            rejection_type = ?,
             updated_at = ?
         WHERE order_code = ?
-    """, is_pg), (reason, updated_at, order_code))
+    """, is_pg), (new_status, new_payment_status, reason, rejection_type, updated_at, order_code))
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return success
+
+def delete_order(order_code: str) -> bool:
+    """Permanently delete an order from the database (e.g. for fraudulent receipt orders starting from scratch)."""
+    conn, is_pg = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(q("DELETE FROM orders WHERE order_code = ?", is_pg), (order_code,))
     success = cursor.rowcount > 0
     conn.commit()
     conn.close()
