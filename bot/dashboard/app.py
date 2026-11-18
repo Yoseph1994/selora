@@ -47,6 +47,12 @@ app.add_middleware(
 )
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
+# Lightweight 24/7 Keep-Alive Endpoints (Prevents Render spin-down / sleep)
+@app.get("/health")
+@app.get("/ping")
+async def health_check():
+    return {"status": "ok", "service": "selora-bot", "timestamp": time.time()}
+
 # Mount static directories
 app.mount("/product-images", StaticFiles(directory=str(PRODUCT_IMAGES_DIR)), name="product_images")
 app.mount("/designs-images", StaticFiles(directory=str(DESIGNS_IMAGES_DIR)), name="designs_images")
